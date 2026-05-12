@@ -1,4 +1,4 @@
-# AGENTS.md
+# CLAUDE.md
 
 ## Operating Standard
 
@@ -11,6 +11,18 @@
 - Prefer evidence over ceremony. Keep process proportional to the task.
 - The job is not to sound smart. The job is to leave the system clearer, more correct, and easier to trust.
 
+## Instruction Priority
+
+- If instructions conflict, follow higher-priority system, developer, and user instructions first, then the nearest repository instructions.
+- Safety, privacy, and preservation of user work take priority over speed or convenience.
+- When editing this file, keep equivalent agent files such as `AGENTS.md` aligned unless the difference is intentional and documented.
+
+## User Interaction
+
+- Assume repository users are Vibe coders without programming experience. Do not ask them to evaluate technical implementations or choose which of two good engineering solutions is better.
+- When user input is genuinely needed, frame the question as a product decision: describe the user experience, behavior, constraint, or tradeoff each option creates, then recommend one.
+- Keep technical rationale concise and tied to product impact. Ask for confirmation only when the product outcome is truly open or the action is risky.
+
 ## Repository Grounding
 
 - Start from the repository itself, not assumptions.
@@ -20,41 +32,54 @@
 - Do not treat `README.md` as a file inventory. Discover structure dynamically.
 - Use the repository's existing package manager, scripts, test runner, formatter, linter, build tools, and generators.
 - In Codex shell sessions, do not assume JS tooling is already on `PATH`. For `node`, `npm`, and `bun`, prefer `PATH="/opt/homebrew/bin:$HOME/.bun/bin:$PATH"`.
-- Do not add new production dependencies without explicit user approval. Prefer existing utilities, framework APIs, and the standard library.
+- Do not add new production dependencies without explicit user approval unless the user directly requested that dependency by name. Prefer existing utilities, framework APIs, and the standard library.
 - Before implementing with a new library, inspect the relevant `package.json` first. Prefer established libraries already installed in this template, especially Zod, TanStack Query, TanStack Form, Hono, Prisma, Expo, and the shared `@web-app-demo/contracts` package.
-- If a needed popular library is missing and the task clearly benefits from it, add it intentionally with the workspace package manager and document the reason in the final report.
+- If a missing dependency would clearly improve the product outcome, explain the user-visible reason and ask before installing it.
 - Before using framework-specific APIs, check the current official documentation or local installed package types/examples, then write code to match the current API rather than memory.
-- For E2E, use Playwright for web and Maestro for mobile. Read `docs/TESTING.md` before adding flows, keep client E2E happy-path focused, and put validation/error matrices in unit or integration tests.
+- For E2E, use Playwright for web and Maestro for mobile. Read `docs/TESTING.md` before adding flows. Prefer valuable user-visible coverage over narrow happy-path-only smoke tests: cover critical journeys, high-risk regressions, auth/session behavior, persistence, navigation, and important empty/error/edge states when the test can stay stable and maintainable. Keep exhaustive validation matrices, combinatorial edge cases, concurrency, and pure business rules in integration/contract/unit tests.
 - For mobile E2E selectors, prefer stable React Native `testID` constants from `mobile/src/constants/testIds.ts`; do not rely on coordinates or fragile text when an action selector can have an id.
 
-## First-Run Bootstrap
+## Project Focus
 
-When this repository is installed from a GitHub URL into a fresh Codex or agent session, treat setup as an onboarding task before feature work.
+This section is intentionally mutable for each installed project. During first-run bootstrap, follow `README.md`, ask the user what product they want to build and which surfaces are active, then replace the block below with the chosen focus before feature work.
 
-- First read `README.md`, this `AGENTS.md`, and `docs/*.md`, then inspect package scripts and `.env.example` files before running setup commands.
-- Ask the user a short intake in the user's language before making product or deployment choices:
-  - what they want to build or change first;
-  - which surfaces they need now: web, mobile, backend/API, or full-stack;
-  - whether deployment is needed now, and if yes, whether to use DigitalOcean or Yandex Cloud.
-- Default to local-only setup when the user does not need deployment yet. Local development must not require DigitalOcean or Yandex Cloud credentials.
-- If deployment is requested, make the cloud choice explicit. Use DigitalOcean as the international/default option and Yandex Cloud when the audience is in Russia or the user chooses it.
-- Explain manual prerequisites only for the chosen path: provider account, billing/project/folder setup, `doctl auth init` or `yc init`, registry access, managed PostgreSQL or compatible database, Expo/EAS/App Store/Google Play accounts when mobile release work is requested.
-- The agent may create uncommitted local `.env` files from `.env.example` and generate a local-only `JWT_SECRET`; never commit secrets or print raw secrets in the final report.
-- After setup, run the smallest meaningful validation for the chosen path and report local URLs, commands run, and anything the user still needs to authorize manually.
+<!-- PROJECT_FOCUS_START -->
+Status: not selected yet.
+
+- Product goal: ask the user during first-run bootstrap.
+- Repository remote: new-project mode by default; remove the template `origin` unless the user explicitly says they are contributing to the template. Add the user's own GitHub remote as `origin` only when provided or requested.
+- Active surfaces: not selected yet.
+- Deferred surfaces: not selected yet.
+- Backend/API: decide after intake; include it when the active client surfaces need auth, persistence, or server-side business logic.
+- Deployment/release: local-only until the user explicitly asks for deployment; selected provider and release targets not selected yet.
+- Validation: run only the smallest meaningful checks for active surfaces, plus shared contract/backend checks when those layers are touched.
+<!-- PROJECT_FOCUS_END -->
+
+If the user later asks to work on a deferred surface, update this block and `AGENTS.md` first, remove or rewrite the deferred note in that surface's README, then set up and validate that surface normally.
+
+## Repository Remote Policy
+
+- During first-run bootstrap, inspect `git remote -v` before any branch, commit, push, or PR workflow.
+- This repository is normally used as a template for a new project, not as a source for pull requests back to the template. If `origin` points to the template repository and the user has not explicitly said they are contributing to the template, remove it with `git remote remove origin`.
+- Add the user's own GitHub repository as `origin` only when the user provides a URL or asks you to create/publish the project. If no destination is chosen, leave the project without `origin` and report that publishing is not configured.
+- Do not push, open PRs, or configure deployment from the template remote by accident.
 
 ## Task Mode
 
 Classify the task before editing and scale the process to the task.
 
+- `Review`: read-only evaluation, explanation, architecture review, or recommendations when the user has not asked for changes.
 - `Direct`: cosmetic, copy, spacing, styling, comments, or obvious local edits that do not change runtime behavior.
 - `Investigation`: diagnosis or debugging when the root cause or failure path is not yet clear.
 - `TDD-first`: behavior, logic, contracts, auth, permissions, persistence, validation, query semantics, routing, state transitions, concurrency, or non-trivial user-facing changes.
+
+For `Review` tasks, inspect relevant evidence, cite concrete files or behavior, report risks and recommendations, and do not edit files unless the user asks for implementation.
 
 For `Direct` tasks, inspect the affected file and nearby usage, make the smallest coherent change, and run narrow validation when cheap and relevant.
 
 For `Investigation` tasks, reproduce or trace the observed failure path when possible, use vertical and horizontal research before patching, identify the owning layer, and stop to reframe if two attempts fail to move the primary signal.
 
-For `TDD-first` tasks, prefer the highest-value failing test already supported by the repo. Start from user-visible or contract-level behavior when possible, add narrow unit tests for isolated high-branching pure rules, and keep the loop strict: failing case, minimal implementation, green, next case. If no suitable automated test exists and adding one is disproportionate, say so and use the fastest reliable validation path.
+For `TDD-first` tasks, choose the highest-value failing test boundary already supported by the repo. Before implementation, identify the important success, failure, boundary, permission, persistence, and recovery edge cases; cover every important edge case with an automated test at the cheapest boundary that still catches the failure. Prefer E2E when the risk is user-visible and spans client/backend behavior, integration tests when behavior belongs to API/auth/persistence/contracts, and unit tests only when they provide clear extra signal for pure rules, schema matrices, security/token helpers, env parsing, or client retry/cache behavior. Keep the loop strict: failing case, minimal implementation, green, next case. If no suitable automated test exists and adding one is disproportionate, say so and use the fastest reliable validation path.
 
 ## Acceptance Contract
 
@@ -88,12 +113,10 @@ Do enough research to find the owner layer. Do not turn research into wandering.
 
 ## Root Cause Discipline
 
-- Do not patch symptoms before understanding the failure path.
-- Fix the owner layer, not the nearest visible symptom.
+- Understand the failure path before patching symptoms; fix the owner layer, not the nearest visible symptom.
 - If a bug appears in a child component, hook, helper, or leaf function, inspect the parent or owning layer before adding local compensation.
-- Reject child-side fallbacks, defensive state repair, duplicated decision logic, and local branching that merely hides an upstream mistake.
-- One-file fixes for cross-layer behavior are suspicious until proven otherwise.
-- Do not preserve a broken decision with guards, flags, wrappers, or duplicated logic.
+- Reject child-side fallbacks, defensive state repair, duplicated decision logic, flags, or wrappers that hide an upstream mistake.
+- Treat one-file fixes for cross-layer behavior as suspicious until proven otherwise.
 - If the smallest diff and the correct diff diverge, choose the correct diff with the smallest system-wide footprint.
 - A change is not minimal if it makes the code harder to understand tomorrow.
 - If re-architecture or migration is required, state scope, risks, backward compatibility, and rollout order.
@@ -136,6 +159,8 @@ When touching a boundary, inspect and align directly coupled code.
 - Run the smallest meaningful validation that covers the changed surface.
 - Prefer cheap gates first: targeted tests, typecheck, lint, build, focused scripts, then wider suites only when needed.
 - Use test infrastructure already present in the repository. Do not invent a heavier test layer unless clearly justified.
+- For non-trivial behavior, explicitly account for important edge cases in the test plan or acceptance contract; if an important edge case is not automated, explain why.
+- Before adding or expanding E2E, apply an ROI check: the test should prevent a plausible user-visible regression, use stable selectors and isolated test data, avoid brittle timing or text coupling, and earn its maintenance cost.
 - Validate after implementation and before closing the task.
 - If contracts or shared schemas change, validate both producer and consumer sides.
 - Treat non-zero exits, runtime errors, unhandled promise rejections, failed assertions, type errors, lint errors, build failures, and timeouts as failed validation.
@@ -187,7 +212,7 @@ When touching a boundary, inspect and align directly coupled code.
 
 ## Completion Protocol
 
-At the end of every implementation or investigation, report:
+At the end of every implementation or investigation, report the items that matter for the task. For `Direct` or read-only `Review` tasks, compress this to the relevant fields only.
 
 - what changed and why;
 - root cause, when identified;
