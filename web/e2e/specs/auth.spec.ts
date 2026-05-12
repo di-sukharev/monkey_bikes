@@ -353,6 +353,28 @@ test('manufacturer submits a bicycle and admin publishes it to the catalog', asy
   await page.getByLabel('Cancellation comment').fill('Schedule changed.')
   await page.getByRole('button', { name: 'Cancel request' }).click()
   await expect(page.getByText('Request cancelled')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Logout' }).click()
+  await page.goto('/')
+  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
+  await page.getByLabel('Email').fill(adminEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Login' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+
+  await page.goto('/admin/payments')
+  await page.getByRole('row').filter({ hasText: renterEmail }).first().getByRole('link', { name: 'Open' }).click()
+  await expect(page.getByRole('heading', { name: 'Admin order' })).toBeVisible()
+  await expect(page.getByText('paid', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Issue order' }).click()
+  await expect(page.getByText('Order issued')).toBeVisible()
+  await expect(page.getByText('Issue', { exact: true }).first()).toBeVisible()
+  await page.getByLabel(`Return safety action for ${bicycleTitle}`).selectOption('maintenance')
+  await page.getByLabel(`Return checklist comment for ${bicycleTitle}`).fill('Tire wear noticed.')
+  await page.getByRole('button', { name: 'Return order' }).click()
+  await expect(page.getByText('Order returned')).toBeVisible()
+  await expect(page.getByText('Return', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('maintenance', { exact: true }).first()).toBeVisible()
 })
 
 async function registerUser(email: string, role: 'manufacturer' | 'user' = 'user') {

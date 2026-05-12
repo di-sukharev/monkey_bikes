@@ -31,7 +31,6 @@ const adminOperationalSourceStatuses: BicycleStatus[] = [
   'hidden',
   'maintenance',
   'reserved',
-  'rented',
 ]
 
 export const adminBicycleStatusTargets: AdminBicycleStatusTarget[] = [

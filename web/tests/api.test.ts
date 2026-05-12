@@ -321,11 +321,12 @@ test('ApiClient sends admin manufacturer moderation filters and decisions', asyn
 
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input))
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined
     calls.push({
       path: url.pathname,
       search: url.search,
       method: init?.method,
-      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      body,
     })
 
     if (url.pathname === '/api/admin/manufacturers') {
@@ -553,11 +554,12 @@ test('ApiClient creates and lists rental requests without client money fields', 
 
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input))
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined
     calls.push({
       path: url.pathname,
       search: url.search,
       method: init?.method,
-      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      body,
     })
 
     if (url.pathname === '/api/orders' && init?.method === 'POST') {
@@ -640,11 +642,12 @@ test('ApiClient manages order cancellation and admin status transitions', async 
 
   globalThis.fetch = async (input, init) => {
     const url = new URL(String(input))
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined
     calls.push({
       path: url.pathname,
       search: url.search,
       method: init?.method,
-      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      body,
     })
 
     if (url.pathname === '/api/orders/order_1/cancel') {
@@ -668,7 +671,13 @@ test('ApiClient manages order cancellation and admin status transitions', async 
     }
 
     if (url.pathname === '/api/admin/orders/order_1/status') {
-      return json({ order: adminOrderResponse('confirmed') }, 200)
+      return json({
+        order: adminOrderResponse(
+          body && typeof body === 'object' && 'status' in body && body.status === 'issued'
+            ? 'issued'
+            : 'confirmed',
+        ),
+      }, 200)
     }
 
     return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
@@ -688,11 +697,27 @@ test('ApiClient manages order cancellation and admin status transitions', async 
     status: 'confirmed',
     comment: '',
   })
+  const issued = await client.updateAdminOrderStatus('order_1', {
+    status: 'issued',
+    checklists: [
+      {
+        bicycleId: 'bike_1',
+        frameCondition: 'ok',
+        wheelsCondition: 'ok',
+        handlebarCondition: 'ok',
+        saddleCondition: 'ok',
+        brakesCondition: 'ok',
+        exteriorCondition: 'worn',
+        comment: '',
+      },
+    ],
+  })
 
   expect(cancelled.order.status).toBe('cancelled')
   expect(list.total).toBe(1)
   expect(detail.order.availabilityWarnings[0]?.type).toBe('technical_limits')
   expect(confirmed.order.status).toBe('confirmed')
+  expect(issued.order.status).toBe('issued')
   expect(calls).toEqual([
     {
       path: '/api/orders/order_1/cancel',
@@ -716,7 +741,29 @@ test('ApiClient manages order cancellation and admin status transitions', async 
       path: '/api/admin/orders/order_1/status',
       search: '',
       method: 'PATCH',
-      body: { status: 'confirmed', comment: null },
+      body: { status: 'confirmed', comment: null, checklists: [] },
+    },
+    {
+      path: '/api/admin/orders/order_1/status',
+      search: '',
+      method: 'PATCH',
+      body: {
+        status: 'issued',
+        comment: null,
+        checklists: [
+          {
+            bicycleId: 'bike_1',
+            frameCondition: 'ok',
+            wheelsCondition: 'ok',
+            handlebarCondition: 'ok',
+            saddleCondition: 'ok',
+            brakesCondition: 'ok',
+            exteriorCondition: 'worn',
+            safetyAction: 'none',
+            comment: null,
+          },
+        ],
+      },
     },
   ])
 })
@@ -1089,7 +1136,9 @@ function paymentResponse(type: 'deposit' | 'rent', status: 'cancelled' | 'failed
   }
 }
 
-function adminOrderResponse(status: 'cancelled' | 'confirmed' | 'request' = 'request') {
+function adminOrderResponse(
+  status: 'cancelled' | 'confirmed' | 'issued' | 'request' | 'returned' = 'request',
+) {
   const order = orderResponse()
 
   return {
@@ -1121,6 +1170,7 @@ function adminOrderResponse(status: 'cancelled' | 'confirmed' | 'request' = 'req
               createdAt: '2026-05-12T11:00:00.000Z',
             },
           ],
+    checklists: [],
     availabilityWarnings: [
       {
         type: 'technical_limits',

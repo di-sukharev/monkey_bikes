@@ -93,6 +93,31 @@ enum PaymentStatus {
   @@map("payment_status")
 }
 
+enum OrderChecklistType {
+  issue
+  return
+
+  @@map("order_checklist_type")
+}
+
+enum OrderChecklistCondition {
+  damaged
+  not_applicable
+  ok
+  unsafe
+  worn
+
+  @@map("order_checklist_condition")
+}
+
+enum OrderChecklistBicycleAction {
+  hidden
+  maintenance
+  none
+
+  @@map("order_checklist_bicycle_action")
+}
+
 model User {
   id                  String               @id @default(cuid())
   email               String               @unique
@@ -106,6 +131,7 @@ model User {
   manufacturerProfile ManufacturerProfile?
   orders              Order[]
   orderStatusHistory  OrderStatusHistory[]
+  orderChecklists     OrderChecklist[]
 
   @@index([role])
   @@index([status])
@@ -181,6 +207,7 @@ model Bicycle {
   updatedAt                   DateTime            @updatedAt
   manufacturerProfile         ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
   orderItems                  OrderItem[]
+  orderChecklists             OrderChecklist[]
 
   @@index([manufacturerProfileId, createdAt])
   @@index([status, createdAt])
@@ -214,6 +241,7 @@ model Order {
   items                      OrderItem[]
   statusHistory              OrderStatusHistory[]
   payments                   Payment[]
+  checklists                 OrderChecklist[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -282,4 +310,32 @@ model Payment {
   @@index([orderId, type, status])
   @@index([status, createdAt])
   @@map("payments")
+}
+
+model OrderChecklist {
+  id                 String                       @id @default(cuid())
+  orderId            String
+  bicycleId          String
+  type               OrderChecklistType
+  frameCondition     OrderChecklistCondition
+  wheelsCondition    OrderChecklistCondition
+  handlebarCondition OrderChecklistCondition
+  saddleCondition    OrderChecklistCondition
+  brakesCondition    OrderChecklistCondition
+  exteriorCondition  OrderChecklistCondition
+  safetyAction       OrderChecklistBicycleAction @default(none)
+  comment            String?
+  checkedByUserId    String
+  checkedAt          DateTime                    @default(now())
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt
+  order              Order                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  bicycle            Bicycle                     @relation(fields: [bicycleId], references: [id], onDelete: Restrict)
+  checkedByUser      User                        @relation(fields: [checkedByUserId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, bicycleId, type])
+  @@index([orderId, type])
+  @@index([bicycleId, type, checkedAt])
+  @@index([checkedByUserId, checkedAt])
+  @@map("order_checklists")
 }

@@ -60,7 +60,6 @@ const adminOperationalStatuses: BicycleStatus[] = [
   'hidden',
   'maintenance',
   'reserved',
-  'rented',
 ]
 
 export class BicycleService {

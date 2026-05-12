@@ -41,6 +41,7 @@ describe('bicycle UI status rules', () => {
       'maintenance',
       'archived',
     ])
+    expect(adminBicycleStatusOptionsFor('rented', 'approved')).toEqual([])
   })
 
   test('does not expose publish actions for bicycles owned by non-approved manufacturers', () => {

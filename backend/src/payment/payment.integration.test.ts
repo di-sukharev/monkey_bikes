@@ -269,22 +269,6 @@ maybeDescribe('payment API integration', () => {
     expect(disabledDevEndpointBody.error.code).toBe('PAYMENT_DEV_ENDPOINTS_DISABLED')
   })
 
-  test('does not expose order issuance before the issuance flow owns payment gating', async () => {
-    const admin = await createAdmin('payment-issue-admin@example.com')
-    const user = await registerUser('payment-issue-owner@example.com', 'Owner')
-    const bicycle = await createAvailableBicycle('Issue Guard Payment Maker')
-    const request = await createOrder(user.accessToken, [bicycle.id])
-    expect((await confirmOrder(admin.accessToken, request.order.id)).status).toBe(200)
-
-    const issue = await app.request(`/api/admin/orders/${request.order.id}/status`, {
-      method: 'PATCH',
-      headers: authJsonHeaders(admin.accessToken),
-      body: JSON.stringify({ status: 'issued' }),
-    })
-    expect(issue.status).toBe(400)
-    expect((await prisma.order.findUniqueOrThrow({ where: { id: request.order.id } })).status).toBe('confirmed')
-  })
-
   async function registerUser(
     email: string,
     options: string | { displayName?: string; role?: 'manufacturer' | 'user' } = {},

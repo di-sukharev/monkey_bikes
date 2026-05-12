@@ -2,7 +2,9 @@ import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   AdminOrderDto,
+  AdminOrderStatusUpdateInput,
   AdminOrderWarningDto,
+  BicycleStatus,
   OrderDto,
   OrderStatus,
   PaymentType,
@@ -58,6 +60,10 @@ import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/use-auth'
 import { OrderForm } from './order-form'
+import {
+  AdminOrderChecklistTransitionPanel,
+  AdminOrderChecklistsTable,
+} from './admin-order-checklists'
 import {
   OrderPaymentsPanel,
   PaymentStatusSummary,
@@ -826,17 +832,18 @@ export function AdminOrderDetailPage() {
     queryFn: () => auth.api.adminOrder(id),
   })
   const updateStatus = useMutation({
-    mutationFn: (status: 'cancelled' | 'confirmed') =>
-      auth.api.updateAdminOrderStatus(id, {
-        status,
-        comment,
-      }),
+    mutationFn: (input: AdminOrderStatusUpdateInput) =>
+      auth.api.updateAdminOrderStatus(id, input),
     onSuccess: async (response) => {
       setNotice(`Order ${response.order.status}`)
       setComment('')
       queryClient.setQueryData(orderAdminDetailQueryKey(id), response)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
       await queryClient.invalidateQueries({ queryKey: ['orders', response.order.userId] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'payments'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
+      await queryClient.invalidateQueries({ queryKey: ['manufacturer', 'bicycles'] })
     },
   })
 
@@ -882,7 +889,11 @@ export function AdminOrderDetailPage() {
   }
 
   const requestPending = order.status === 'request'
+  const confirmed = order.status === 'confirmed'
+  const issued = order.status === 'issued'
+  const cancellationAvailable = requestPending || confirmed
   const errorWarnings = order.availabilityWarnings.filter((warning) => warning.severity === 'error')
+  const issueBlockedByWarnings = confirmed && errorWarnings.length > 0
 
   return (
     <section className={cn(pageShellClass, 'grid gap-4')}>
@@ -923,11 +934,19 @@ export function AdminOrderDetailPage() {
             </Alert>
           )}
 
-          {errorWarnings.length > 0 && (
+          {requestPending && errorWarnings.length > 0 && (
             <Alert variant="destructive">
               <CircleAlertIcon />
               <AlertTitle>Confirmation is blocked</AlertTitle>
               <AlertDescription>Resolve availability or catalog state conflicts before confirming.</AlertDescription>
+            </Alert>
+          )}
+
+          {issueBlockedByWarnings && order.paymentRequirementsMet && (
+            <Alert variant="destructive">
+              <CircleAlertIcon />
+              <AlertTitle>Issuance is blocked</AlertTitle>
+              <AlertDescription>Resolve live bicycle or manufacturer state conflicts before issuing.</AlertDescription>
             </Alert>
           )}
 
@@ -962,14 +981,38 @@ export function AdminOrderDetailPage() {
 
           <OrderPaymentsPanel order={order} mode="admin" />
 
+          <AdminOrderChecklistsTable order={order} />
+
+          {confirmed && order.paymentRequirementsMet && !issueBlockedByWarnings && (
+            <AdminOrderChecklistTransitionPanel
+              key={`${order.id}-issue`}
+              disabled={updateStatus.isPending}
+              order={order}
+              type="issue"
+              onSubmit={(input) => updateStatus.mutate(input)}
+            />
+          )}
+
+          {issued && (
+            <AdminOrderChecklistTransitionPanel
+              key={`${order.id}-return`}
+              disabled={updateStatus.isPending}
+              order={order}
+              type="return"
+              onSubmit={(input) => updateStatus.mutate(input)}
+            />
+          )}
+
           <StatusHistoryTable order={order} />
 
-          {requestPending && (
+          {cancellationAvailable && (
             <section className="grid gap-3 border-t pt-4">
               <div className="grid gap-1">
                 <h2 className="text-base font-semibold">Decision</h2>
                 <p className="text-sm text-muted-foreground">
-                  Confirm only when availability, logistics, contacts, and safety limits are acceptable.
+                  {requestPending
+                    ? 'Confirm only when availability, logistics, contacts, and safety limits are acceptable.'
+                    : 'Confirmed orders can still be cancelled before issue when handoff is no longer possible.'}
                 </p>
               </div>
               <Textarea
@@ -985,19 +1028,21 @@ export function AdminOrderDetailPage() {
                   type="button"
                   variant="outline"
                   disabled={updateStatus.isPending || comment.trim().length === 0}
-                  onClick={() => updateStatus.mutate('cancelled')}
+                  onClick={() => updateStatus.mutate({ status: 'cancelled', comment })}
                 >
                   <XCircleIcon data-icon="inline-start" />
                   Cancel
                 </Button>
-                <Button
-                  type="button"
-                  disabled={updateStatus.isPending || errorWarnings.length > 0}
-                  onClick={() => updateStatus.mutate('confirmed')}
-                >
-                  <ShieldCheckIcon data-icon="inline-start" />
-                  Confirm
-                </Button>
+                {requestPending && (
+                  <Button
+                    type="button"
+                    disabled={updateStatus.isPending || errorWarnings.length > 0}
+                    onClick={() => updateStatus.mutate({ status: 'confirmed', comment })}
+                  >
+                    <ShieldCheckIcon data-icon="inline-start" />
+                    Confirm
+                  </Button>
+                )}
               </div>
             </section>
           )}
@@ -1103,7 +1148,7 @@ function SelectedAdminOrderItemsTable({ order }: { order: AdminOrderDto }) {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant={item.liveBicycle.status === 'available' ? 'secondary' : 'destructive'}>
+                  <Badge variant={liveBicycleStatusVariant(order.status, item.liveBicycle.status)}>
                     {item.liveBicycle.status}
                   </Badge>
                   <Badge variant={item.liveBicycle.manufacturerStatus === 'approved' ? 'secondary' : 'destructive'}>
@@ -1129,6 +1174,16 @@ function SelectedAdminOrderItemsTable({ order }: { order: AdminOrderDto }) {
       </Table>
     </div>
   )
+}
+
+function liveBicycleStatusVariant(
+  orderStatus: OrderStatus,
+  bicycleStatus: BicycleStatus,
+): 'default' | 'outline' | 'secondary' | 'destructive' {
+  if (bicycleStatus === 'available') return 'secondary'
+  if (orderStatus === 'issued' && bicycleStatus === 'rented') return 'secondary'
+  if (orderStatus === 'returned' && (bicycleStatus === 'hidden' || bicycleStatus === 'maintenance')) return 'outline'
+  return 'destructive'
 }
 
 function AdminWarnings({ warnings }: { warnings: AdminOrderWarningDto[] }) {

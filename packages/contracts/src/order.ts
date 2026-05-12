@@ -98,10 +98,35 @@ export const orderCancelRequestSchema = z
   })
   .strict()
 
+export const orderChecklistTypeSchema = z.enum(['issue', 'return'])
+export const orderChecklistConditionSchema = z.enum([
+  'damaged',
+  'not_applicable',
+  'ok',
+  'unsafe',
+  'worn',
+])
+export const orderChecklistBicycleActionSchema = z.enum(['hidden', 'maintenance', 'none'])
+
+export const adminOrderChecklistInputSchema = z
+  .object({
+    bicycleId: z.string().trim().min(1),
+    frameCondition: orderChecklistConditionSchema,
+    wheelsCondition: orderChecklistConditionSchema,
+    handlebarCondition: orderChecklistConditionSchema,
+    saddleCondition: orderChecklistConditionSchema,
+    brakesCondition: orderChecklistConditionSchema,
+    exteriorCondition: orderChecklistConditionSchema,
+    safetyAction: orderChecklistBicycleActionSchema.optional().default('none'),
+    comment: nullableTrimmedString(2_000).optional().default(null),
+  })
+  .strict()
+
 export const adminOrderStatusUpdateRequestSchema = z
   .object({
-    status: z.enum(['cancelled', 'confirmed']),
+    status: z.enum(['cancelled', 'confirmed', 'issued', 'returned']),
     comment: nullableTrimmedString(1_000).optional().default(null),
+    checklists: z.array(adminOrderChecklistInputSchema).optional().default([]),
   })
   .strict()
   .refine(
@@ -113,6 +138,36 @@ export const adminOrderStatusUpdateRequestSchema = z
       path: ['comment'],
     },
   )
+  .refine(
+    (value) =>
+      (value.status !== 'issued' && value.status !== 'returned') ||
+      value.checklists.length > 0,
+    {
+      message: 'Checklists are required for this order transition',
+      path: ['checklists'],
+    },
+  )
+  .superRefine((value, context) => {
+    if (value.status !== 'issued' && value.status !== 'returned' && value.checklists.length > 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Checklists are only accepted for issue and return transitions',
+        path: ['checklists'],
+      })
+    }
+
+    if (value.status === 'issued') {
+      value.checklists.forEach((checklist, index) => {
+        if (checklist.safetyAction !== 'none') {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Issue checklists cannot change bicycle catalog status',
+            path: ['checklists', index, 'safetyAction'],
+          })
+        }
+      })
+    }
+  })
 
 export const orderBicycleSummarySchema = z.object({
   id: z.string(),
@@ -178,6 +233,26 @@ export const orderStatusHistorySchema = z.object({
   createdAt: z.string().datetime(),
 })
 
+export const orderChecklistSchema = z.object({
+  id: z.string(),
+  orderId: z.string(),
+  bicycleId: z.string(),
+  type: orderChecklistTypeSchema,
+  frameCondition: orderChecklistConditionSchema,
+  wheelsCondition: orderChecklistConditionSchema,
+  handlebarCondition: orderChecklistConditionSchema,
+  saddleCondition: orderChecklistConditionSchema,
+  brakesCondition: orderChecklistConditionSchema,
+  exteriorCondition: orderChecklistConditionSchema,
+  safetyAction: orderChecklistBicycleActionSchema,
+  comment: z.string().nullable(),
+  checkedByUserId: z.string(),
+  checkedByUser: orderUserSummarySchema,
+  checkedAt: z.string().datetime(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+})
+
 export const adminOrderLiveBicycleSchema = z.object({
   id: z.string(),
   status: bicycleStatusSchema,
@@ -214,6 +289,7 @@ export const adminOrderSchema = orderSchema.extend({
   user: orderUserSummarySchema,
   items: z.array(adminOrderItemSchema).min(1),
   statusHistory: z.array(orderStatusHistorySchema),
+  checklists: z.array(orderChecklistSchema),
   availabilityWarnings: z.array(adminOrderWarningSchema),
 })
 
@@ -256,6 +332,11 @@ export type AdminOrderStatusUpdateInput = z.input<
 export type OrderDto = z.infer<typeof orderSchema>
 export type OrderItemDto = z.infer<typeof orderItemSchema>
 export type OrderStatusHistoryDto = z.infer<typeof orderStatusHistorySchema>
+export type OrderChecklistType = z.infer<typeof orderChecklistTypeSchema>
+export type OrderChecklistCondition = z.infer<typeof orderChecklistConditionSchema>
+export type OrderChecklistBicycleAction = z.infer<typeof orderChecklistBicycleActionSchema>
+export type AdminOrderChecklistInput = z.output<typeof adminOrderChecklistInputSchema>
+export type OrderChecklistDto = z.infer<typeof orderChecklistSchema>
 export type AdminOrderWarningDto = z.infer<typeof adminOrderWarningSchema>
 export type AdminOrderDto = z.infer<typeof adminOrderSchema>
 export type OrderResponse = z.infer<typeof orderResponseSchema>

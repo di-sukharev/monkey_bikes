@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
   adminBicycleModerationRequestSchema,
   adminBicycleSchema,
+  adminOrderChecklistInputSchema,
   adminManufacturerStatusUpdateRequestSchema,
   adminOrderSchema,
   adminOrderStatusUpdateRequestSchema,
@@ -462,7 +463,24 @@ describe('contracts', () => {
     })).toEqual({
       status: 'confirmed',
       comment: null,
+      checklists: [],
     })
+    expect(() =>
+      adminOrderStatusUpdateRequestSchema.parse({
+        status: 'confirmed',
+        checklists: [
+          {
+            bicycleId: 'bike_1',
+            frameCondition: 'ok',
+            wheelsCondition: 'ok',
+            handlebarCondition: 'ok',
+            saddleCondition: 'ok',
+            brakesCondition: 'not_applicable',
+            exteriorCondition: 'ok',
+          },
+        ],
+      }),
+    ).toThrow()
 
     expect(adminOrderStatusUpdateRequestSchema.parse({
       status: 'cancelled',
@@ -475,8 +493,72 @@ describe('contracts', () => {
       }),
     ).toThrow()
 
+    const issueTransition = adminOrderStatusUpdateRequestSchema.parse({
+      status: 'issued',
+      checklists: [
+        {
+          bicycleId: 'bike_1',
+          frameCondition: 'ok',
+          wheelsCondition: 'ok',
+          handlebarCondition: 'ok',
+          saddleCondition: 'ok',
+          brakesCondition: 'not_applicable',
+          exteriorCondition: 'worn',
+          comment: 'Ready for handoff.',
+        },
+      ],
+    })
+    expect(issueTransition.checklists[0]?.safetyAction).toBe('none')
+    expect(() =>
+      adminOrderStatusUpdateRequestSchema.parse({
+        status: 'issued',
+        checklists: [
+          {
+            bicycleId: 'bike_1',
+            frameCondition: 'ok',
+            wheelsCondition: 'ok',
+            handlebarCondition: 'ok',
+            saddleCondition: 'ok',
+            brakesCondition: 'not_applicable',
+            exteriorCondition: 'ok',
+            safetyAction: 'maintenance',
+          },
+        ],
+      }),
+    ).toThrow()
+    expect(adminOrderChecklistInputSchema.parse({
+      bicycleId: ' bike_1 ',
+      frameCondition: 'ok',
+      wheelsCondition: 'ok',
+      handlebarCondition: 'ok',
+      saddleCondition: 'ok',
+      brakesCondition: 'not_applicable',
+      exteriorCondition: 'unsafe',
+      safetyAction: 'maintenance',
+      comment: '',
+    })).toEqual({
+      bicycleId: 'bike_1',
+      frameCondition: 'ok',
+      wheelsCondition: 'ok',
+      handlebarCondition: 'ok',
+      saddleCondition: 'ok',
+      brakesCondition: 'not_applicable',
+      exteriorCondition: 'unsafe',
+      safetyAction: 'maintenance',
+      comment: null,
+    })
+    expect(() =>
+      adminOrderStatusUpdateRequestSchema.parse({
+        status: 'returned',
+        checklists: [],
+      }),
+    ).toThrow()
+
     expect(apiErrorCodeSchema.parse('ORDER_AVAILABILITY_CONFLICT')).toBe(
       'ORDER_AVAILABILITY_CONFLICT',
+    )
+    expect(apiErrorCodeSchema.parse('PAYMENT_REQUIREMENTS_NOT_MET')).toBe(
+      'PAYMENT_REQUIREMENTS_NOT_MET',
     )
 
     const adminOrder = adminOrderSchema.parse({
@@ -551,6 +633,32 @@ describe('contracts', () => {
           },
           comment: 'Approved.',
           createdAt: '2026-05-12T11:00:00.000Z',
+        },
+      ],
+      checklists: [
+        {
+          id: 'checklist_1',
+          orderId: 'order_1',
+          bicycleId: 'bike_1',
+          type: 'issue',
+          frameCondition: 'ok',
+          wheelsCondition: 'ok',
+          handlebarCondition: 'ok',
+          saddleCondition: 'ok',
+          brakesCondition: 'not_applicable',
+          exteriorCondition: 'worn',
+          safetyAction: 'none',
+          comment: 'Ready for handoff.',
+          checkedByUserId: 'admin_1',
+          checkedByUser: {
+            id: 'admin_1',
+            email: 'admin@example.com',
+            displayName: 'Admin',
+            status: 'active',
+          },
+          checkedAt: '2026-05-12T11:05:00.000Z',
+          createdAt: '2026-05-12T11:05:00.000Z',
+          updatedAt: '2026-05-12T11:05:00.000Z',
         },
       ],
       availabilityWarnings: [

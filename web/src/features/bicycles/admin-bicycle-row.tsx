@@ -93,6 +93,11 @@ export function AdminBicycleRow({
               </NativeSelectOption>
             ))}
           </NativeSelect>
+          {bicycle.status === 'rented' && (
+            <span className="text-sm text-muted-foreground">
+              Rented bicycles change status through the return checklist.
+            </span>
+          )}
         </div>
       </TableCell>
     </TableRow>

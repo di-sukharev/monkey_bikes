@@ -1,8 +1,10 @@
 import type {
+  AdminOrderChecklistInput,
   AdminOrderDto,
   AdminOrdersQuery,
   AdminOrderStatusUpdateRequest,
   AdminOrderWarningDto,
+  OrderChecklistDto,
   OrderCancelRequest,
   OrderCreateRequest,
   OrderDto,
@@ -93,6 +95,26 @@ type OrderStatusHistoryRecord = {
   createdAt: Date
 }
 
+type OrderChecklistRecord = {
+  id: string
+  orderId: string
+  bicycleId: string
+  type: 'issue' | 'return'
+  frameCondition: 'damaged' | 'not_applicable' | 'ok' | 'unsafe' | 'worn'
+  wheelsCondition: 'damaged' | 'not_applicable' | 'ok' | 'unsafe' | 'worn'
+  handlebarCondition: 'damaged' | 'not_applicable' | 'ok' | 'unsafe' | 'worn'
+  saddleCondition: 'damaged' | 'not_applicable' | 'ok' | 'unsafe' | 'worn'
+  brakesCondition: 'damaged' | 'not_applicable' | 'ok' | 'unsafe' | 'worn'
+  exteriorCondition: 'damaged' | 'not_applicable' | 'ok' | 'unsafe' | 'worn'
+  safetyAction: 'hidden' | 'maintenance' | 'none'
+  comment: string | null
+  checkedByUserId: string
+  checkedByUser: OrderUserSummaryRecord
+  checkedAt: Date
+  createdAt: Date
+  updatedAt: Date
+}
+
 type OrderRecord = {
   id: string
   userId: string
@@ -121,6 +143,7 @@ type AdminOrderRecord = Omit<OrderRecord, 'items'> & {
   user: OrderUserSummaryRecord
   items: AdminOrderItemRecord[]
   statusHistory: OrderStatusHistoryRecord[]
+  checklists: OrderChecklistRecord[]
 }
 
 type AvailabilityConflict = {
@@ -168,6 +191,14 @@ const adminOrderInclude = {
       },
     },
     orderBy: { createdAt: 'asc' as const },
+  },
+  checklists: {
+    include: {
+      checkedByUser: {
+        select: orderUserSummarySelect,
+      },
+    },
+    orderBy: [{ checkedAt: 'asc' as const }, { id: 'asc' as const }],
   },
   payments: {
     orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
@@ -437,6 +468,14 @@ export class OrderService {
       return this.confirmAdminOrder(actor, id, input)
     }
 
+    if (input.status === 'issued') {
+      return this.issueAdminOrder(actor, id, input)
+    }
+
+    if (input.status === 'returned') {
+      return this.returnAdminOrder(actor, id, input)
+    }
+
     return this.cancelAdminOrder(actor, id, input)
   }
 
@@ -540,18 +579,18 @@ export class OrderService {
         throw new AppError(404, 'NOT_FOUND', 'Order not found')
       }
 
-      if (current.status !== 'request') {
+      if (current.status !== 'request' && current.status !== 'confirmed') {
         throw new AppError(
           409,
           'ORDER_STATUS_TRANSITION_NOT_ALLOWED',
-          'Only rental requests can be cancelled by an administrator in this flow',
+          'Only rental requests or confirmed orders can be cancelled by an administrator in this flow',
         )
       }
 
       const updated = await tx.order.updateMany({
         where: {
           id: current.id,
-          status: 'request',
+          status: current.status,
         },
         data: {
           status: 'cancelled',
@@ -570,8 +609,193 @@ export class OrderService {
       await tx.orderStatusHistory.create({
         data: {
           orderId: current.id,
-          fromStatus: 'request',
+          fromStatus: current.status,
           toStatus: 'cancelled',
+          changedByUserId: actor.id,
+          comment: input.comment,
+        },
+      })
+
+      return tx.order.findUniqueOrThrow({
+        where: { id: current.id },
+        include: adminOrderInclude,
+      })
+    })
+
+    return {
+      order: await this.toAdminOrderDto(order),
+    }
+  }
+
+  private async issueAdminOrder(
+    actor: AuthenticatedUser,
+    id: string,
+    input: AdminOrderStatusUpdateRequest,
+  ) {
+    const order = await this.runOrderTransition(async (tx) => {
+      const current = await tx.order.findUnique({
+        where: { id },
+        include: adminOrderInclude,
+      })
+
+      if (!current) {
+        throw new AppError(404, 'NOT_FOUND', 'Order not found')
+      }
+
+      if (current.status !== 'confirmed') {
+        throw new AppError(
+          409,
+          'ORDER_STATUS_TRANSITION_NOT_ALLOWED',
+          'Only confirmed orders can be issued',
+        )
+      }
+
+      const liveBicycles = await lockOrderBicycles(tx, current.items.map((item) => item.bicycleId))
+      const unavailableWarnings = buildLiveAvailabilityWarnings(current, liveBicycles)
+        .filter((warning) => warning.severity === 'error')
+
+      if (unavailableWarnings.length > 0) {
+        throw new AppError(
+          409,
+          'BICYCLE_NOT_AVAILABLE',
+          'Selected bicycles are no longer available for issuance',
+          { warnings: unavailableWarnings },
+        )
+      }
+
+      const conflicts = await findAvailabilityConflicts(tx, current)
+      if (conflicts.length > 0) {
+        throw new AppError(
+          409,
+          'ORDER_AVAILABILITY_CONFLICT',
+          'Selected bicycles are unavailable for these dates',
+          { conflicts },
+        )
+      }
+
+      if (!paymentRequirementsMet(current.payments)) {
+        throw new AppError(
+          409,
+          'PAYMENT_REQUIREMENTS_NOT_MET',
+          'Rent and deposit payments must be successful before issuing the order',
+        )
+      }
+
+      const checklists = requiredTransitionChecklists(current, input.checklists)
+      await upsertOrderChecklists(tx, current.id, actor.id, 'issue', checklists)
+      await updateOrderBicycleStatuses(tx, current.items.map((item) => item.bicycleId), () => 'rented')
+
+      const updated = await tx.order.updateMany({
+        where: {
+          id: current.id,
+          status: 'confirmed',
+        },
+        data: {
+          status: 'issued',
+          adminComment: input.comment,
+        },
+      })
+
+      if (updated.count !== 1) {
+        throw new AppError(
+          409,
+          'ORDER_STATUS_TRANSITION_NOT_ALLOWED',
+          'Order status changed before it could be issued',
+        )
+      }
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: current.id,
+          fromStatus: 'confirmed',
+          toStatus: 'issued',
+          changedByUserId: actor.id,
+          comment: input.comment,
+        },
+      })
+
+      return tx.order.findUniqueOrThrow({
+        where: { id: current.id },
+        include: adminOrderInclude,
+      })
+    })
+
+    return {
+      order: await this.toAdminOrderDto(order),
+    }
+  }
+
+  private async returnAdminOrder(
+    actor: AuthenticatedUser,
+    id: string,
+    input: AdminOrderStatusUpdateRequest,
+  ) {
+    const order = await this.runOrderTransition(async (tx) => {
+      const current = await tx.order.findUnique({
+        where: { id },
+        include: adminOrderInclude,
+      })
+
+      if (!current) {
+        throw new AppError(404, 'NOT_FOUND', 'Order not found')
+      }
+
+      if (current.status !== 'issued') {
+        throw new AppError(
+          409,
+          'ORDER_STATUS_TRANSITION_NOT_ALLOWED',
+          'Only issued orders can be returned',
+        )
+      }
+
+      const liveBicycles = await lockOrderBicycles(tx, current.items.map((item) => item.bicycleId))
+      const unavailableWarnings = buildReturnReadinessWarnings(current, liveBicycles)
+
+      if (unavailableWarnings.length > 0) {
+        throw new AppError(
+          409,
+          'BICYCLE_NOT_AVAILABLE',
+          'Selected bicycles are no longer marked as rented for return',
+          { warnings: unavailableWarnings },
+        )
+      }
+
+      const checklists = requiredTransitionChecklists(current, input.checklists)
+      await upsertOrderChecklists(tx, current.id, actor.id, 'return', checklists)
+      await updateOrderBicycleStatuses(
+        tx,
+        current.items.map((item) => item.bicycleId),
+        (bicycleId) => {
+          const checklist = checklists.find((item) => item.bicycleId === bicycleId)
+          if (!checklist || checklist.safetyAction === 'none') return 'available'
+          return checklist.safetyAction
+        },
+      )
+
+      const updated = await tx.order.updateMany({
+        where: {
+          id: current.id,
+          status: 'issued',
+        },
+        data: {
+          status: 'returned',
+          adminComment: input.comment,
+        },
+      })
+
+      if (updated.count !== 1) {
+        throw new AppError(
+          409,
+          'ORDER_STATUS_TRANSITION_NOT_ALLOWED',
+          'Order status changed before it could be returned',
+        )
+      }
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: current.id,
+          fromStatus: 'issued',
+          toStatus: 'returned',
           changedByUserId: actor.id,
           comment: input.comment,
         },
@@ -618,14 +842,18 @@ export class OrderService {
       user: order.user,
       items: order.items.map(toAdminOrderItemDto),
       statusHistory: order.statusHistory.map(toOrderStatusHistoryDto),
+      checklists: order.checklists.map(toOrderChecklistDto),
       availabilityWarnings: await this.availabilityWarnings(order),
     }
   }
 
   private async availabilityWarnings(order: AdminOrderRecord) {
-    const conflicts = await findAvailabilityConflicts(this.db, order)
+    const orderCanStillConflict = order.status !== 'cancelled' && order.status !== 'returned'
+    const conflicts = orderCanStillConflict ? await findAvailabilityConflicts(this.db, order) : []
     return [
-      ...buildLiveAvailabilityWarnings(order, order.items.map((item) => item.bicycle)),
+      ...(orderCanStillConflict
+        ? buildLiveAvailabilityWarnings(order, order.items.map((item) => item.bicycle))
+        : []),
       ...conflicts.map((conflict): AdminOrderWarningDto => ({
         type: 'availability_conflict',
         severity: 'error',
@@ -697,25 +925,41 @@ async function lockOrderBicycles(
   return lockedBicycles
 }
 
+async function updateOrderBicycleStatuses(
+  tx: Prisma.TransactionClient,
+  bicycleIds: string[],
+  statusFor: (bicycleId: string) => 'available' | 'hidden' | 'maintenance' | 'rented',
+) {
+  for (const id of [...new Set(bicycleIds)].sort()) {
+    await tx.bicycle.update({
+      where: { id },
+      data: {
+        status: statusFor(id),
+      },
+    })
+  }
+}
+
 function buildLiveAvailabilityWarnings(
-  order: Pick<AdminOrderRecord, 'fulfillmentType' | 'items'>,
+  order: Pick<AdminOrderRecord, 'fulfillmentType' | 'items' | 'status'>,
   liveBicycles: LiveBicycleForAdminRecord[],
 ) {
   const itemsByBicycleId = new Map(order.items.map((item) => [item.bicycleId, item]))
   const warnings: AdminOrderWarningDto[] = []
+  const expectedStatus = order.status === 'issued' ? 'rented' : 'available'
 
   for (const bicycle of liveBicycles) {
     const item = itemsByBicycleId.get(bicycle.id)
     const bicycleTitle = item?.bicycleTitleSnapshot ?? null
 
-    if (bicycle.status !== 'available') {
+    if (bicycle.status !== expectedStatus) {
       warnings.push({
         type: 'bicycle_status',
         severity: 'error',
         bicycleId: bicycle.id,
         bicycleTitle,
         conflictingOrderId: null,
-        message: `${bicycleTitle ?? 'Selected bicycle'} is currently ${bicycle.status}.`,
+        message: `${bicycleTitle ?? 'Selected bicycle'} is currently ${bicycle.status}; expected ${expectedStatus}.`,
       })
     }
 
@@ -740,6 +984,31 @@ function buildLiveAvailabilityWarnings(
         message: `${bicycleTitle ?? 'Selected bicycle'} no longer supports delivery.`,
       })
     }
+  }
+
+  return warnings
+}
+
+function buildReturnReadinessWarnings(
+  order: Pick<AdminOrderRecord, 'items'>,
+  liveBicycles: LiveBicycleForAdminRecord[],
+) {
+  const itemsByBicycleId = new Map(order.items.map((item) => [item.bicycleId, item]))
+  const warnings: AdminOrderWarningDto[] = []
+
+  for (const bicycle of liveBicycles) {
+    if (bicycle.status === 'rented') continue
+
+    const item = itemsByBicycleId.get(bicycle.id)
+    const bicycleTitle = item?.bicycleTitleSnapshot ?? null
+    warnings.push({
+      type: 'bicycle_status',
+      severity: 'error',
+      bicycleId: bicycle.id,
+      bicycleTitle,
+      conflictingOrderId: null,
+      message: `${bicycleTitle ?? 'Selected bicycle'} is currently ${bicycle.status}; expected rented.`,
+    })
   }
 
   return warnings
@@ -823,6 +1092,121 @@ function toOrderStatusHistoryDto(history: OrderStatusHistoryRecord) {
     changedByUser: history.changedByUser,
     comment: history.comment,
     createdAt: history.createdAt.toISOString(),
+  }
+}
+
+function toOrderChecklistDto(checklist: OrderChecklistRecord): OrderChecklistDto {
+  return {
+    id: checklist.id,
+    orderId: checklist.orderId,
+    bicycleId: checklist.bicycleId,
+    type: checklist.type,
+    frameCondition: checklist.frameCondition,
+    wheelsCondition: checklist.wheelsCondition,
+    handlebarCondition: checklist.handlebarCondition,
+    saddleCondition: checklist.saddleCondition,
+    brakesCondition: checklist.brakesCondition,
+    exteriorCondition: checklist.exteriorCondition,
+    safetyAction: checklist.safetyAction,
+    comment: checklist.comment,
+    checkedByUserId: checklist.checkedByUserId,
+    checkedByUser: checklist.checkedByUser,
+    checkedAt: checklist.checkedAt.toISOString(),
+    createdAt: checklist.createdAt.toISOString(),
+    updatedAt: checklist.updatedAt.toISOString(),
+  }
+}
+
+function requiredTransitionChecklists(
+  order: Pick<AdminOrderRecord, 'items'>,
+  inputChecklists: AdminOrderChecklistInput[],
+) {
+  const expectedBicycleIds = new Set(order.items.map((item) => item.bicycleId))
+  const checklistsByBicycleId = new Map<string, AdminOrderChecklistInput>()
+
+  for (const checklist of inputChecklists) {
+    if (!expectedBicycleIds.has(checklist.bicycleId)) {
+      throw new AppError(
+        409,
+        'CHECKLIST_BICYCLE_MISMATCH',
+        'Checklist bicycle must belong to this order',
+      )
+    }
+
+    if (checklistsByBicycleId.has(checklist.bicycleId)) {
+      throw new AppError(
+        409,
+        'CHECKLIST_REQUIRED',
+        'Exactly one checklist is required for every order bicycle',
+      )
+    }
+
+    checklistsByBicycleId.set(checklist.bicycleId, checklist)
+  }
+
+  const missingBicycleIds = [...expectedBicycleIds]
+    .filter((bicycleId) => !checklistsByBicycleId.has(bicycleId))
+
+  if (missingBicycleIds.length > 0) {
+    throw new AppError(
+      409,
+      'CHECKLIST_REQUIRED',
+      'Exactly one checklist is required for every order bicycle',
+      { missingBicycleIds },
+    )
+  }
+
+  return order.items.map((item) => checklistsByBicycleId.get(item.bicycleId)!)
+}
+
+async function upsertOrderChecklists(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+  checkedByUserId: string,
+  type: 'issue' | 'return',
+  checklists: AdminOrderChecklistInput[],
+) {
+  const checkedAt = new Date()
+
+  for (const checklist of checklists) {
+    const safetyAction = type === 'issue' ? 'none' : checklist.safetyAction
+
+    await tx.orderChecklist.upsert({
+      where: {
+        orderId_bicycleId_type: {
+          orderId,
+          bicycleId: checklist.bicycleId,
+          type,
+        },
+      },
+      create: {
+        orderId,
+        bicycleId: checklist.bicycleId,
+        type,
+        frameCondition: checklist.frameCondition,
+        wheelsCondition: checklist.wheelsCondition,
+        handlebarCondition: checklist.handlebarCondition,
+        saddleCondition: checklist.saddleCondition,
+        brakesCondition: checklist.brakesCondition,
+        exteriorCondition: checklist.exteriorCondition,
+        safetyAction,
+        comment: checklist.comment,
+        checkedByUserId,
+        checkedAt,
+      },
+      update: {
+        frameCondition: checklist.frameCondition,
+        wheelsCondition: checklist.wheelsCondition,
+        handlebarCondition: checklist.handlebarCondition,
+        saddleCondition: checklist.saddleCondition,
+        brakesCondition: checklist.brakesCondition,
+        exteriorCondition: checklist.exteriorCondition,
+        safetyAction,
+        comment: checklist.comment,
+        checkedByUserId,
+        checkedAt,
+      },
+    })
   }
 }
 

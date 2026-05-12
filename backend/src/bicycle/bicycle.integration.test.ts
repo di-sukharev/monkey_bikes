@@ -348,6 +348,39 @@ maybeDescribe('bicycle API integration', () => {
     expect(producerUpdateArchived.status).toBe(409)
   })
 
+  test('blocks manual admin status changes for bicycles in issued orders', async () => {
+    const admin = await createAdmin('rented-status-admin@example.com')
+    const manufacturer = await createManufacturer('rented-status-maker@example.com')
+    await approveManufacturerProfile(manufacturer.user.id, 'Rented Status Maker')
+    const renter = await registerUser('rented-status-owner@example.com', 'Owner')
+
+    const bicycle = await createAndSubmitBicycle(manufacturer.accessToken, 'Rented Status Bike')
+    const approve = await app.request(`/api/admin/bicycles/${bicycle.id}/moderation`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({ decision: 'approved' }),
+    })
+    expect(approve.status).toBe(200)
+    await createIssuedOrderForBicycle(renter.user.id, bicycle.id)
+
+    const manualMaintenance = await app.request(`/api/admin/bicycles/${bicycle.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({ status: 'maintenance' }),
+    })
+    const manualMaintenanceBody = await manualMaintenance.json()
+
+    expect(manualMaintenance.status).toBe(409)
+    expect(manualMaintenanceBody.error.code).toBe('CONFLICT')
+    expect((await prisma.bicycle.findUniqueOrThrow({ where: { id: bicycle.id } })).status).toBe('rented')
+    expect(await prisma.order.count({
+      where: {
+        status: 'issued',
+        items: { some: { bicycleId: bicycle.id } },
+      },
+    })).toBe(1)
+  })
+
   test('does not publish bicycles for manufacturers that lose approval', async () => {
     const admin = await createAdmin('blocked-admin@example.com')
     const manufacturer = await createManufacturer('blocked-catalog-maker@example.com')
@@ -523,6 +556,56 @@ maybeDescribe('bicycle API integration', () => {
     const submitBody = await submit.json()
     expect(submit.status).toBe(200)
     return submitBody.bicycle
+  }
+
+  async function createIssuedOrderForBicycle(userId: string, bicycleId: string) {
+    const bicycle = await prisma.bicycle.findUniqueOrThrow({
+      where: { id: bicycleId },
+      include: { manufacturerProfile: true },
+    })
+
+    await prisma.$transaction([
+      prisma.order.create({
+        data: {
+          userId,
+          status: 'issued',
+          startsOn: '2026-05-12',
+          endsOn: '2026-05-12',
+          rentalDays: 1,
+          fulfillmentType: 'pickup',
+          deliveryAddress: null,
+          contactName: 'Trainer',
+          contactPhone: '+7 999 111-22-33',
+          userComment: null,
+          adminComment: null,
+          rentalAmountKopecks: bicycle.pricePerDayKopecks,
+          depositAmountKopecks: bicycle.depositKopecks,
+          deliveryAmountKopecks: 0,
+          totalAmountKopecks: bicycle.pricePerDayKopecks + bicycle.depositKopecks,
+          safetyAgreementAcceptedAt: new Date(),
+          items: {
+            create: {
+              bicycleId: bicycle.id,
+              pricePerDaySnapshotKopecks: bicycle.pricePerDayKopecks,
+              depositSnapshotKopecks: bicycle.depositKopecks,
+              bicycleTitleSnapshot: bicycle.title,
+              bicycleSizeSnapshot: bicycle.size,
+              bicycleCitySnapshot: bicycle.city,
+              bicyclePickupAddressSnapshot: bicycle.pickupAddress,
+              bicycleDeliveryAvailableSnapshot: bicycle.deliveryAvailable,
+              manufacturerProfileIdSnapshot: bicycle.manufacturerProfile.id,
+              manufacturerPublicNameSnapshot: bicycle.manufacturerProfile.publicName,
+              manufacturerRegionSnapshot: bicycle.manufacturerProfile.region,
+              manufacturerCitySnapshot: bicycle.manufacturerProfile.city,
+            },
+          },
+        },
+      }),
+      prisma.bicycle.update({
+        where: { id: bicycle.id },
+        data: { status: 'rented' },
+      }),
+    ])
   }
 })
 

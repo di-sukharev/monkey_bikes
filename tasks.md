@@ -214,6 +214,16 @@
 
 Минимальная проверка: backend integration tests на переходы и чеклисты; web smoke админского issue/return flow.
 
+Статус выполнения:
+
+- Выполнено: добавлены чеклисты выдачи и возврата по заказу, велосипеду, типу операции, автору и времени проверки.
+- Выполнено: переход `confirmed -> issued` требует успешные rent/deposit платежи, полный issue checklist, актуальный live-status велосипеда и утвержденного производителя; велосипеды атомарно переходят в `rented`.
+- Выполнено: переход `issued -> returned` требует return checklist и live-status `rented`; clean return возвращает велосипед в `available`, safety findings переводят в `maintenance` или `hidden`.
+- Выполнено: общий admin status update велосипедов не может обойти return checklist для `rented`; ручные изменения `rented` статуса заблокированы backend-ом и не показываются в UI.
+- Выполнено: админский UI на shadcn/UI вынесен в компонент чеклистов, показывает историю проверок, блокеры выдачи и invalidates связанные order/payment/bicycle/catalog caches.
+- Выполнено: чеклисты создаются атомарно внутри status transition API, чтобы статус заказа и состояние велосипеда не расходились.
+- Проверено: backend unit/typecheck/prisma validate, backend integration на `DATABASE_URL_TEST`, web tests/typecheck/lint/build и Playwright E2E прошли; review loop достиг оценки 9.6/10.
+
 ## 8. Личный кабинет пользователя
 
 Цель: собрать пользовательский кабинет для просмотра заявок, заказов, платежей, контактов и условий получения/возврата.
