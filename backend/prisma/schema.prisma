@@ -32,6 +32,28 @@ enum ManufacturerProfileStatus {
   @@map("manufacturer_profile_status")
 }
 
+enum BicycleSize {
+  S
+  M
+  L
+
+  @@map("bicycle_size")
+}
+
+enum BicycleStatus {
+  archived
+  available
+  draft
+  hidden
+  maintenance
+  moderation
+  rejected
+  rented
+  reserved
+
+  @@map("bicycle_status")
+}
+
 model User {
   id                  String               @id @default(cuid())
   email               String               @unique
@@ -83,8 +105,44 @@ model ManufacturerProfile {
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
   user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bicycles          Bicycle[]
 
   @@index([status])
   @@index([createdAt])
   @@map("manufacturer_profiles")
+}
+
+model Bicycle {
+  id                          String              @id @default(cuid())
+  manufacturerProfileId       String
+  title                       String
+  description                 String
+  size                        BicycleSize
+  photoUrls                   String[]            @default([])
+  pricePerDayKopecks          Int
+  depositKopecks              Int
+  status                      BicycleStatus       @default(draft)
+  moderationComment           String?
+  submittedAt                 DateTime?
+  reviewedAt                  DateTime?
+  region                      String?
+  city                        String
+  pickupAddress               String
+  deliveryAvailable           Boolean             @default(false)
+  maxLoadKg                   Int
+  seatHeightCm                Int
+  frameLengthCm               Int
+  wheelDiameterCm             Int
+  recommendedAnimalDimensions String
+  safetyNotes                 String
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+  manufacturerProfile         ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
+
+  @@index([manufacturerProfileId, createdAt])
+  @@index([status, createdAt])
+  @@index([size])
+  @@index([city])
+  @@index([pricePerDayKopecks])
+  @@map("bicycles")
 }

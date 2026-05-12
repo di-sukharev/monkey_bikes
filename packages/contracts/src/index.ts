@@ -1,4 +1,5 @@
 export * from './admin'
 export * from './auth'
+export * from './bicycle'
 export * from './errors'
 export * from './manufacturer'

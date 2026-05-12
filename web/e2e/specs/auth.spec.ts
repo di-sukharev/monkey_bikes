@@ -181,6 +181,72 @@ test('manufacturer profile cache is isolated across account switches', async ({ 
   await expect(page.getByLabel('Public name')).toHaveValue('')
 })
 
+test('manufacturer submits a bicycle and admin publishes it to the catalog', async ({ page }) => {
+  const adminEmail = uniqueEmail('web-e2e-bike-admin')
+  const manufacturerEmail = uniqueEmail('web-e2e-bike-maker')
+  const manufacturerName = `Bike Maker ${Date.now()}`
+  const bicycleTitle = `Tiny Performer ${Date.now()}`
+
+  await registerUser(adminEmail)
+  await promoteUserToAdmin(adminEmail)
+  await registerUser(manufacturerEmail, 'manufacturer')
+  await createApprovedManufacturerProfile(manufacturerEmail, manufacturerName)
+
+  await page.goto('/')
+  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
+  await page.getByLabel('Email').fill(manufacturerEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Login' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+
+  await page.goto('/manufacturer/bicycles')
+  await expect(page.getByRole('heading', { name: 'Bicycles', exact: true })).toBeVisible()
+  await page.getByLabel('Title').fill(bicycleTitle)
+  await page.getByLabel('Daily price, kopecks').fill('250000')
+  await page.getByLabel('Deposit, kopecks').fill('500000')
+  await page.getByLabel('City').fill('Moscow')
+  await page.getByLabel('Region').fill('Moscow')
+  await page.getByLabel('Pickup address').fill('Main storage, door 2')
+  await page.getByLabel('Max load, kg').fill('12')
+  await page.getByLabel('Seat height, cm').fill('22')
+  await page.getByLabel('Frame length, cm').fill('40')
+  await page.getByLabel('Wheel diameter, cm').fill('16')
+  await page.getByLabel('Delivery available').check()
+  await page.getByLabel('Photo URLs').fill('https://example.com/bike.jpg')
+  await page.getByLabel('Description').fill('Compact bicycle for controlled circus rehearsals.')
+  await page.getByLabel('Recommended animal dimensions').fill('Small trained animals up to 70 cm height')
+  await page.getByLabel('Safety notes').fill('Use only with trained handlers and indoor safety mats.')
+  await page.getByRole('button', { name: 'Create draft' }).click()
+  await expect(page.getByText(`${bicycleTitle} saved as draft`)).toBeVisible()
+  const bicycleRow = page.getByRole('row').filter({ hasText: bicycleTitle })
+  await expect(bicycleRow).toBeVisible()
+  await bicycleRow.getByRole('button', { name: 'Submit' }).click()
+  await expect(page.getByText(`${bicycleTitle} submitted for moderation`)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Logout' }).click()
+  await page.goto('/')
+  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
+  await page.getByLabel('Email').fill(adminEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Login' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+
+  await page.goto('/admin/bicycles')
+  await expect(page.getByRole('heading', { name: 'Bicycles', exact: true })).toBeVisible()
+  const adminRow = page.getByRole('row').filter({ hasText: bicycleTitle })
+  await expect(adminRow).toBeVisible()
+  await adminRow.getByRole('button', { name: 'Approve' }).click()
+  await expect(page.getByText(`${bicycleTitle} updated`)).toBeVisible()
+
+  await page.goto('/bicycles')
+  await expect(page.getByRole('heading', { name: 'Bicycles', exact: true })).toBeVisible()
+  await expect(page.getByText(bicycleTitle)).toBeVisible()
+  await page.getByRole('link', { name: 'Details' }).click()
+  await expect(page.getByRole('heading', { name: bicycleTitle })).toBeVisible()
+  await expect(page.getByText('Deposit')).toBeVisible()
+  await expect(page.getByText('Use only with trained handlers and indoor safety mats.')).toBeVisible()
+})
+
 async function registerUser(email: string, role: 'manufacturer' | 'user' = 'user') {
   const response = await fetch(`${backendUrl}/api/auth/register`, {
     method: 'POST',
@@ -208,6 +274,33 @@ async function promoteUserToAdmin(email: string) {
       data: {
         role: 'admin',
         status: 'active',
+      },
+    })
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+async function createApprovedManufacturerProfile(email: string, publicName: string) {
+  const prisma = createPrisma(databaseUrl)
+
+  try {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email },
+    })
+
+    await prisma.manufacturerProfile.create({
+      data: {
+        userId: user.id,
+        legalName: `${publicName} LLC`,
+        publicName,
+        region: 'Moscow',
+        city: 'Moscow',
+        phone: '+7 999 000-00-00',
+        email,
+        description: 'Approved manufacturer profile for bicycle E2E.',
+        status: 'approved',
+        reviewedAt: new Date(),
       },
     })
   } finally {

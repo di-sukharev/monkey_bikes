@@ -8,6 +8,12 @@ import { createAdminRoutes } from './admin/routes'
 import { AdminUserService } from './admin/service'
 import { createAuthRoutes } from './auth/routes'
 import { AuthService } from './auth/service'
+import {
+  createAdminBicycleRoutes,
+  createManufacturerBicycleRoutes,
+  createPublicBicycleRoutes,
+} from './bicycle/routes'
+import { BicycleService } from './bicycle/service'
 import { errorResponse, handleError } from './http/errors'
 import { createManufacturerRoutes } from './manufacturer/routes'
 import { ManufacturerProfileService } from './manufacturer/service'
@@ -16,6 +22,7 @@ type AppBindings = {
   Variables: {
     adminUserService: AdminUserService
     authService: AuthService
+    bicycleService: BicycleService
     env: AppEnv
     manufacturerProfileService: ManufacturerProfileService
   }
@@ -29,6 +36,7 @@ type CreateAppOptions = {
 export function createApp({ env, prisma }: CreateAppOptions) {
   const adminUserService = new AdminUserService(prisma)
   const authService = new AuthService(prisma, env)
+  const bicycleService = new BicycleService(prisma)
   const manufacturerProfileService = new ManufacturerProfileService(prisma)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: (result, c) => {
@@ -58,6 +66,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.use('*', async (c, next) => {
     c.set('adminUserService', adminUserService)
     c.set('authService', authService)
+    c.set('bicycleService', bicycleService)
     c.set('env', env)
     c.set('manufacturerProfileService', manufacturerProfileService)
     await next()
@@ -77,8 +86,11 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   })
 
   app.route('/api/auth', createAuthRoutes())
+  app.route('/api/bicycles', createPublicBicycleRoutes())
   app.route('/api/manufacturer', createManufacturerRoutes())
+  app.route('/api/manufacturer', createManufacturerBicycleRoutes())
   app.route('/api/admin', createAdminRoutes())
+  app.route('/api/admin', createAdminBicycleRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

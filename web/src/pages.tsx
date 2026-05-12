@@ -83,11 +83,16 @@ export function RootLayout() {
           <nav className="order-3 flex w-full gap-1 sm:order-none sm:ml-auto sm:w-auto">
             <NavLink to="/">Auth</NavLink>
             <NavLink to="/app">App</NavLink>
+            <NavLink to="/bicycles">Catalog</NavLink>
             {auth.user?.role === 'manufacturer' && (
               <NavLink to="/manufacturer/profile">Manufacturer</NavLink>
             )}
+            {auth.user?.role === 'manufacturer' && (
+              <NavLink to="/manufacturer/bicycles">My bicycles</NavLink>
+            )}
             {auth.user?.role === 'admin' && <NavLink to="/admin/users">Users</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/manufacturers">Manufacturers</NavLink>}
+            {auth.user?.role === 'admin' && <NavLink to="/admin/bicycles">Bicycles</NavLink>}
           </nav>
 
           {auth.isAuthenticated && (
@@ -396,7 +401,15 @@ function NavLink({
   to,
   children,
 }: {
-  to: '/' | '/app' | '/admin/users' | '/admin/manufacturers' | '/manufacturer/profile'
+  to:
+    | '/'
+    | '/app'
+    | '/admin/users'
+    | '/admin/manufacturers'
+    | '/admin/bicycles'
+    | '/manufacturer/profile'
+    | '/manufacturer/bicycles'
+    | '/bicycles'
   children: ReactNode
 }) {
   return (

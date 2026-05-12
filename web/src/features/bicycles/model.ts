@@ -1,0 +1,135 @@
+import type {
+  AdminBicycleStatusUpdateRequest,
+  BicycleDto,
+  BicycleSize,
+  BicycleStatus,
+  BicycleUpsertRequest,
+  ManufacturerProfileStatus,
+} from '@web-app-demo/contracts'
+
+export const bicycleSizes: BicycleSize[] = ['S', 'M', 'L']
+
+export const bicycleStatuses: BicycleStatus[] = [
+  'draft',
+  'moderation',
+  'available',
+  'rejected',
+  'reserved',
+  'rented',
+  'maintenance',
+  'hidden',
+  'archived',
+]
+
+export type BicycleFormValues = BicycleUpsertRequest
+export type AdminBicycleStatusTarget = AdminBicycleStatusUpdateRequest['status']
+
+const producerEditableStatuses: BicycleStatus[] = ['available', 'draft', 'moderation', 'rejected']
+const producerSubmittableStatuses: BicycleStatus[] = ['draft', 'rejected']
+const adminOperationalSourceStatuses: BicycleStatus[] = [
+  'available',
+  'hidden',
+  'maintenance',
+  'reserved',
+  'rented',
+]
+
+export const adminBicycleStatusTargets: AdminBicycleStatusTarget[] = [
+  'available',
+  'hidden',
+  'maintenance',
+  'archived',
+]
+
+export const emptyBicycleForm: BicycleFormValues = {
+  title: '',
+  description: '',
+  size: 'S',
+  photoUrls: [],
+  pricePerDayKopecks: 1000,
+  depositKopecks: 0,
+  region: null,
+  city: '',
+  pickupAddress: '',
+  deliveryAvailable: false,
+  maxLoadKg: 1,
+  seatHeightCm: 1,
+  frameLengthCm: 1,
+  wheelDiameterCm: 1,
+  recommendedAnimalDimensions: '',
+  safetyNotes: '',
+}
+
+export function bicycleToForm(bicycle: BicycleDto): BicycleFormValues {
+  return {
+    title: bicycle.title,
+    description: bicycle.description,
+    size: bicycle.size,
+    photoUrls: bicycle.photoUrls,
+    pricePerDayKopecks: bicycle.pricePerDayKopecks,
+    depositKopecks: bicycle.depositKopecks,
+    region: bicycle.region,
+    city: bicycle.city,
+    pickupAddress: bicycle.pickupAddress,
+    deliveryAvailable: bicycle.deliveryAvailable,
+    maxLoadKg: bicycle.maxLoadKg,
+    seatHeightCm: bicycle.seatHeightCm,
+    frameLengthCm: bicycle.frameLengthCm,
+    wheelDiameterCm: bicycle.wheelDiameterCm,
+    recommendedAnimalDimensions: bicycle.recommendedAnimalDimensions,
+    safetyNotes: bicycle.safetyNotes,
+  }
+}
+
+export function formatMoney(kopecks: number) {
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+  }).format(kopecks / 100)
+}
+
+export function canManufacturerEditBicycle(status: BicycleStatus) {
+  return producerEditableStatuses.includes(status)
+}
+
+export function canManufacturerSubmitBicycle(status: BicycleStatus) {
+  return producerSubmittableStatuses.includes(status)
+}
+
+export function canAdminApproveBicycle(
+  status: BicycleStatus,
+  manufacturerStatus: ManufacturerProfileStatus,
+) {
+  return status === 'moderation' && manufacturerStatus === 'approved'
+}
+
+export function adminBicycleStatusOptionsFor(
+  status: BicycleStatus,
+  manufacturerStatus: ManufacturerProfileStatus,
+): AdminBicycleStatusTarget[] {
+  if (status === 'hidden' || status === 'maintenance') {
+    return adminBicycleStatusTargets.filter(
+      (nextStatus) =>
+        nextStatus !== status &&
+        (nextStatus !== 'available' || manufacturerStatus === 'approved'),
+    )
+  }
+
+  if (adminOperationalSourceStatuses.includes(status)) {
+    return adminBicycleStatusTargets.filter((nextStatus) => nextStatus !== 'available')
+  }
+
+  return []
+}
+
+export function manufacturerBicyclesQueryKey(userId: string | null | undefined, page: number) {
+  return [...manufacturerBicyclesRootQueryKey(userId), page] as const
+}
+
+export function manufacturerBicyclesRootQueryKey(userId: string | null | undefined) {
+  return ['manufacturer', 'bicycles', userId ?? null] as const
+}
+
+export function adminBicyclesQueryKey(page: number, status: BicycleStatus | 'all') {
+  return ['admin', 'bicycles', page, status] as const
+}

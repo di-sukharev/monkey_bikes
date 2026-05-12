@@ -74,6 +74,8 @@ export function ManufacturerProfilePage() {
     onSuccess: async () => {
       setNotice('Profile saved as draft')
       await queryClient.invalidateQueries({ queryKey: profileQueryKey })
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
     },
   })
 
@@ -82,6 +84,8 @@ export function ManufacturerProfilePage() {
     onSuccess: async () => {
       setNotice('Profile submitted for moderation')
       await queryClient.invalidateQueries({ queryKey: profileQueryKey })
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
     },
   })
 
@@ -245,6 +249,8 @@ export function AdminManufacturersPage() {
     onSuccess: async (response) => {
       setNotice(`${response.profile.publicName} updated`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'manufacturers'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
+      await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
     },
   })
 

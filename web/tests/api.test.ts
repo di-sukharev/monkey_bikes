@@ -379,6 +379,174 @@ test('ApiClient sends admin manufacturer moderation filters and decisions', asyn
   ])
 })
 
+test('ApiClient serializes bicycle catalog filters', async () => {
+  let accessToken: string | null = null
+  const calls: Array<{ path: string; search: string; authorization: string | null }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    const headers = new Headers(init?.headers)
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      authorization: headers.get('Authorization'),
+    })
+
+    return json(
+      {
+        items: [publicBicycleResponse()],
+        page: 1,
+        pageSize: 20,
+        total: 1,
+      },
+      200,
+    )
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const response = await client.publicBicycles({
+    sizes: ['S', 'M'],
+    minPriceKopecks: 100000,
+    maxPriceKopecks: 300000,
+    startsOn: '2026-05-20',
+    endsOn: '2026-05-21',
+  })
+
+  expect(response.items[0]?.title).toBe('Tiny Performer S')
+  expect(calls).toEqual([
+    {
+      path: '/api/bicycles',
+      search:
+        '?page=1&pageSize=20&sizes=S%2CM&minPriceKopecks=100000&maxPriceKopecks=300000&startsOn=2026-05-20&endsOn=2026-05-21',
+      authorization: null,
+    },
+  ])
+})
+
+test('ApiClient manages manufacturer bicycles and admin decisions', async () => {
+  let accessToken: string | null = 'bike-access-token'
+  const calls: Array<{ path: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const path = new URL(String(input)).pathname
+    calls.push({
+      path,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (path === '/api/manufacturer/bicycles' && init?.method === 'POST') {
+      return json({ bicycle: bicycleResponse('draft') }, 200)
+    }
+
+    if (path === '/api/manufacturer/bicycles/bike_1/submit') {
+      return json({ bicycle: bicycleResponse('moderation') }, 200)
+    }
+
+    if (path === '/api/admin/bicycles/bike_1/moderation') {
+      return json({ bicycle: adminBicycleResponse('available') }, 200)
+    }
+
+    if (path === '/api/admin/bicycles/bike_1/status') {
+      return json({ bicycle: adminBicycleResponse('hidden') }, 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const created = await client.createManufacturerBicycle(bicyclePayload('Tiny Performer S'))
+  const submitted = await client.submitManufacturerBicycle('bike_1')
+  const approved = await client.moderateAdminBicycle('bike_1', { decision: 'approved' })
+  const hidden = await client.updateAdminBicycleStatus('bike_1', { status: 'hidden' })
+
+  expect(created.bicycle.status).toBe('draft')
+  expect(submitted.bicycle.status).toBe('moderation')
+  expect(approved.bicycle.status).toBe('available')
+  expect(hidden.bicycle.status).toBe('hidden')
+  expect(calls).toEqual([
+    {
+      path: '/api/manufacturer/bicycles',
+      method: 'POST',
+      body: bicyclePayload('Tiny Performer S'),
+    },
+    {
+      path: '/api/manufacturer/bicycles/bike_1/submit',
+      method: 'POST',
+      body: undefined,
+    },
+    {
+      path: '/api/admin/bicycles/bike_1/moderation',
+      method: 'PATCH',
+      body: { decision: 'approved' },
+    },
+    {
+      path: '/api/admin/bicycles/bike_1/status',
+      method: 'PATCH',
+      body: { status: 'hidden' },
+    },
+  ])
+})
+
+test('ApiClient sends manufacturer bicycle pagination filters', async () => {
+  let accessToken: string | null = 'manufacturer-access-token'
+  const calls: Array<{ path: string; search: string; authorization: string | null }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    const headers = new Headers(init?.headers)
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      authorization: headers.get('Authorization'),
+    })
+
+    return json(
+      {
+        items: [bicycleResponse('draft')],
+        page: 2,
+        pageSize: 20,
+        total: 21,
+      },
+      200,
+    )
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const response = await client.manufacturerBicycles({
+    page: 2,
+    pageSize: 20,
+    status: 'draft',
+  })
+
+  expect(response.total).toBe(21)
+  expect(calls).toEqual([
+    {
+      path: '/api/manufacturer/bicycles',
+      search: '?page=2&pageSize=20&status=draft',
+      authorization: 'Bearer manufacturer-access-token',
+    },
+  ])
+})
+
 test('bootstrapAuthSession waits for stale-cookie cleanup before completing', async () => {
   const events: string[] = []
   let completed = false
@@ -477,5 +645,72 @@ function adminManufacturerProfileResponse(
       createdAt: '2026-05-12T09:00:00.000Z',
       updatedAt: '2026-05-12T09:00:00.000Z',
     },
+  }
+}
+
+function bicyclePayload(title: string) {
+  return {
+    title,
+    description: 'Compact bicycle for controlled circus rehearsals.',
+    size: 'S',
+    photoUrls: ['https://example.com/bike.jpg'],
+    pricePerDayKopecks: 250000,
+    depositKopecks: 500000,
+    region: 'Moscow',
+    city: 'Moscow',
+    pickupAddress: 'Main storage, door 2',
+    deliveryAvailable: true,
+    maxLoadKg: 12,
+    seatHeightCm: 22,
+    frameLengthCm: 40,
+    wheelDiameterCm: 16,
+    recommendedAnimalDimensions: 'Small trained animals up to 70 cm height',
+    safetyNotes: 'Use only with trained handlers and indoor safety mats.',
+  }
+}
+
+function bicycleResponse(status: 'draft' | 'moderation' | 'available' | 'hidden') {
+  return {
+    id: 'bike_1',
+    manufacturerProfileId: 'manufacturer_1',
+    ...bicyclePayload('Tiny Performer S'),
+    status,
+    moderationComment: null,
+    submittedAt: status === 'draft' ? null : '2026-05-12T10:00:00.000Z',
+    reviewedAt: status === 'available' || status === 'hidden' ? '2026-05-12T11:00:00.000Z' : null,
+    createdAt: '2026-05-12T09:00:00.000Z',
+    updatedAt: '2026-05-12T10:00:00.000Z',
+  }
+}
+
+function publicBicycleResponse() {
+  const bicycle = { ...bicycleResponse('available') }
+  delete (bicycle as Partial<typeof bicycle>).manufacturerProfileId
+  delete (bicycle as Partial<typeof bicycle>).moderationComment
+  delete (bicycle as Partial<typeof bicycle>).submittedAt
+  delete (bicycle as Partial<typeof bicycle>).reviewedAt
+
+  return {
+    ...bicycle,
+    manufacturer: manufacturerSummary(),
+  }
+}
+
+function adminBicycleResponse(status: 'draft' | 'moderation' | 'available' | 'hidden') {
+  return {
+    ...bicycleResponse(status),
+    manufacturer: {
+      ...manufacturerSummary(),
+      status: 'approved',
+    },
+  }
+}
+
+function manufacturerSummary() {
+  return {
+    id: 'manufacturer_1',
+    publicName: 'Tiny Bikes',
+    city: 'Moscow',
+    region: 'Moscow',
   }
 }

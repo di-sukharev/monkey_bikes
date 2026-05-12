@@ -210,6 +210,7 @@ MVP описывает целевый объем первой рабочей в�
 
 - `draft` - черновик производителя;
 - `moderation` - на модерации;
+- `rejected` - отклонен модератором и требует правок производителя;
 - `available` - доступен для аренды;
 - `reserved` - забронирован;
 - `rented` - выдан в аренду;
@@ -217,7 +218,7 @@ MVP описывает целевый объем первой рабочей в�
 - `hidden` - скрыт из публичного каталога;
 - `archived` - архивирован.
 
-Публичный каталог показывает только велосипеды со статусом `available`, прошедшие модерацию.
+Публичный каталог показывает только велосипеды со статусом `available`, прошедшие модерацию и связанные с текущим утвержденным профилем производителя.
 
 Доступность на выбранные даты рассчитывается по заказам. Велосипед недоступен, если у него есть пересекающийся заказ в статусе `confirmed` или `issued`.
 
@@ -572,23 +573,25 @@ Web не должен дублировать shape API вручную. Клие�
 Поля:
 
 - id;
-- manufacturerId;
+- manufacturerProfileId;
 - title;
 - description;
 - size: `S`, `M`, `L`;
-- photoUrls;
-- dailyPrice;
-- depositAmount;
-- status;
-- moderationStatus;
+- photoUrls: массив URL фотографий, по умолчанию пустой массив;
+- pricePerDayKopecks;
+- depositKopecks;
+- status: `draft`, `moderation`, `rejected`, `available`, `reserved`, `rented`, `maintenance`, `hidden`, `archived`;
+- moderationComment;
+- submittedAt;
+- reviewedAt;
 - region;
 - city;
 - pickupAddress;
 - deliveryAvailable;
-- maxLoad;
-- seatHeight;
-- frameLength;
-- wheelDiameter;
+- maxLoadKg;
+- seatHeightCm;
+- frameLengthCm;
+- wheelDiameterCm;
 - recommendedAnimalDimensions;
 - safetyNotes;
 - createdAt;

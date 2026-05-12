@@ -1,5 +1,10 @@
 import {
   apiErrorSchema,
+  adminBicycleModerationRequestSchema,
+  adminBicycleResponseSchema,
+  adminBicyclesQuerySchema,
+  adminBicyclesResponseSchema,
+  adminBicycleStatusUpdateRequestSchema,
   adminManufacturerStatusUpdateResponseSchema,
   adminManufacturerStatusUpdateRequestSchema,
   adminManufacturersQuerySchema,
@@ -8,25 +13,44 @@ import {
   adminUserResponseSchema,
   adminUsersQuerySchema,
   adminUsersResponseSchema,
+  bicycleResponseSchema,
+  bicycleUpsertRequestSchema,
   type AdminManufacturerStatusUpdateRequest,
   type AdminManufacturersQuery,
   type AdminManufacturersResponse,
+  type AdminBicycleModerationRequest,
+  type AdminBicycleResponse,
+  type AdminBicyclesQuery,
+  type AdminBicyclesResponse,
+  type AdminBicycleStatusUpdateRequest,
   type AdminUpdateUserRequest,
   type AdminUserResponse,
   type AdminUsersQuery,
   type AdminUsersResponse,
   authResponseSchema,
+  type BicycleResponse,
+  type BicycleUpsertInput,
   loginRequestSchema,
   logoutRequestSchema,
   meResponseSchema,
+  manufacturerBicyclesQuerySchema,
+  manufacturerBicyclesResponseSchema,
   manufacturerProfileGetResponseSchema,
   manufacturerProfileResponseSchema,
   manufacturerProfileSubmitResponseSchema,
   manufacturerProfileUpsertRequestSchema,
+  type ManufacturerBicyclesQuery,
+  type ManufacturerBicyclesResponse,
   type ManufacturerProfileGetResponse,
   type ManufacturerProfileResponse,
   type ManufacturerProfileSubmitResponse,
   type ManufacturerProfileUpsertRequest,
+  publicBicycleResponseSchema,
+  publicBicyclesQuerySchema,
+  publicBicyclesResponseSchema,
+  type PublicBicycleResponse,
+  type PublicBicyclesQuery,
+  type PublicBicyclesResponse,
   refreshRequestSchema,
   refreshResponseSchema,
   registerRequestSchema,
@@ -212,6 +236,147 @@ export class ApiClient {
     )
   }
 
+  publicBicycles(input: Partial<PublicBicyclesQuery> = {}): Promise<PublicBicyclesResponse> {
+    const query = publicBicyclesQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.sizes) {
+      params.set('sizes', query.sizes.join(','))
+    }
+
+    if (query.minPriceKopecks !== undefined) {
+      params.set('minPriceKopecks', String(query.minPriceKopecks))
+    }
+
+    if (query.maxPriceKopecks !== undefined) {
+      params.set('maxPriceKopecks', String(query.maxPriceKopecks))
+    }
+
+    if (query.city) {
+      params.set('city', query.city)
+    }
+
+    if (query.startsOn) {
+      params.set('startsOn', query.startsOn)
+    }
+
+    if (query.endsOn) {
+      params.set('endsOn', query.endsOn)
+    }
+
+    return this.request(`/api/bicycles?${params.toString()}`, publicBicyclesResponseSchema, {
+      auth: false,
+    })
+  }
+
+  publicBicycle(id: string): Promise<PublicBicycleResponse> {
+    return this.request(`/api/bicycles/${encodeURIComponent(id)}`, publicBicycleResponseSchema, {
+      auth: false,
+    })
+  }
+
+  manufacturerBicycles(
+    input: Partial<ManufacturerBicyclesQuery> = {},
+  ): Promise<ManufacturerBicyclesResponse> {
+    const query = manufacturerBicyclesQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    return this.request(
+      `/api/manufacturer/bicycles?${params.toString()}`,
+      manufacturerBicyclesResponseSchema,
+      {
+        auth: true,
+      },
+    )
+  }
+
+  createManufacturerBicycle(input: BicycleUpsertInput): Promise<BicycleResponse> {
+    const payload = bicycleUpsertRequestSchema.parse(input)
+    return this.request('/api/manufacturer/bicycles', bicycleResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    })
+  }
+
+  updateManufacturerBicycle(id: string, input: BicycleUpsertInput): Promise<BicycleResponse> {
+    const payload = bicycleUpsertRequestSchema.parse(input)
+    return this.request(`/api/manufacturer/bicycles/${encodeURIComponent(id)}`, bicycleResponseSchema, {
+      method: 'PATCH',
+      body: payload,
+      auth: true,
+    })
+  }
+
+  submitManufacturerBicycle(id: string): Promise<BicycleResponse> {
+    return this.request(
+      `/api/manufacturer/bicycles/${encodeURIComponent(id)}/submit`,
+      bicycleResponseSchema,
+      {
+        method: 'POST',
+        auth: true,
+      },
+    )
+  }
+
+  adminBicycles(input: Partial<AdminBicyclesQuery> = {}): Promise<AdminBicyclesResponse> {
+    const query = adminBicyclesQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    if (query.size) {
+      params.set('size', query.size)
+    }
+
+    return this.request(`/api/admin/bicycles?${params.toString()}`, adminBicyclesResponseSchema, {
+      auth: true,
+    })
+  }
+
+  moderateAdminBicycle(
+    id: string,
+    input: AdminBicycleModerationRequest,
+  ): Promise<AdminBicycleResponse> {
+    const payload = adminBicycleModerationRequestSchema.parse(input)
+    const body =
+      payload.moderationComment === null
+        ? { decision: payload.decision }
+        : payload
+
+    return this.request(
+      `/api/admin/bicycles/${encodeURIComponent(id)}/moderation`,
+      adminBicycleResponseSchema,
+      {
+        method: 'PATCH',
+        body,
+        auth: true,
+      },
+    )
+  }
+
+  updateAdminBicycleStatus(
+    id: string,
+    input: AdminBicycleStatusUpdateRequest,
+  ): Promise<AdminBicycleResponse> {
+    const payload = adminBicycleStatusUpdateRequestSchema.parse(input)
+    return this.request(
+      `/api/admin/bicycles/${encodeURIComponent(id)}/status`,
+      adminBicycleResponseSchema,
+      {
+        method: 'PATCH',
+        body: payload,
+        auth: true,
+      },
+    )
+  }
+
   async logout(input: LogoutRequest = {}) {
     const payload = logoutRequestSchema.parse(input)
     await this.rawRequest('/api/auth/logout', {
@@ -297,6 +462,13 @@ export class ApiClient {
 
     return headers
   }
+}
+
+function paginatedParams(page: number, pageSize: number) {
+  return new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  })
 }
 
 async function toApiError(response: Response) {

@@ -51,7 +51,7 @@ bun run e2e:web
 - генерирует Prisma client и применяет миграции;
 - поднимает backend на `E2E_BACKEND_PORT` (по умолчанию порт вычисляется от пути репозитория);
 - поднимает Vite на `E2E_WEB_PORT` (по умолчанию порт вычисляется от пути репозитория);
-- прогоняет браузерные smoke-сценарии auth session, admin user management, manufacturer profile moderation и изоляции manufacturer profile cache между аккаунтами.
+- прогоняет браузерные smoke-сценарии auth session, admin user management, manufacturer profile moderation, изоляции manufacturer profile cache между аккаунтами и публикации велосипеда в публичный каталог.
 
 Полезные env:
 
