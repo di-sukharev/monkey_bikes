@@ -3,8 +3,9 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { createApp } from '../app'
 import { createPrisma } from '../db'
 import type { AppEnv } from '../env'
+import { integrationDatabaseUrl } from '../test/integration-database'
 
-const databaseUrl = process.env.TEST_DATABASE_URL
+const databaseUrl = integrationDatabaseUrl()
 
 const maybeDescribe = databaseUrl ? describe : describe.skip
 

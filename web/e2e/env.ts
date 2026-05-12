@@ -13,6 +13,20 @@ export const defaultBackendPort =
 export const defaultWebPort =
   process.env.E2E_WEB_PORT ?? String(55000 + (Number.parseInt(repositoryHash.slice(0, 6), 16) % 5000))
 export const defaultDatabaseUrl = `postgresql://postgres:postgres@localhost:${defaultPostgresTestPort}/web_app_demo_test?schema=public`
+export const testDatabaseUrl =
+  process.env.E2E_SKIP_DOCKER === '1'
+    ? process.env.DATABASE_URL_TEST ?? process.env.TEST_DATABASE_URL ?? defaultDatabaseUrl
+    : process.env.TEST_DATABASE_URL ?? defaultDatabaseUrl
+
+export function assertPlaywrightTestDatabaseUrl(databaseUrl = testDatabaseUrl) {
+  const databaseName = new URL(databaseUrl).pathname.replace(/^\//, '')
+
+  if (!databaseName.endsWith('_test') && process.env.E2E_ALLOW_NON_TEST_DATABASE !== '1') {
+    throw new Error(
+      `Refusing to run Playwright against non-test database "${databaseName}". Use a *_test database or set E2E_ALLOW_NON_TEST_DATABASE=1 intentionally.`,
+    )
+  }
+}
 
 export function composeEnv(extra: NodeJS.ProcessEnv = {}) {
   return {

@@ -9,10 +9,9 @@ import {
 } from 'react'
 
 import { ApiClient } from './api'
+import { clearSessionQueryCache, meQueryKey } from './auth-cache'
 import { AuthContext, type AuthContextValue } from './auth-context'
 import { bootstrapAuthSession } from './bootstrap-auth'
-
-const meQueryKey = ['auth', 'me'] as const
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
@@ -23,10 +22,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
     (nextAccessToken: string | null) => setAccessTokenState(nextAccessToken),
     [],
   )
-  const handleAuthExpired = useCallback(() => {
+  const resetSessionQueries = useCallback(
+    () => clearSessionQueryCache(queryClient),
+    [queryClient],
+  )
+  const handleAuthExpired = useCallback(async () => {
     setAccessToken(null)
-    queryClient.removeQueries({ queryKey: meQueryKey })
-  }, [queryClient, setAccessToken])
+    await resetSessionQueries()
+  }, [resetSessionQueries, setAccessToken])
 
   const api = useMemo(
     () =>
@@ -73,26 +76,28 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const register = useCallback(
     async (input: RegisterRequest) => {
       const response = await api.register(input)
+      await resetSessionQueries()
       setAccessToken(response.accessToken)
       queryClient.setQueryData(meQueryKey, { user: response.user })
     },
-    [api, queryClient, setAccessToken],
+    [api, queryClient, resetSessionQueries, setAccessToken],
   )
 
   const login = useCallback(
     async (input: LoginRequest) => {
       const response = await api.login(input)
+      await resetSessionQueries()
       setAccessToken(response.accessToken)
       queryClient.setQueryData(meQueryKey, { user: response.user })
     },
-    [api, queryClient, setAccessToken],
+    [api, queryClient, resetSessionQueries, setAccessToken],
   )
 
   const logout = useCallback(async () => {
     await api.logout().catch(() => undefined)
     setAccessToken(null)
-    queryClient.removeQueries({ queryKey: meQueryKey })
-  }, [api, queryClient, setAccessToken])
+    await resetSessionQueries()
+  }, [api, resetSessionQueries, setAccessToken])
 
   const value = useMemo<AuthContextValue>(
     () => ({

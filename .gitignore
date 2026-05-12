@@ -12,6 +12,7 @@ web/e2e/.artifacts/
 mobile/.maestro/reports/
 
 # Runtime and logs
+.scratch/
 *.log
 npm-debug.log*
 yarn-debug.log*

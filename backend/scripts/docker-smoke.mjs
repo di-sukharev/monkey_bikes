@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { createServer } from 'node:net'
 import {
+  assertTestDatabaseUrl,
   composeEnv,
   composeProjectName,
   defaultPostgresTestPort,
@@ -17,11 +18,27 @@ const hostPort = process.env.BACKEND_DOCKER_SMOKE_PORT ?? String(await findOpenP
 const networkName = `${composeProjectName}_default`
 const composeArgs = ['compose', '-p', composeProjectName]
 const dockerEnv = composeEnv()
+const explicitHostDatabaseUrl = process.env.BACKEND_DOCKER_SMOKE_HOST_DATABASE_URL
+const explicitContainerDatabaseUrl = process.env.BACKEND_DOCKER_SMOKE_DATABASE_URL
+
+const hasPartialDatabaseOverride =
+  (explicitHostDatabaseUrl && !explicitContainerDatabaseUrl) ||
+  (!explicitHostDatabaseUrl && explicitContainerDatabaseUrl)
+
+if (hasPartialDatabaseOverride) {
+  throw new Error(
+    'Set both BACKEND_DOCKER_SMOKE_HOST_DATABASE_URL and BACKEND_DOCKER_SMOKE_DATABASE_URL so migrations and the container use the same test database.',
+  )
+}
+
 const databaseUrlForHost =
-  process.env.TEST_DATABASE_URL ?? defaultTestDatabaseUrl(defaultPostgresTestPort)
+  explicitHostDatabaseUrl ?? defaultTestDatabaseUrl(defaultPostgresTestPort)
+assertTestDatabaseUrl(databaseUrlForHost, 'BACKEND_DOCKER_SMOKE_ALLOW_NON_TEST_DATABASE')
 const databaseUrlForContainer =
-  process.env.BACKEND_DOCKER_SMOKE_DATABASE_URL ??
+  explicitContainerDatabaseUrl ??
   'postgresql://postgres:postgres@postgres_test:5432/web_app_demo_test?schema=public'
+assertTestDatabaseUrl(databaseUrlForContainer, 'BACKEND_DOCKER_SMOKE_ALLOW_NON_TEST_DATABASE')
+assertMatchingDatabaseTarget(databaseUrlForHost, databaseUrlForContainer)
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {
@@ -52,6 +69,29 @@ function findOpenPort() {
       })
     })
   })
+}
+
+function assertMatchingDatabaseTarget(hostDatabaseUrl, containerDatabaseUrl) {
+  const hostTarget = databaseTarget(hostDatabaseUrl)
+  const containerTarget = databaseTarget(containerDatabaseUrl)
+
+  if (
+    hostTarget.databaseName !== containerTarget.databaseName ||
+    hostTarget.schema !== containerTarget.schema
+  ) {
+    throw new Error(
+      'BACKEND_DOCKER_SMOKE_HOST_DATABASE_URL and BACKEND_DOCKER_SMOKE_DATABASE_URL must use the same database name and schema.',
+    )
+  }
+}
+
+function databaseTarget(databaseUrl) {
+  const url = new URL(databaseUrl)
+
+  return {
+    databaseName: url.pathname.replace(/^\//, ''),
+    schema: url.searchParams.get('schema') ?? 'public',
+  }
 }
 
 async function waitForComposePostgres() {

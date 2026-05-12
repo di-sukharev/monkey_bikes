@@ -77,8 +77,8 @@ bun run --cwd backend seed:admin
 - `bun run build` - build/typecheck/export проектов, где есть build-скрипт.
 - `bun run build:landing` - production build landing-проекта.
 - `bun run test:backend` - backend unit/integration tests.
-- `bun run test:backend:integration` - DB-backed auth tests через `postgres_test`.
-- `bun run e2e:web` - Playwright auth smoke через backend + Vite.
+- `bun run test:backend:integration` - DB-backed auth/manufacturer API tests через `postgres_test` или `DATABASE_URL_TEST`.
+- `bun run e2e:web` - Playwright auth/admin/manufacturer smoke через backend + Vite.
 - `bun run e2e:mobile` - Maestro auth smoke по установленному mobile build.
 - `bun run --cwd backend seed:admin` - создать или обновить локального администратора.
 - `bun run --cwd backend prisma:migrate` - создать/применить Prisma migration в dev.

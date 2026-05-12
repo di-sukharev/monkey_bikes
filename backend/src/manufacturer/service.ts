@@ -1,5 +1,5 @@
 import type {
-  AdminManufacturerStatusUpdateRequest,
+  AdminManufacturerStatusUpdatePayload,
   AdminManufacturersQuery,
   AdminManufacturerProfileDto,
   ManufacturerProfileDto,
@@ -163,7 +163,7 @@ export class ManufacturerProfileService {
     }
   }
 
-  async updateAdminManufacturerStatus(id: string, input: AdminManufacturerStatusUpdateRequest) {
+  async updateAdminManufacturerStatus(id: string, input: AdminManufacturerStatusUpdatePayload) {
     const currentProfile = await this.db.manufacturerProfile.findUnique({
       where: { id },
     })
@@ -172,7 +172,7 @@ export class ManufacturerProfileService {
       throw new AppError(404, 'NOT_FOUND', 'Manufacturer profile not found')
     }
 
-    const allowedSourceStatuses =
+    const allowedSourceStatuses: Array<ManufacturerProfileRecord['status']> =
       input.status === 'blocked' ? ['approved', 'draft', 'moderation', 'rejected'] : ['moderation']
     const result = await this.db.manufacturerProfile.updateMany({
       where: {
@@ -233,7 +233,7 @@ function manufacturerSubmissionConflictMessage(status: ManufacturerProfileRecord
 }
 
 function manufacturerModerationConflictMessage(
-  nextStatus: AdminManufacturerStatusUpdateRequest['status'],
+  nextStatus: AdminManufacturerStatusUpdatePayload['status'],
   currentStatus: ManufacturerProfileRecord['status'],
 ) {
   if (nextStatus === 'blocked' && currentStatus === 'blocked') {

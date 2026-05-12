@@ -4,18 +4,24 @@ import { fileURLToPath } from 'node:url'
 import { spawnSync } from 'node:child_process'
 
 const backendRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
+const repositoryRoot = resolve(backendRoot, '..')
 
 const testFiles = collectTestFiles(resolve(backendRoot, 'src'))
   .filter((file) => file.endsWith('.test.ts') && !file.endsWith('.integration.test.ts'))
   .map((file) => relative(backendRoot, file))
   .sort()
+const repositoryTestFiles = collectTestFiles(resolve(repositoryRoot, 'scripts'))
+  .filter((file) => file.endsWith('.test.mjs'))
+  .map((file) => relative(backendRoot, file))
+  .sort()
+const allTestFiles = [...testFiles, ...repositoryTestFiles]
 
-if (testFiles.length === 0) {
+if (allTestFiles.length === 0) {
   process.stderr.write('No backend unit tests found\n')
   process.exit(1)
 }
 
-const result = spawnSync('bun', ['test', ...testFiles], {
+const result = spawnSync('bun', ['test', ...allTestFiles], {
   cwd: backendRoot,
   env: process.env,
   stdio: 'inherit',

@@ -49,7 +49,7 @@ bunx shadcn@latest add <component>
 
 ## E2E
 
-Playwright smoke находится в `e2e/specs/auth.spec.ts` и проверяет `register -> refresh after reload -> protected UI -> logout`.
+Playwright smoke находится в `e2e/specs/auth.spec.ts` и проверяет auth session, admin user management и manufacturer profile moderation через реальные backend/API вызовы.
 
 Первый запуск:
 

@@ -1,9 +1,10 @@
 import { spawnSync } from 'node:child_process'
 import {
+  assertPlaywrightTestDatabaseUrl,
   composeEnv,
   composeProjectName,
-  defaultDatabaseUrl,
   repositoryRoot,
+  testDatabaseUrl,
 } from './env'
 
 const composeArgs = ['compose', '-p', composeProjectName]
@@ -43,14 +44,8 @@ async function waitForComposePostgres(service: string, database: string, env: No
 }
 
 export default async function globalSetup() {
-  const databaseUrl = process.env.DATABASE_URL ?? defaultDatabaseUrl
-  const databaseName = new URL(databaseUrl).pathname.replace(/^\//, '')
-
-  if (!databaseName.endsWith('_test') && process.env.E2E_ALLOW_NON_TEST_DATABASE !== '1') {
-    throw new Error(
-      `Refusing to run Playwright against non-test database "${databaseName}". Use a *_test database or set E2E_ALLOW_NON_TEST_DATABASE=1 intentionally.`,
-    )
-  }
+  const databaseUrl = testDatabaseUrl
+  assertPlaywrightTestDatabaseUrl(databaseUrl)
 
   const env = composeEnv({
     DATABASE_URL: databaseUrl,

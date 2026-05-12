@@ -1,13 +1,7 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 
-import {
-  AdminManufacturersPage,
-  AdminUsersPage,
-  AppPage,
-  HomePage,
-  ManufacturerProfilePage,
-  RootLayout,
-} from './pages'
+import { AdminManufacturersPage, ManufacturerProfilePage } from './features/manufacturers/pages'
+import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
 
 const rootRoute = createRootRoute({
   component: RootLayout,

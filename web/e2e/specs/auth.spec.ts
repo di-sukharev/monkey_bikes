@@ -1,9 +1,9 @@
 import { e2ePassword, expect, test, uniqueEmail } from '../helpers/test'
 import { createPrisma } from '../../../backend/src/db'
-import { defaultBackendPort, defaultDatabaseUrl } from '../env'
+import { defaultBackendPort, testDatabaseUrl } from '../env'
 
 const backendUrl = process.env.E2E_BACKEND_URL ?? `http://127.0.0.1:${defaultBackendPort}`
-const databaseUrl = process.env.DATABASE_URL ?? defaultDatabaseUrl
+const databaseUrl = testDatabaseUrl
 
 test('registers, restores the session, opens protected UI, and logs out', async ({ page }) => {
   const email = uniqueEmail()
@@ -121,6 +121,7 @@ test('manufacturer submits a profile and admin approves it', async ({ page }) =>
   await page.getByLabel('Email').fill(adminEmail)
   await page.getByLabel('Password').fill(e2ePassword)
   await page.locator('form').getByRole('button', { name: 'Login' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
 
   await page.goto('/admin/manufacturers')
   await expect(page.getByRole('heading', { name: 'Manufacturers' })).toBeVisible()
@@ -128,6 +129,56 @@ test('manufacturer submits a profile and admin approves it', async ({ page }) =>
   await expect(row).toBeVisible()
   await row.getByRole('button', { name: 'Approve' }).click()
   await expect(page.getByText(`${publicName} updated`)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Logout' }).click()
+  await page.goto('/')
+  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
+  await page.getByLabel('Email').fill(manufacturerEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Login' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+  await page.goto('/manufacturer/profile')
+  await expect(page.getByRole('button', { name: 'Submit for moderation' })).toBeDisabled()
+})
+
+test('manufacturer profile cache is isolated across account switches', async ({ page }) => {
+  const firstEmail = uniqueEmail('web-e2e-cache-maker-a')
+  const secondEmail = uniqueEmail('web-e2e-cache-maker-b')
+  const firstPublicName = `Cache Maker A ${Date.now()}`
+
+  await page.goto('/')
+  await page.getByLabel('Account type').getByRole('button', { name: 'Manufacturer' }).click()
+  await page.getByLabel('Name').fill('Cache Maker A')
+  await page.getByLabel('Email').fill(firstEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+
+  await page.goto('/manufacturer/profile')
+  await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible()
+  await page.getByLabel('Legal name').fill(`${firstPublicName} LLC`)
+  await page.getByLabel('Public name').fill(firstPublicName)
+  await page.getByLabel('Contact email').fill(firstEmail)
+  await page.getByLabel('Phone').fill('+7 999 111-11-11')
+  await page.getByLabel('Region').fill('Moscow')
+  await page.getByLabel('City').fill('Moscow')
+  await page.getByLabel('Description').fill('First manufacturer profile.')
+  await page.getByRole('button', { name: 'Save draft' }).click()
+  await expect(page.getByText('Profile saved as draft')).toBeVisible()
+  await expect(page.getByLabel('Public name')).toHaveValue(firstPublicName)
+
+  await page.getByRole('button', { name: 'Logout' }).click()
+  await page.goto('/')
+  await page.getByLabel('Account type').getByRole('button', { name: 'Manufacturer' }).click()
+  await page.getByLabel('Name').fill('Cache Maker B')
+  await page.getByLabel('Email').fill(secondEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+
+  await page.goto('/manufacturer/profile')
+  await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible()
+  await expect(page.getByLabel('Public name')).toHaveValue('')
 })
 
 async function registerUser(email: string, role: 'manufacturer' | 'user' = 'user') {

@@ -1,7 +1,7 @@
 import {
   apiErrorSchema,
+  adminManufacturerStatusUpdateResponseSchema,
   adminManufacturerStatusUpdateRequestSchema,
-  adminManufacturerProfileSchema,
   adminManufacturersQuerySchema,
   adminManufacturersResponseSchema,
   adminUpdateUserRequestSchema,
@@ -38,12 +38,9 @@ import {
   type RefreshResponse,
   type RegisterRequest,
 } from '@web-app-demo/contracts'
-import { z } from 'zod'
+import type { z } from 'zod'
 
 const apiBaseUrl = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
-const adminManufacturerStatusResponseSchema = z.object({
-  profile: adminManufacturerProfileSchema,
-})
 
 type ApiClientOptions = {
   getAccessToken: () => string | null
@@ -206,7 +203,7 @@ export class ApiClient {
 
     return this.request(
       `/api/admin/manufacturers/${encodeURIComponent(id)}/status`,
-      adminManufacturerStatusResponseSchema,
+      adminManufacturerStatusUpdateResponseSchema,
       {
         method: 'PATCH',
         body,

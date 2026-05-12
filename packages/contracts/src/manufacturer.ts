@@ -11,7 +11,7 @@ const nullableTrimmedString = z.preprocess((value) => {
 }, z.string().min(1).max(500).nullable())
 
 const requiredProfileString = z.string().trim().min(2).max(200)
-const requiredProfileEmail = z.email().trim().toLowerCase().max(255)
+const requiredProfileEmail = z.string().trim().toLowerCase().email().max(254)
 
 export const manufacturerProfileStatusSchema = z.enum([
   'approved',
@@ -72,7 +72,7 @@ export const adminManufacturersResponseSchema = z.object({
 export const adminManufacturerStatusUpdateRequestSchema = z
   .object({
     status: z.enum(['approved', 'blocked', 'rejected']),
-    moderationComment: nullableTrimmedString,
+    moderationComment: nullableTrimmedString.optional().default(null),
   })
   .refine(
     (value) =>
@@ -83,6 +83,10 @@ export const adminManufacturerStatusUpdateRequestSchema = z
       path: ['moderationComment'],
     },
   )
+
+export const adminManufacturerStatusUpdateResponseSchema = z.object({
+  profile: adminManufacturerProfileSchema,
+})
 
 export type ManufacturerProfileStatus = z.infer<typeof manufacturerProfileStatusSchema>
 export type ManufacturerProfileUpsertRequest = z.infer<
@@ -97,6 +101,12 @@ export type ManufacturerProfileSubmitResponse = z.infer<
 export type AdminManufacturerProfileDto = z.infer<typeof adminManufacturerProfileSchema>
 export type AdminManufacturersQuery = z.infer<typeof adminManufacturersQuerySchema>
 export type AdminManufacturersResponse = z.infer<typeof adminManufacturersResponseSchema>
-export type AdminManufacturerStatusUpdateRequest = z.infer<
+export type AdminManufacturerStatusUpdateRequest = z.input<
   typeof adminManufacturerStatusUpdateRequestSchema
+>
+export type AdminManufacturerStatusUpdatePayload = z.output<
+  typeof adminManufacturerStatusUpdateRequestSchema
+>
+export type AdminManufacturerStatusUpdateResponse = z.infer<
+  typeof adminManufacturerStatusUpdateResponseSchema
 >

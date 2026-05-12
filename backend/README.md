@@ -65,9 +65,9 @@ Backend загружает `backend/.env` через `dotenv`, а Prisma config 
 `DATABASE_URL` из этого же файла. Поэтому миграции и dev-server должны смотреть
 на одну и ту же Homebrew database.
 
-`bun run test:integration` по умолчанию поднимает `postgres_test` из `../docker-compose.yml`, применяет Prisma migrations к `web_app_demo_test` и запускает DB-backed auth API tests. Для локальной Homebrew test database задайте `TEST_SKIP_DOCKER=1` и `TEST_DATABASE_URL` на базу с suffix `_test`.
+`bun run test:integration` по умолчанию поднимает `postgres_test` из `../docker-compose.yml`, применяет Prisma migrations к `web_app_demo_test` и запускает DB-backed API tests. Для локальной Homebrew test database задайте `TEST_SKIP_DOCKER=1`; runner использует `DATABASE_URL_TEST` из `backend/.env`, а `TEST_DATABASE_URL` остается совместимым алиасом. Integration runner отказывается работать с базой без suffix `_test`, если явно не задан `TEST_ALLOW_NON_TEST_DATABASE=1`.
 
-`bun run smoke:docker` собирает backend Docker image, стартует его против `postgres_test`, ждёт `/health` и затем удаляет только созданный smoke-контейнер.
+`bun run smoke:docker` собирает backend Docker image, стартует его против `postgres_test`, ждёт `/health` и затем удаляет только созданный smoke-контейнер. Smoke-runner намеренно использует Docker Compose test database по умолчанию; если нужно заменить БД, задайте парой `BACKEND_DOCKER_SMOKE_HOST_DATABASE_URL` и `BACKEND_DOCKER_SMOKE_DATABASE_URL`, чтобы миграции и контейнер смотрели на одну `*_test` базу с одинаковой schema.
 
 ## Auth API
 

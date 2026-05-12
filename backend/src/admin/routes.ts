@@ -1,8 +1,8 @@
 import {
   adminManufacturerStatusUpdateRequestSchema,
+  adminManufacturerStatusUpdateResponseSchema,
   adminManufacturersQuerySchema,
   adminManufacturersResponseSchema,
-  adminManufacturerProfileSchema,
   adminUpdateUserRequestSchema,
   adminUserResponseSchema,
   adminUsersQuerySchema,
@@ -191,7 +191,7 @@ const updateManufacturerStatusRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: z.object({ profile: adminManufacturerProfileSchema }),
+          schema: adminManufacturerStatusUpdateResponseSchema,
         },
       },
       description: 'Updated manufacturer profile moderation status',
@@ -211,6 +211,10 @@ const updateManufacturerStatusRoute = createRoute({
     404: {
       content: errorResponseContent,
       description: 'Manufacturer profile not found',
+    },
+    409: {
+      content: errorResponseContent,
+      description: 'Profile state does not allow this moderation decision',
     },
   },
 })

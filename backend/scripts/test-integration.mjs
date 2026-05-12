@@ -3,14 +3,20 @@ import { readdirSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  assertTestDatabaseUrl,
   composeEnv,
   composeProjectName,
   defaultTestDatabaseUrl,
+  testDatabaseUrl,
 } from '../../scripts/repo-env.mjs'
 
 const backendRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '..')
 const repositoryRoot = resolve(backendRoot, '..')
-const databaseUrl = process.env.TEST_DATABASE_URL ?? defaultTestDatabaseUrl()
+const databaseUrl =
+  process.env.TEST_SKIP_DOCKER === '1'
+    ? testDatabaseUrl()
+    : process.env.TEST_DATABASE_URL ?? defaultTestDatabaseUrl()
+assertTestDatabaseUrl(databaseUrl, 'TEST_ALLOW_NON_TEST_DATABASE')
 const dockerEnv = composeEnv()
 const composeArgs = ['compose', '-p', composeProjectName]
 
@@ -53,6 +59,7 @@ const env = {
   ...dockerEnv,
   DATABASE_URL: databaseUrl,
   TEST_DATABASE_URL: databaseUrl,
+  DATABASE_URL_TEST: databaseUrl,
 }
 
 if (process.env.TEST_SKIP_DOCKER !== '1') {

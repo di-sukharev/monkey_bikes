@@ -3,8 +3,9 @@ import { afterAll, beforeEach, describe, expect, test } from 'bun:test'
 import { createApp } from '../app'
 import { createPrisma } from '../db'
 import type { AppEnv } from '../env'
+import { integrationDatabaseUrl } from '../test/integration-database'
 
-const databaseUrl = process.env.TEST_DATABASE_URL
+const databaseUrl = integrationDatabaseUrl()
 
 const maybeDescribe = databaseUrl ? describe : describe.skip
 
@@ -190,6 +191,18 @@ maybeDescribe('manufacturer profile API integration', () => {
     )
     expect(rejectWithoutComment.status).toBe(400)
 
+    const missingProfile = await app.request('/api/admin/manufacturers/missing-profile/status', {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${admin.accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'approved' }),
+    })
+    const missingProfileBody = await missingProfile.json()
+    expect(missingProfile.status).toBe(404)
+    expect(missingProfileBody.error.code).toBe('NOT_FOUND')
+
     const reject = await app.request(`/api/admin/manufacturers/${listBody.items[0].id}/status`, {
       method: 'PATCH',
       headers: {
@@ -265,6 +278,16 @@ maybeDescribe('manufacturer profile API integration', () => {
     const approveSubmittedBody = await approveSubmitted.json()
     expect(approveSubmitted.status).toBe(200)
     expect(approveSubmittedBody.profile.status).toBe('approved')
+
+    const submitApproved = await app.request('/api/manufacturer/profile/submit', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${manufacturer.accessToken}`,
+      },
+    })
+    const submitApprovedBody = await submitApproved.json()
+    expect(submitApproved.status).toBe(409)
+    expect(submitApprovedBody.error.code).toBe('CONFLICT')
 
     const rejectApproved = await app.request(
       `/api/admin/manufacturers/${draftBody.profile.id}/status`,

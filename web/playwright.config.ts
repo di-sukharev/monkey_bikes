@@ -1,7 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { defaultBackendPort, defaultDatabaseUrl, defaultWebPort } from './e2e/env'
+import {
+  assertPlaywrightTestDatabaseUrl,
+  defaultBackendPort,
+  defaultWebPort,
+  testDatabaseUrl,
+} from './e2e/env'
 
 const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
 const repositoryRoot = resolve(frontendRoot, '..')
@@ -11,7 +16,8 @@ const backendPort = Number(defaultBackendPort)
 const frontendPort = Number(defaultWebPort)
 const backendUrl = process.env.E2E_BACKEND_URL ?? `http://127.0.0.1:${backendPort}`
 const frontendUrl = process.env.E2E_WEB_URL ?? `http://127.0.0.1:${frontendPort}`
-const databaseUrl = process.env.DATABASE_URL ?? defaultDatabaseUrl
+const databaseUrl = testDatabaseUrl
+assertPlaywrightTestDatabaseUrl(databaseUrl)
 
 function normalizeEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   return Object.fromEntries(
