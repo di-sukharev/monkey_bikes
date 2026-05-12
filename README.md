@@ -49,6 +49,15 @@ EXPO_PUBLIC_API_URL=http://localhost:3000
 
 На Android emulator вместо localhost обычно нужен `http://10.0.2.2:3000`.
 
+`backend/.env.example` также содержит локальные `SEED_ADMIN_EMAIL`,
+`SEED_ADMIN_PASSWORD` и `SEED_ADMIN_DISPLAY_NAME`; перед запуском `seed:admin`
+задайте свой локальный пароль. Команда создает или обновляет эту учетную
+запись с ролью `admin` и по умолчанию работает только с локальной БД.
+
+```bash
+bun run --cwd backend seed:admin
+```
+
 ## Основные команды
 
 - `bun run dev` - запустить workspace-проекты в dev-режиме параллельно.
@@ -61,6 +70,7 @@ EXPO_PUBLIC_API_URL=http://localhost:3000
 - `bun run test:backend:integration` - DB-backed auth tests через `postgres_test`.
 - `bun run e2e:web` - Playwright auth smoke через backend + Vite.
 - `bun run e2e:mobile` - Maestro auth smoke по установленному mobile build.
+- `bun run --cwd backend seed:admin` - создать или обновить локального администратора.
 - `bun run --cwd backend prisma:migrate` - создать/применить Prisma migration в dev.
 - `bun run --cwd backend prisma:deploy` - применить готовые миграции на сервере.
 

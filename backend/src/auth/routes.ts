@@ -14,6 +14,7 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 
 import type { AppEnv } from '../env'
 import { errorResponse } from '../http/errors'
+import { requireAuth } from './guards'
 import type { AuthService } from './service'
 
 const refreshCookieName = 'web_app_demo_refresh'
@@ -102,6 +103,10 @@ const loginRoute = createRoute({
       content: errorResponseContent,
       description: 'Invalid credentials',
     },
+    403: {
+      content: errorResponseContent,
+      description: 'User is blocked',
+    },
   },
 })
 
@@ -130,6 +135,10 @@ const refreshRoute = createRoute({
       content: errorResponseContent,
       description: 'Invalid refresh token',
     },
+    403: {
+      content: errorResponseContent,
+      description: 'User is blocked',
+    },
   },
 })
 
@@ -144,6 +153,10 @@ const meRoute = createRoute({
     401: {
       content: errorResponseContent,
       description: 'Invalid access token',
+    },
+    403: {
+      content: errorResponseContent,
+      description: 'User is blocked',
     },
   },
 })
@@ -212,8 +225,7 @@ export function createAuthRoutes() {
   })
 
   routes.openapi(meRoute, async (c) => {
-    const auth = c.get('authService')
-    return c.json(await auth.getMe(bearerToken(c)), 200)
+    return c.json({ user: await requireAuth(c) }, 200)
   })
 
   routes.openapi(logoutRoute, async (c) => {
@@ -236,12 +248,6 @@ function requestMetadata(c: Context): { userAgent?: string; ipAddress?: string }
     userAgent: c.req.header('user-agent'),
     ipAddress: forwardedFor?.split(',')[0]?.trim(),
   }
-}
-
-function bearerToken(c: Context) {
-  const authorization = c.req.header('authorization')
-  if (!authorization?.startsWith('Bearer ')) return undefined
-  return authorization.slice('Bearer '.length)
 }
 
 function getRefreshCookie(c: Context) {

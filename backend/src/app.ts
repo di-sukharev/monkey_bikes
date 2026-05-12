@@ -4,12 +4,15 @@ import { secureHeaders } from 'hono/secure-headers'
 
 import type { DbClient } from './db'
 import type { AppEnv } from './env'
+import { createAdminRoutes } from './admin/routes'
+import { AdminUserService } from './admin/service'
 import { createAuthRoutes } from './auth/routes'
 import { AuthService } from './auth/service'
 import { errorResponse, handleError } from './http/errors'
 
 type AppBindings = {
   Variables: {
+    adminUserService: AdminUserService
     authService: AuthService
     env: AppEnv
   }
@@ -21,6 +24,7 @@ type CreateAppOptions = {
 }
 
 export function createApp({ env, prisma }: CreateAppOptions) {
+  const adminUserService = new AdminUserService(prisma)
   const authService = new AuthService(prisma, env)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: (result, c) => {
@@ -42,12 +46,13 @@ export function createApp({ env, prisma }: CreateAppOptions) {
         return env.CORS_ORIGINS.includes(origin) ? origin : null
       },
       allowHeaders: ['Content-Type', 'Authorization', 'X-Client-Platform'],
-      allowMethods: ['GET', 'POST', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
       credentials: true,
       maxAge: 600,
     }),
   )
   app.use('*', async (c, next) => {
+    c.set('adminUserService', adminUserService)
     c.set('authService', authService)
     c.set('env', env)
     await next()
@@ -67,6 +72,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   })
 
   app.route('/api/auth', createAuthRoutes())
+  app.route('/api/admin', createAdminRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

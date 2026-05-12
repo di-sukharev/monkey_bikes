@@ -1,7 +1,9 @@
 import { createContext } from 'react'
 import type { LoginRequest, RegisterRequest, UserDto } from '@web-app-demo/contracts'
+import type { ApiClient } from './api'
 
 export type AuthContextValue = {
+  api: ApiClient
   user: UserDto | null
   isBootstrapping: boolean
   isAuthenticated: boolean

@@ -7,15 +7,34 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserRole {
+  admin
+  manufacturer
+  user
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  active
+  blocked
+
+  @@map("user_status")
+}
+
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
   passwordHash String
   displayName  String?
+  role         UserRole      @default(user)
+  status       UserStatus    @default(active)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   sessions     AuthSession[]
 
+  @@index([role])
+  @@index([status])
   @@map("users")
 }
 

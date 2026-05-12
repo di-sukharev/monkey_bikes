@@ -46,6 +46,17 @@ bun run prisma:deploy
 
 Пароли хешируются через `Bun.password` с Argon2id. Access token - короткоживущий JWT через `jose`. Refresh token - opaque random token; в базе хранится только SHA-256 hash, refresh делает rotation и отзывает старую session.
 
+Локального администратора создает команда `bun run seed:admin` из переменных
+`SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` и `SEED_ADMIN_DISPLAY_NAME`. Команда
+идемпотентна: существующий пользователь с этим email обновляется до
+`role=admin` и `status=active`, без создания auth-сессий. Пароль нужно задать
+явно; известные example-пароли отклоняются, а non-local database URL требует
+явного `SEED_ADMIN_ALLOW_NON_LOCAL=true`.
+
+```bash
+bun run seed:admin
+```
+
 ## Архитектура
 
 `src/index.ts` только загружает env, создаёт Prisma client и запускает Bun server. Hono app создаётся в `src/app.ts`. Auth feature живёт в `src/auth`: routes валидируют и делегируют, service владеет session/user логикой, token helpers изолируют JWT и refresh-token механику.

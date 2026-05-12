@@ -21,8 +21,13 @@ type UserRecord = {
   id: string
   email: string
   displayName: string | null
+  role: 'admin' | 'manufacturer' | 'user'
+  status: 'active' | 'blocked'
   createdAt: Date
+  updatedAt: Date
 }
+
+export type AuthenticatedUser = UserDto
 
 export class AuthService {
   constructor(
@@ -48,6 +53,8 @@ export class AuthService {
           email: input.email,
           passwordHash,
           displayName: input.displayName,
+          role: 'user',
+          status: 'active',
         },
       })
       .catch((error: unknown) => {
@@ -75,6 +82,10 @@ export class AuthService {
       throw new AppError(401, 'UNAUTHORIZED', 'Invalid email or password')
     }
 
+    if (user.status === 'blocked') {
+      throw new AppError(403, 'FORBIDDEN', 'User is blocked')
+    }
+
     return this.issueSession(user, metadata)
   }
 
@@ -100,6 +111,19 @@ export class AuthService {
 
     if (!currentSession) {
       throw new AppError(401, 'UNAUTHORIZED', 'Refresh session is invalid or expired')
+    }
+
+    if (currentSession.user.status === 'blocked') {
+      await this.db.authSession.updateMany({
+        where: {
+          id: currentSession.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: now,
+        },
+      })
+      throw new AppError(403, 'FORBIDDEN', 'User is blocked')
     }
 
     const nextRefreshToken = createRefreshToken()
@@ -149,6 +173,12 @@ export class AuthService {
   }
 
   async getMe(accessToken: string | undefined) {
+    return {
+      user: await this.authenticateAccessToken(accessToken),
+    }
+  }
+
+  async authenticateAccessToken(accessToken: string | undefined): Promise<AuthenticatedUser> {
     if (!accessToken) {
       throw new AppError(401, 'UNAUTHORIZED', 'Access token is required')
     }
@@ -175,9 +205,20 @@ export class AuthService {
       throw new AppError(401, 'UNAUTHORIZED', 'Session is invalid or expired')
     }
 
-    return {
-      user: toUserDto(session.user),
+    if (session.user.status === 'blocked') {
+      await this.db.authSession.updateMany({
+        where: {
+          id: session.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      })
+      throw new AppError(403, 'FORBIDDEN', 'User is blocked')
     }
+
+    return toUserDto(session.user)
   }
 
   async logout(refreshToken: string | undefined) {
@@ -236,6 +277,9 @@ export function toUserDto(user: UserRecord): UserDto {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    role: user.role,
+    status: user.status,
     createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
   }
 }

@@ -1,5 +1,13 @@
 import {
   apiErrorSchema,
+  adminUpdateUserRequestSchema,
+  adminUserResponseSchema,
+  adminUsersQuerySchema,
+  adminUsersResponseSchema,
+  type AdminUpdateUserRequest,
+  type AdminUserResponse,
+  type AdminUsersQuery,
+  type AdminUsersResponse,
   authResponseSchema,
   loginRequestSchema,
   logoutRequestSchema,
@@ -26,7 +34,7 @@ type ApiClientOptions = {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PATCH'
   body?: unknown
   auth?: boolean
   retryOnUnauthorized?: boolean
@@ -82,6 +90,41 @@ export class ApiClient {
 
   me(): Promise<MeResponse> {
     return this.request('/api/auth/me', meResponseSchema, {
+      auth: true,
+    })
+  }
+
+  adminUsers(input: Partial<AdminUsersQuery> = {}): Promise<AdminUsersResponse> {
+    const query = adminUsersQuerySchema.parse(input)
+    const params = new URLSearchParams({
+      page: String(query.page),
+      pageSize: String(query.pageSize),
+    })
+
+    if (query.role) {
+      params.set('role', query.role)
+    }
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    return this.request(`/api/admin/users?${params.toString()}`, adminUsersResponseSchema, {
+      auth: true,
+    })
+  }
+
+  adminUser(id: string): Promise<AdminUserResponse> {
+    return this.request(`/api/admin/users/${encodeURIComponent(id)}`, adminUserResponseSchema, {
+      auth: true,
+    })
+  }
+
+  updateAdminUser(id: string, input: AdminUpdateUserRequest): Promise<AdminUserResponse> {
+    const payload = adminUpdateUserRequestSchema.parse(input)
+    return this.request(`/api/admin/users/${encodeURIComponent(id)}`, adminUserResponseSchema, {
+      method: 'PATCH',
+      body: payload,
       auth: true,
     })
   }

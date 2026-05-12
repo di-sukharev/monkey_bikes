@@ -36,7 +36,10 @@ test('ApiClient refreshes and retries authenticated requests with the new access
             id: 'user_1',
             email: 'user@example.com',
             displayName: null,
+            role: 'user',
+            status: 'active',
             createdAt: '2026-05-11T00:00:00.000Z',
+            updatedAt: '2026-05-11T00:00:00.000Z',
           },
         },
         200,
@@ -143,6 +146,123 @@ test('ApiClient expireSession clears stale web session cookie through logout', a
   expect(accessToken).toBeNull()
   expect(authExpiredCalls).toBe(1)
   expect(calls).toEqual([{ path: '/api/auth/logout', method: 'POST' }])
+})
+
+test('ApiClient sends admin user patches and parses the updated user', async () => {
+  let accessToken: string | null = 'admin-access-token'
+  const calls: Array<{ path: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const path = new URL(String(input)).pathname
+    calls.push({
+      path,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (path === '/api/admin/users/user_1') {
+      return json(
+        {
+          user: {
+            id: 'user_1',
+            email: 'user@example.com',
+            displayName: null,
+            role: 'manufacturer',
+            status: 'active',
+            createdAt: '2026-05-11T00:00:00.000Z',
+            updatedAt: '2026-05-12T00:00:00.000Z',
+          },
+        },
+        200,
+      )
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const response = await client.updateAdminUser('user_1', { role: 'manufacturer' })
+
+  expect(response.user.role).toBe('manufacturer')
+  expect(calls).toEqual([
+    {
+      path: '/api/admin/users/user_1',
+      method: 'PATCH',
+      body: { role: 'manufacturer' },
+    },
+  ])
+})
+
+test('ApiClient sends paginated admin user list filters', async () => {
+  let accessToken: string | null = 'admin-access-token'
+  const calls: Array<{ search: string; authorization: string | null }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    const headers = new Headers(init?.headers)
+    calls.push({
+      search: url.search,
+      authorization: headers.get('Authorization'),
+    })
+
+    return json(
+      {
+        items: [],
+        page: 2,
+        pageSize: 10,
+        total: 0,
+      },
+      200,
+    )
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const response = await client.adminUsers({
+    page: 2,
+    pageSize: 10,
+    role: 'manufacturer',
+    status: 'blocked',
+  })
+
+  expect(response.page).toBe(2)
+  expect(calls).toEqual([
+    {
+      search: '?page=2&pageSize=10&role=manufacturer&status=blocked',
+      authorization: 'Bearer admin-access-token',
+    },
+  ])
+})
+
+test('ApiClient exposes admin user patch errors', async () => {
+  let accessToken: string | null = 'admin-access-token'
+
+  globalThis.fetch = async () =>
+    json({ error: { code: 'CONFLICT', message: 'At least one active admin is required' } }, 409)
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  await expect(client.updateAdminUser('admin_1', { status: 'blocked' })).rejects.toMatchObject({
+    status: 409,
+    code: 'CONFLICT',
+    message: 'At least one active admin is required',
+  })
 })
 
 test('bootstrapAuthSession waits for stale-cookie cleanup before completing', async () => {
