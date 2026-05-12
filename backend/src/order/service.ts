@@ -19,6 +19,7 @@ import type { AuthenticatedUser } from '../auth/service'
 import type { DbClient } from '../db'
 import { Prisma } from '../generated/prisma/client'
 import { AppError } from '../http/errors'
+import { paymentRequirementsMet, type PaymentRecord, toPaymentDto } from '../payment/dto'
 
 type BicycleForOrderRecord = {
   id: string
@@ -113,6 +114,7 @@ type OrderRecord = {
   createdAt: Date
   updatedAt: Date
   items: OrderItemRecord[]
+  payments: PaymentRecord[]
 }
 
 type AdminOrderRecord = Omit<OrderRecord, 'items'> & {
@@ -134,6 +136,9 @@ const orderTransitionMaxAttempts = 3
 const orderInclude = {
   items: {
     orderBy: { createdAt: 'asc' as const },
+  },
+  payments: {
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
   },
 }
 const orderUserSummarySelect = {
@@ -163,6 +168,9 @@ const adminOrderInclude = {
       },
     },
     orderBy: { createdAt: 'asc' as const },
+  },
+  payments: {
+    orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
   },
 }
 
@@ -860,6 +868,8 @@ function toOrderDto(order: OrderRecord): OrderDto {
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     items: order.items.map(toOrderItemDto),
+    payments: order.payments.map(toPaymentDto),
+    paymentRequirementsMet: paymentRequirementsMet(order.payments),
   }
 }
 

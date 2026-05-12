@@ -14,6 +14,7 @@ import {
   OrderRequestPage,
   OrdersPage,
 } from './features/orders/pages'
+import { AdminPaymentsPage } from './features/payments/pages'
 import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
 
 const rootRoute = createRootRoute({
@@ -54,6 +55,12 @@ const adminOrdersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/orders',
   component: AdminOrdersPage,
+})
+
+const adminPaymentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/payments',
+  component: AdminPaymentsPage,
 })
 
 const adminOrderDetailRoute = createRoute({
@@ -114,6 +121,7 @@ const routeTree = rootRoute.addChildren([
   adminManufacturersRoute,
   adminBicyclesRoute,
   adminOrdersRoute,
+  adminPaymentsRoute,
   adminOrderDetailRoute,
   manufacturerProfileRoute,
   manufacturerBicyclesRoute,

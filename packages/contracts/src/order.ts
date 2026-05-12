@@ -8,6 +8,7 @@ import {
 import { userSchema, userStatusSchema } from './auth'
 import { dateOnlyStringSchema, rentalDaysInclusive } from './date'
 import { manufacturerProfileStatusSchema } from './manufacturer'
+import { paymentSchema } from './payment'
 
 const nullableTrimmedString = (maxLength: number) => z.preprocess((value) => {
   if (value === null || value === undefined) return null
@@ -154,6 +155,8 @@ export const orderSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   items: z.array(orderItemSchema).min(1),
+  payments: z.array(paymentSchema),
+  paymentRequirementsMet: z.boolean(),
 })
 
 export const orderUserSummarySchema = userSchema.pick({

@@ -11,8 +11,37 @@ describe('loadEnv', () => {
     })
 
     expect(env.PORT).toBe(3000)
+    expect(env.APP_ENV).toBe('development')
     expect(env.ACCESS_TOKEN_TTL_SECONDS).toBe(900)
     expect(env.COOKIE_SECURE).toBe(false)
     expect(env.CORS_ORIGINS).toEqual(['http://localhost:5173', 'http://localhost:8081'])
+    expect(env.PAYMENT_PROVIDER).toBe('stub')
+    expect(env.PAYMENT_STUB_DEV_ENDPOINTS_ENABLED).toBe(true)
+    expect(env.PAYMENT_CURRENCY).toBe('RUB')
+  })
+
+  test('disables stub payment surfaces in production by default', () => {
+    const env = loadEnv({
+      APP_ENV: 'production',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:54329/web_app_demo',
+      JWT_SECRET: '12345678901234567890123456789012',
+    })
+
+    expect(env.PAYMENT_PROVIDER).toBe('disabled')
+    expect(env.PAYMENT_STUB_DEV_ENDPOINTS_ENABLED).toBe(false)
+  })
+
+  test('allows explicit stub provider and dev endpoint config', () => {
+    const env = loadEnv({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://postgres:postgres@localhost:54329/web_app_demo',
+      JWT_SECRET: '12345678901234567890123456789012',
+      PAYMENT_PROVIDER: 'stub',
+      PAYMENT_STUB_DEV_ENDPOINTS_ENABLED: 'true',
+    })
+
+    expect(env.APP_ENV).toBe('production')
+    expect(env.PAYMENT_PROVIDER).toBe('stub')
+    expect(env.PAYMENT_STUB_DEV_ENDPOINTS_ENABLED).toBe(true)
   })
 })

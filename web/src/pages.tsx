@@ -95,6 +95,7 @@ export function RootLayout() {
             {auth.user?.role === 'admin' && <NavLink to="/admin/manufacturers">Manufacturers</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/bicycles">Bicycles</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/orders">Orders</NavLink>}
+            {auth.user?.role === 'admin' && <NavLink to="/admin/payments">Payments</NavLink>}
           </nav>
 
           {auth.isAuthenticated && (
@@ -410,6 +411,7 @@ function NavLink({
     | '/admin/manufacturers'
     | '/admin/bicycles'
     | '/admin/orders'
+    | '/admin/payments'
     | '/manufacturer/profile'
     | '/manufacturer/bicycles'
     | '/bicycles'

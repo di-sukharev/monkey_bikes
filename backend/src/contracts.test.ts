@@ -16,6 +16,8 @@ import {
   orderCancelRequestSchema,
   orderCreateRequestSchema,
   orderSchema,
+  paymentResponseSchema,
+  paymentSchema,
   publicBicyclesQuerySchema,
   registerRequestSchema,
   userSchema,
@@ -402,6 +404,8 @@ describe('contracts', () => {
       safetyAgreementAcceptedAt: '2026-05-12T10:00:00.000Z',
       createdAt: '2026-05-12T10:00:00.000Z',
       updatedAt: '2026-05-12T10:00:00.000Z',
+      payments: [],
+      paymentRequirementsMet: false,
       items: [
         {
           id: 'item_1',
@@ -427,6 +431,23 @@ describe('contracts', () => {
         },
       ],
     }).items[0]?.pricePerDaySnapshotKopecks).toBe(250000)
+
+    const payment = paymentSchema.parse({
+      id: 'payment_1',
+      orderId: 'order_1',
+      type: 'rent',
+      provider: 'stub',
+      status: 'pending',
+      amountKopecks: 700000,
+      currency: 'RUB',
+      providerPaymentId: 'stub_payment_1',
+      failureReason: null,
+      completedAt: null,
+      createdAt: '2026-05-12T10:00:00.000Z',
+      updatedAt: '2026-05-12T10:00:00.000Z',
+    })
+    expect(payment.type).toBe('rent')
+    expect(paymentResponseSchema.parse({ payment }).payment.status).toBe('pending')
   })
 
   test('normalizes order status transition contracts and domain error codes', () => {
@@ -478,6 +499,37 @@ describe('contracts', () => {
       safetyAgreementAcceptedAt: '2026-05-12T10:00:00.000Z',
       createdAt: '2026-05-12T10:00:00.000Z',
       updatedAt: '2026-05-12T10:00:00.000Z',
+      payments: [
+        {
+          id: 'payment_1',
+          orderId: 'order_1',
+          type: 'rent',
+          provider: 'stub',
+          status: 'succeeded',
+          amountKopecks: 700000,
+          currency: 'RUB',
+          providerPaymentId: 'stub_payment_1',
+          failureReason: null,
+          completedAt: '2026-05-12T10:05:00.000Z',
+          createdAt: '2026-05-12T10:00:00.000Z',
+          updatedAt: '2026-05-12T10:05:00.000Z',
+        },
+        {
+          id: 'payment_2',
+          orderId: 'order_1',
+          type: 'deposit',
+          provider: 'stub',
+          status: 'succeeded',
+          amountKopecks: 700000,
+          currency: 'RUB',
+          providerPaymentId: 'stub_payment_2',
+          failureReason: null,
+          completedAt: '2026-05-12T10:06:00.000Z',
+          createdAt: '2026-05-12T10:00:00.000Z',
+          updatedAt: '2026-05-12T10:06:00.000Z',
+        },
+      ],
+      paymentRequirementsMet: true,
       user: {
         id: 'user_1',
         email: 'renter@example.com',

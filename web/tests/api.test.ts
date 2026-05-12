@@ -721,6 +721,98 @@ test('ApiClient manages order cancellation and admin status transitions', async 
   ])
 })
 
+test('ApiClient manages stub payments and admin payment filters', async () => {
+  let accessToken: string | null = 'payment-access-token'
+  const calls: Array<{ path: string; search: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (url.pathname === '/api/orders/order_1/payments/rent') {
+      return json({ payment: paymentResponse('rent', 'pending') }, 201)
+    }
+
+    if (url.pathname === '/api/payments/payment_1/stub-success') {
+      return json({ payment: paymentResponse('rent', 'succeeded') }, 200)
+    }
+
+    if (url.pathname === '/api/admin/payments') {
+      return json(
+        {
+          items: [
+            {
+              ...paymentResponse('rent', 'succeeded'),
+              order: {
+                id: 'order_1',
+                status: 'confirmed',
+                startsOn: '2026-05-12',
+                endsOn: '2026-05-13',
+                user: {
+                  id: 'user_1',
+                  email: 'renter@example.com',
+                  displayName: 'Renter',
+                },
+              },
+            },
+          ],
+          page: 1,
+          pageSize: 20,
+          total: 1,
+        },
+        200,
+      )
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const created = await client.createOrderPayment('order_1', 'rent')
+  const completed = await client.completeStubPayment('payment_1', 'stub-success')
+  const adminList = await client.adminPayments({
+    page: 1,
+    pageSize: 20,
+    status: 'succeeded',
+    type: 'rent',
+  })
+
+  expect(created.payment.status).toBe('pending')
+  expect(completed.payment.status).toBe('succeeded')
+  expect(adminList.items[0]?.order.user.email).toBe('renter@example.com')
+  expect(calls).toEqual([
+    {
+      path: '/api/orders/order_1/payments/rent',
+      search: '',
+      method: 'POST',
+      body: undefined,
+    },
+    {
+      path: '/api/payments/payment_1/stub-success',
+      search: '',
+      method: 'POST',
+      body: undefined,
+    },
+    {
+      path: '/api/admin/payments',
+      search: '?page=1&pageSize=20&status=succeeded&type=rent',
+      method: 'GET',
+      body: undefined,
+    },
+  ])
+})
+
 test('ApiClient preserves domain error details for admin order conflicts', async () => {
   let accessToken: string | null = 'admin-access-token'
 
@@ -956,6 +1048,8 @@ function orderResponse() {
     safetyAgreementAcceptedAt: '2026-05-12T10:00:00.000Z',
     createdAt: '2026-05-12T10:00:00.000Z',
     updatedAt: '2026-05-12T10:00:00.000Z',
+    payments: [],
+    paymentRequirementsMet: false,
     items: [
       {
         id: 'item_1',
@@ -975,6 +1069,23 @@ function orderResponse() {
         },
       },
     ],
+  }
+}
+
+function paymentResponse(type: 'deposit' | 'rent', status: 'cancelled' | 'failed' | 'pending' | 'succeeded') {
+  return {
+    id: 'payment_1',
+    orderId: 'order_1',
+    type,
+    provider: 'stub',
+    status,
+    amountKopecks: type === 'rent' ? 500000 : 500000,
+    currency: 'RUB',
+    providerPaymentId: 'stub_payment_1',
+    failureReason: status === 'failed' ? 'Stub payment failed' : null,
+    completedAt: status === 'pending' ? null : '2026-05-12T10:05:00.000Z',
+    createdAt: '2026-05-12T10:00:00.000Z',
+    updatedAt: '2026-05-12T10:05:00.000Z',
   }
 }
 

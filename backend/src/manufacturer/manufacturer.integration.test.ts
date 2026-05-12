@@ -18,6 +18,10 @@ maybeDescribe('manufacturer profile API integration', () => {
     ACCESS_TOKEN_TTL_SECONDS: 60,
     REFRESH_TOKEN_TTL_DAYS: 30,
     COOKIE_SECURE: false,
+    APP_ENV: 'test',
+    PAYMENT_PROVIDER: 'stub',
+    PAYMENT_STUB_DEV_ENDPOINTS_ENABLED: true,
+    PAYMENT_CURRENCY: 'RUB',
   }
   const prisma = createPrisma(databaseUrl!)
   const app = createApp({ env, prisma })

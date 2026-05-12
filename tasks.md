@@ -182,6 +182,16 @@
 
 Минимальная проверка: backend integration tests на платежные инварианты; env/config tests; web smoke платежного сценария.
 
+Статус выполнения:
+
+- Выполнено: добавлена сущность `Payment` с типами `rent`/`deposit`, provider `stub`, статусами `pending`/`succeeded`/`failed`/`cancelled`, снимком суммы, валютой, completion metadata и Prisma-ограничением одного активного платежа на заказ и тип.
+- Выполнено: пользователь может создать платеж только для своего подтвержденного заказа; повторный create возвращает существующую активную попытку, failed/cancelled освобождают retry, zero deposit сразу становится successful.
+- Выполнено: dev endpoints `stub-success`/`stub-fail`/`stub-cancel` доступны только при включенном конфиге, repeated success идемпотентен, terminal failed/cancelled требуют новой попытки.
+- Выполнено: production defaults отключают stub provider/dev endpoints, `.env.example` отражает платежную конфигурацию без реальных секретов.
+- Выполнено: пользователь и администратор видят платежные статусы через компонентный shadcn/UI payments-модуль; админ видит отдельный список платежей и blocker выдачи до полной оплаты.
+- Выполнено: task 6 экспонирует `paymentRequirementsMet` и явно не открывает `issued` transition; фактический guard выдачи остается владельцем задачи 7.
+- Проверено: backend unit/typecheck/prisma validate, backend integration на `DATABASE_URL_TEST`, web tests/typecheck/lint/build и Playwright E2E прошли; review loop достиг оценки 9.5/10.
+
 ## 7. Выдача, возврат и чеклисты
 
 Цель: закрыть операционный цикл заказа от подтверждения до возврата велосипеда с фиксацией состояния.

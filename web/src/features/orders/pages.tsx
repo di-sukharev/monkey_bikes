@@ -5,6 +5,7 @@ import type {
   AdminOrderWarningDto,
   OrderDto,
   OrderStatus,
+  PaymentType,
   PublicBicycleDto,
 } from '@web-app-demo/contracts'
 import {
@@ -57,6 +58,12 @@ import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/use-auth'
 import { OrderForm } from './order-form'
+import {
+  OrderPaymentsPanel,
+  PaymentStatusSummary,
+  type PendingPaymentAction,
+} from '../payments/order-payments-panel'
+import { formatPaymentType, type StubPaymentAction } from '../payments/model'
 import {
   emptyOrderForm,
   formatMoney,
@@ -340,11 +347,12 @@ export function OrdersPage() {
 
           {data && data.items.length > 0 && (
             <div className="overflow-x-auto rounded-lg border">
-              <Table className="min-w-[860px]">
+              <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Request</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Payments</TableHead>
                     <TableHead>Dates</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead className="w-[140px]">Details</TableHead>
@@ -360,6 +368,7 @@ export function OrdersPage() {
                         </div>
                       </TableCell>
                       <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                      <TableCell><PaymentStatusSummary order={order} /></TableCell>
                       <TableCell>{formatOrderDates(order)}</TableCell>
                       <TableCell>{formatMoney(order.totalAmountKopecks)}</TableCell>
                       <TableCell>
@@ -414,6 +423,8 @@ export function OrderDetailPage() {
   const { id } = useParams({ strict: false }) as { id: string }
   const [cancelComment, setCancelComment] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
+  const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
+  const [pendingPaymentAction, setPendingPaymentAction] = useState<PendingPaymentAction>(null)
   const orderQuery = useQuery({
     queryKey: orderDetailQueryKey(auth.user?.id, id),
     enabled: auth.user?.role === 'user',
@@ -429,6 +440,34 @@ export function OrderDetailPage() {
       setCancelComment('')
       await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
       queryClient.setQueryData(orderDetailQueryKey(auth.user?.id, id), response)
+    },
+  })
+  const createPayment = useMutation({
+    mutationFn: async (type: PaymentType) => {
+      setPendingPaymentAction({ kind: 'create', type })
+      return auth.api.createOrderPayment(id, type)
+    },
+    onSuccess: async (response) => {
+      setPaymentNotice(`${formatPaymentType(response.payment.type)} payment ${response.payment.status}`)
+      await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
+      await queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(auth.user?.id, id) })
+    },
+    onSettled: () => {
+      setPendingPaymentAction(null)
+    },
+  })
+  const completePayment = useMutation({
+    mutationFn: async ({ paymentId, action }: { paymentId: string; action: StubPaymentAction }) => {
+      setPendingPaymentAction({ kind: 'complete', paymentId, action })
+      return auth.api.completeStubPayment(paymentId, action)
+    },
+    onSuccess: async (response) => {
+      setPaymentNotice(`${formatPaymentType(response.payment.type)} payment ${response.payment.status}`)
+      await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
+      await queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(auth.user?.id, id) })
+    },
+    onSettled: () => {
+      setPendingPaymentAction(null)
     },
   })
 
@@ -526,6 +565,16 @@ export function OrderDetailPage() {
               <AlertDescription>{order.userComment}</AlertDescription>
             </Alert>
           )}
+
+          <OrderPaymentsPanel
+            order={order}
+            mode="user"
+            notice={paymentNotice}
+            error={createPayment.error ?? completePayment.error}
+            pendingAction={pendingPaymentAction}
+            onCreate={(type) => createPayment.mutate(type)}
+            onComplete={(paymentId, action) => completePayment.mutate({ paymentId, action })}
+          />
 
           {notice && (
             <Alert>
@@ -688,12 +737,13 @@ export function AdminOrdersPage() {
 
           {data && data.items.length > 0 && (
             <div className="overflow-x-auto rounded-lg border">
-              <Table className="min-w-[980px]">
+              <Table className="min-w-[1120px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Request</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Payments</TableHead>
                     <TableHead>Dates</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead className="w-[140px]">Details</TableHead>
@@ -715,6 +765,7 @@ export function AdminOrdersPage() {
                         </div>
                       </TableCell>
                       <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                      <TableCell><PaymentStatusSummary order={order} /></TableCell>
                       <TableCell>{formatOrderDates(order)}</TableCell>
                       <TableCell>{formatMoney(order.totalAmountKopecks)}</TableCell>
                       <TableCell>
@@ -908,6 +959,8 @@ export function AdminOrderDetailPage() {
               </AlertDescription>
             </Alert>
           </div>
+
+          <OrderPaymentsPanel order={order} mode="admin" />
 
           <StatusHistoryTable order={order} />
 

@@ -71,6 +71,28 @@ enum OrderStatus {
   @@map("order_status")
 }
 
+enum PaymentType {
+  deposit
+  rent
+
+  @@map("payment_type")
+}
+
+enum PaymentProvider {
+  stub
+
+  @@map("payment_provider")
+}
+
+enum PaymentStatus {
+  cancelled
+  failed
+  pending
+  succeeded
+
+  @@map("payment_status")
+}
+
 model User {
   id                  String               @id @default(cuid())
   email               String               @unique
@@ -191,6 +213,7 @@ model Order {
   user                       User            @relation(fields: [userId], references: [id], onDelete: Restrict)
   items                      OrderItem[]
   statusHistory              OrderStatusHistory[]
+  payments                   Payment[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -237,4 +260,26 @@ model OrderStatusHistory {
   @@index([orderId, createdAt])
   @@index([changedByUserId, createdAt])
   @@map("order_status_history")
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+  orderId           String
+  type              PaymentType
+  provider          PaymentProvider @default(stub)
+  status            PaymentStatus   @default(pending)
+  amountKopecks     Int
+  currency          String          @default("RUB")
+  providerPaymentId String?         @unique
+  failureReason     String?
+  completedAt       DateTime?
+  activeKey         String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  order             Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, type, activeKey])
+  @@index([orderId, type, status])
+  @@index([status, createdAt])
+  @@map("payments")
 }

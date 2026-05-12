@@ -3,6 +3,8 @@ import {
   adminOrdersQuerySchema,
   adminOrdersResponseSchema,
   adminOrderStatusUpdateRequestSchema,
+  adminPaymentsQuerySchema,
+  adminPaymentsResponseSchema,
   apiErrorSchema,
   adminBicycleModerationRequestSchema,
   adminBicycleResponseSchema,
@@ -46,11 +48,16 @@ import {
   type AdminOrdersQuery,
   type AdminOrdersResponse,
   type AdminOrderStatusUpdateInput,
+  type AdminPaymentsQuery,
+  type AdminPaymentsResponse,
   type OrderCreateInput,
   type OrderCancelInput,
   type OrderResponse,
   type OrdersQuery,
   type OrdersResponse,
+  paymentResponseSchema,
+  type PaymentResponse,
+  type PaymentType,
   manufacturerBicyclesQuerySchema,
   manufacturerBicyclesResponseSchema,
   manufacturerProfileGetResponseSchema,
@@ -380,6 +387,27 @@ export class ApiClient {
     })
   }
 
+  createOrderPayment(id: string, type: PaymentType): Promise<PaymentResponse> {
+    return this.request(
+      `/api/orders/${encodeURIComponent(id)}/payments/${type}`,
+      paymentResponseSchema,
+      {
+        method: 'POST',
+        auth: true,
+      },
+    )
+  }
+
+  completeStubPayment(
+    id: string,
+    action: 'stub-cancel' | 'stub-fail' | 'stub-success',
+  ): Promise<PaymentResponse> {
+    return this.request(`/api/payments/${encodeURIComponent(id)}/${action}`, paymentResponseSchema, {
+      method: 'POST',
+      auth: true,
+    })
+  }
+
   adminOrders(input: Partial<AdminOrdersQuery> = {}): Promise<AdminOrdersResponse> {
     const query = adminOrdersQuerySchema.parse(input)
     const params = paginatedParams(query.page, query.pageSize)
@@ -413,6 +441,27 @@ export class ApiClient {
         auth: true,
       },
     )
+  }
+
+  adminPayments(input: Partial<AdminPaymentsQuery> = {}): Promise<AdminPaymentsResponse> {
+    const query = adminPaymentsQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    if (query.type) {
+      params.set('type', query.type)
+    }
+
+    if (query.orderId) {
+      params.set('orderId', query.orderId)
+    }
+
+    return this.request(`/api/admin/payments?${params.toString()}`, adminPaymentsResponseSchema, {
+      auth: true,
+    })
   }
 
   adminBicycles(input: Partial<AdminBicyclesQuery> = {}): Promise<AdminBicyclesResponse> {
