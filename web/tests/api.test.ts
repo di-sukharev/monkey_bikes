@@ -547,6 +547,93 @@ test('ApiClient sends manufacturer bicycle pagination filters', async () => {
   ])
 })
 
+test('ApiClient creates and lists rental requests without client money fields', async () => {
+  let accessToken: string | null = 'user-access-token'
+  const calls: Array<{ path: string; search: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (url.pathname === '/api/orders' && init?.method === 'POST') {
+      return json({ order: orderResponse() }, 201)
+    }
+
+    if (url.pathname === '/api/orders') {
+      return json(
+        {
+          items: [orderResponse()],
+          page: 1,
+          pageSize: 20,
+          total: 1,
+        },
+        200,
+      )
+    }
+
+    if (url.pathname === '/api/orders/order_1') {
+      return json({ order: orderResponse() }, 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const input = {
+    bicycleIds: ['bike_1'],
+    startsOn: '2026-05-12',
+    endsOn: '2026-05-13',
+    fulfillmentType: 'pickup' as const,
+    deliveryAddress: null,
+    contactName: 'Trainer',
+    contactPhone: '+7 999 111-22-33',
+    userComment: '',
+    safetyAgreementAccepted: true as const,
+  }
+
+  const created = await client.createOrder(input)
+  const list = await client.orders({ page: 1, pageSize: 20, status: 'request' })
+  const detail = await client.order('order_1')
+
+  expect(created.order.totalAmountKopecks).toBe(1000000)
+  expect(list.total).toBe(1)
+  expect(detail.order.id).toBe('order_1')
+  expect(calls).toEqual([
+    {
+      path: '/api/orders',
+      search: '',
+      method: 'POST',
+      body: {
+        ...input,
+        userComment: null,
+      },
+    },
+    {
+      path: '/api/orders',
+      search: '?page=1&pageSize=20&status=request',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/orders/order_1',
+      search: '',
+      method: 'GET',
+      body: undefined,
+    },
+  ])
+})
+
 test('bootstrapAuthSession waits for stale-cookie cleanup before completing', async () => {
   const events: string[] = []
   let completed = false
@@ -712,5 +799,48 @@ function manufacturerSummary() {
     publicName: 'Tiny Bikes',
     city: 'Moscow',
     region: 'Moscow',
+  }
+}
+
+function orderResponse() {
+  return {
+    id: 'order_1',
+    userId: 'user_1',
+    status: 'request',
+    startsOn: '2026-05-12',
+    endsOn: '2026-05-13',
+    rentalDays: 2,
+    fulfillmentType: 'pickup',
+    deliveryAddress: null,
+    contactName: 'Trainer',
+    contactPhone: '+7 999 111-22-33',
+    userComment: null,
+    adminComment: null,
+    rentalAmountKopecks: 500000,
+    depositAmountKopecks: 500000,
+    deliveryAmountKopecks: 0,
+    totalAmountKopecks: 1000000,
+    safetyAgreementAcceptedAt: '2026-05-12T10:00:00.000Z',
+    createdAt: '2026-05-12T10:00:00.000Z',
+    updatedAt: '2026-05-12T10:00:00.000Z',
+    items: [
+      {
+        id: 'item_1',
+        orderId: 'order_1',
+        bicycleId: 'bike_1',
+        pricePerDaySnapshotKopecks: 250000,
+        depositSnapshotKopecks: 500000,
+        createdAt: '2026-05-12T10:00:00.000Z',
+        bicycle: {
+          id: 'bike_1',
+          title: 'Tiny Performer S',
+          size: 'S',
+          city: 'Moscow',
+          deliveryAvailable: true,
+          pickupAddress: 'Main storage, door 2',
+          manufacturer: manufacturerSummary(),
+        },
+      },
+    ],
   }
 }

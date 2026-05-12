@@ -1,5 +1,6 @@
 import { z } from 'zod'
 
+import { dateOnlyStringSchema } from './date'
 import { manufacturerProfileStatusSchema } from './manufacturer'
 
 const nullableTrimmedString = z.preprocess((value) => {
@@ -15,11 +16,6 @@ const longBicycleString = z.string().trim().min(10).max(2_000)
 const moneyKopecks = z.coerce.number().int().min(0).max(100_000_000)
 const positiveCentimeters = z.coerce.number().int().min(1).max(1_000)
 const positiveKilograms = z.coerce.number().int().min(1).max(1_000)
-const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/
-const dateOnlyString = z.string()
-  .regex(dateOnlyPattern, 'Expected YYYY-MM-DD')
-  .refine(isValidDateOnly, 'Expected a valid calendar date')
-
 export const bicycleSizeSchema = z.enum(['S', 'M', 'L'])
 
 export const bicycleStatusSchema = z.enum([
@@ -124,8 +120,8 @@ export const publicBicyclesQuerySchema = z
     minPriceKopecks: moneyKopecks.optional(),
     maxPriceKopecks: moneyKopecks.optional(),
     city: nullableTrimmedString.optional(),
-    startsOn: dateOnlyString.optional(),
-    endsOn: dateOnlyString.optional(),
+    startsOn: dateOnlyStringSchema.optional(),
+    endsOn: dateOnlyStringSchema.optional(),
   })
   .refine(
     (value) =>
@@ -224,19 +220,3 @@ export type AdminBicycleModerationPayload = z.output<
 export type AdminBicycleStatusUpdateRequest = z.infer<
   typeof adminBicycleStatusUpdateRequestSchema
 >
-
-function isValidDateOnly(value: string) {
-  const match = dateOnlyPattern.exec(value)
-  if (!match) return false
-
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  const date = new Date(Date.UTC(year, month - 1, day))
-
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  )
-}

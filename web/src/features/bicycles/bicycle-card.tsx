@@ -11,16 +11,34 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { formatMoney } from './model'
 import { BicycleSizeBadge } from './status-badge'
 
-export function PublicBicycleCard({ bicycle }: { bicycle: PublicBicycleDto }) {
+export function PublicBicycleCard({
+  bicycle,
+  selected = false,
+  onSelectedChange,
+}: {
+  bicycle: PublicBicycleDto
+  selected?: boolean
+  onSelectedChange?: (selected: boolean) => void
+}) {
   const imageUrl = bicycle.photoUrls[0]
 
   return (
     <Card>
       <CardHeader className="border-b">
         <div className="grid gap-2">
+          {onSelectedChange && (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={selected}
+                onCheckedChange={(checked) => onSelectedChange(checked === true)}
+              />
+              Select for request
+            </label>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <BicycleSizeBadge size={bicycle.size} />
             <Badge variant="secondary">{formatMoney(bicycle.pricePerDayKopecks)} / day</Badge>
@@ -30,7 +48,11 @@ export function PublicBicycleCard({ bicycle }: { bicycle: PublicBicycleDto }) {
         </div>
         <CardAction>
           <Button asChild size="sm" variant="outline">
-            <Link to="/bicycles/$id" params={{ id: bicycle.id }}>
+            <Link
+              to="/bicycles/$id"
+              params={{ id: bicycle.id }}
+              aria-label={`Details for ${bicycle.title}`}
+            >
               Details
             </Link>
           </Button>

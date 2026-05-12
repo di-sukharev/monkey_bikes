@@ -17,6 +17,8 @@ import { BicycleService } from './bicycle/service'
 import { errorResponse, handleError } from './http/errors'
 import { createManufacturerRoutes } from './manufacturer/routes'
 import { ManufacturerProfileService } from './manufacturer/service'
+import { createOrderRoutes } from './order/routes'
+import { OrderService } from './order/service'
 
 type AppBindings = {
   Variables: {
@@ -25,6 +27,7 @@ type AppBindings = {
     bicycleService: BicycleService
     env: AppEnv
     manufacturerProfileService: ManufacturerProfileService
+    orderService: OrderService
   }
 }
 
@@ -38,6 +41,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const authService = new AuthService(prisma, env)
   const bicycleService = new BicycleService(prisma)
   const manufacturerProfileService = new ManufacturerProfileService(prisma)
+  const orderService = new OrderService(prisma)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: (result, c) => {
       if (!result.success) {
@@ -69,6 +73,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('bicycleService', bicycleService)
     c.set('env', env)
     c.set('manufacturerProfileService', manufacturerProfileService)
+    c.set('orderService', orderService)
     await next()
   })
 
@@ -89,6 +94,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/bicycles', createPublicBicycleRoutes())
   app.route('/api/manufacturer', createManufacturerRoutes())
   app.route('/api/manufacturer', createManufacturerBicycleRoutes())
+  app.route('/api/orders', createOrderRoutes())
   app.route('/api/admin', createAdminRoutes())
   app.route('/api/admin', createAdminBicycleRoutes())
 

@@ -84,6 +84,7 @@ export function RootLayout() {
             <NavLink to="/">Auth</NavLink>
             <NavLink to="/app">App</NavLink>
             <NavLink to="/bicycles">Catalog</NavLink>
+            {auth.user?.role === 'user' && <NavLink to="/orders">My orders</NavLink>}
             {auth.user?.role === 'manufacturer' && (
               <NavLink to="/manufacturer/profile">Manufacturer</NavLink>
             )}
@@ -410,6 +411,7 @@ function NavLink({
     | '/manufacturer/profile'
     | '/manufacturer/bicycles'
     | '/bicycles'
+    | '/orders'
   children: ReactNode
 }) {
   return (

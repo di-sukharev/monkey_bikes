@@ -10,6 +10,8 @@ import {
   manufacturerProfileSchema,
   manufacturerProfileSubmitResponseSchema,
   manufacturerProfileUpsertRequestSchema,
+  orderCreateRequestSchema,
+  orderSchema,
   publicBicyclesQuerySchema,
   registerRequestSchema,
   userSchema,
@@ -298,6 +300,129 @@ describe('contracts', () => {
       decision: 'approved',
       moderationComment: null,
     })
+  })
+
+  test('normalizes order payloads and rejects client-side money injection', () => {
+    const payload = orderCreateRequestSchema.parse({
+      bicycleIds: [' bike_1 ', 'bike_2'],
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      fulfillmentType: 'delivery',
+      deliveryAddress: ' Circus arena, gate 4 ',
+      contactName: ' Trainer ',
+      contactPhone: ' +7 999 111-22-33 ',
+      userComment: ' Keep the bicycles indoors. ',
+      safetyAgreementAccepted: true,
+    })
+
+    expect(payload).toEqual({
+      bicycleIds: ['bike_1', 'bike_2'],
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      fulfillmentType: 'delivery',
+      deliveryAddress: 'Circus arena, gate 4',
+      contactName: 'Trainer',
+      contactPhone: '+7 999 111-22-33',
+      userComment: 'Keep the bicycles indoors.',
+      safetyAgreementAccepted: true,
+    })
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        rentalAmountKopecks: 1,
+      }),
+    ).toThrow()
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        bicycleIds: ['bike_1', 'bike_1'],
+      }),
+    ).toThrow()
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        startsOn: '2026-02-30',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        startsOn: '2026-05-14',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        fulfillmentType: 'pickup',
+        deliveryAddress: null,
+        endsOn: '2027-05-13',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        fulfillmentType: 'pickup',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      orderCreateRequestSchema.parse({
+        ...payload,
+        safetyAgreementAccepted: false,
+      }),
+    ).toThrow()
+
+    expect(orderSchema.parse({
+      id: 'order_1',
+      userId: 'user_1',
+      status: 'request',
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      rentalDays: 2,
+      fulfillmentType: 'delivery',
+      deliveryAddress: 'Circus arena, gate 4',
+      contactName: 'Trainer',
+      contactPhone: '+7 999 111-22-33',
+      userComment: 'Keep the bicycles indoors.',
+      adminComment: null,
+      rentalAmountKopecks: 700000,
+      depositAmountKopecks: 700000,
+      deliveryAmountKopecks: 0,
+      totalAmountKopecks: 1400000,
+      safetyAgreementAcceptedAt: '2026-05-12T10:00:00.000Z',
+      createdAt: '2026-05-12T10:00:00.000Z',
+      updatedAt: '2026-05-12T10:00:00.000Z',
+      items: [
+        {
+          id: 'item_1',
+          orderId: 'order_1',
+          bicycleId: 'bike_1',
+          pricePerDaySnapshotKopecks: 250000,
+          depositSnapshotKopecks: 500000,
+          createdAt: '2026-05-12T10:00:00.000Z',
+          bicycle: {
+            id: 'bike_1',
+            title: 'Tiny Performer S',
+            size: 'S',
+            city: 'Moscow',
+            deliveryAvailable: true,
+            pickupAddress: 'Main storage, door 2',
+            manufacturer: {
+              id: 'manufacturer_1',
+              publicName: 'Tiny Bikes',
+              city: 'Moscow',
+              region: null,
+            },
+          },
+        },
+      ],
+    }).items[0]?.pricePerDaySnapshotKopecks).toBe(250000)
   })
 })
 

@@ -33,6 +33,14 @@ import {
   loginRequestSchema,
   logoutRequestSchema,
   meResponseSchema,
+  orderCreateRequestSchema,
+  orderResponseSchema,
+  ordersQuerySchema,
+  ordersResponseSchema,
+  type OrderCreateInput,
+  type OrderResponse,
+  type OrdersQuery,
+  type OrdersResponse,
   manufacturerBicyclesQuerySchema,
   manufacturerBicyclesResponseSchema,
   manufacturerProfileGetResponseSchema,
@@ -321,6 +329,34 @@ export class ApiClient {
         auth: true,
       },
     )
+  }
+
+  orders(input: Partial<OrdersQuery> = {}): Promise<OrdersResponse> {
+    const query = ordersQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    return this.request(`/api/orders?${params.toString()}`, ordersResponseSchema, {
+      auth: true,
+    })
+  }
+
+  order(id: string): Promise<OrderResponse> {
+    return this.request(`/api/orders/${encodeURIComponent(id)}`, orderResponseSchema, {
+      auth: true,
+    })
+  }
+
+  createOrder(input: OrderCreateInput): Promise<OrderResponse> {
+    const payload = orderCreateRequestSchema.parse(input)
+    return this.request('/api/orders', orderResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    })
   }
 
   adminBicycles(input: Partial<AdminBicyclesQuery> = {}): Promise<AdminBicyclesResponse> {

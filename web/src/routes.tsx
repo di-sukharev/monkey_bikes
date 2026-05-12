@@ -7,6 +7,7 @@ import {
   ManufacturerBicyclesPage,
 } from './features/bicycles/pages'
 import { AdminManufacturersPage, ManufacturerProfilePage } from './features/manufacturers/pages'
+import { OrderDetailPage, OrderRequestPage, OrdersPage } from './features/orders/pages'
 import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
 
 const rootRoute = createRootRoute({
@@ -67,6 +68,27 @@ const bicycleDetailRoute = createRoute({
   component: BicycleDetailPage,
 })
 
+const ordersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders',
+  component: OrdersPage,
+})
+
+const newOrderRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders/new',
+  validateSearch: (search: Record<string, unknown>) => ({
+    bicycleIds: typeof search.bicycleIds === 'string' ? search.bicycleIds : undefined,
+  }),
+  component: OrderRequestPage,
+})
+
+const orderDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/orders/$id',
+  component: OrderDetailPage,
+})
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   appRoute,
@@ -77,6 +99,9 @@ const routeTree = rootRoute.addChildren([
   manufacturerBicyclesRoute,
   catalogRoute,
   bicycleDetailRoute,
+  ordersRoute,
+  newOrderRoute,
+  orderDetailRoute,
 ])
 
 export const router = createRouter({ routeTree })

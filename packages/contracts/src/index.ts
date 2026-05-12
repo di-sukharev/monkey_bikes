@@ -1,5 +1,7 @@
 export * from './admin'
 export * from './auth'
 export * from './bicycle'
+export * from './date'
 export * from './errors'
 export * from './manufacturer'
+export * from './order'

@@ -70,6 +70,7 @@ const bicyclesPageSize = 20
 export function CatalogPage() {
   const auth = useAuth()
   const [page, setPage] = useState(1)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [sizes, setSizes] = useState<BicycleSize[]>([])
   const [city, setCity] = useState('')
   const [minPriceKopecks, setMinPriceKopecks] = useState('')
@@ -94,6 +95,7 @@ export function CatalogPage() {
 
   const data = catalogQuery.data
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / bicyclesPageSize))
+  const selectedSearch = { bicycleIds: selectedIds.join(',') }
 
   return (
     <section className={cn(pageShellClass, 'grid gap-4')}>
@@ -215,6 +217,28 @@ export function CatalogPage() {
             </Alert>
           )}
 
+          {selectedIds.length > 0 && (
+            <Alert>
+              <CircleCheckIcon />
+              <AlertTitle>{selectedIds.length} bicycle(s) selected</AlertTitle>
+              <AlertDescription className="flex flex-wrap gap-2">
+                <Button size="sm" asChild>
+                  <Link to="/orders/new" search={selectedSearch}>
+                    Create rental request
+                  </Link>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedIds([])}
+                >
+                  Clear selection
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {data && data.items.length === 0 && (
             <Empty className="border">
               <EmptyHeader>
@@ -230,7 +254,18 @@ export function CatalogPage() {
           {data && data.items.length > 0 && (
             <div className="grid gap-4 md:grid-cols-2">
               {data.items.map((bicycle) => (
-                <PublicBicycleCard key={bicycle.id} bicycle={bicycle} />
+                <PublicBicycleCard
+                  key={bicycle.id}
+                  bicycle={bicycle}
+                  selected={selectedIds.includes(bicycle.id)}
+                  onSelectedChange={(selected) => {
+                    setSelectedIds((current) =>
+                      selected
+                        ? [...current, bicycle.id]
+                        : current.filter((id) => id !== bicycle.id),
+                    )
+                  }}
+                />
               ))}
             </div>
           )}
@@ -316,7 +351,11 @@ export function BicycleDetailPage() {
             <CardDescription>{bicycle.manufacturer.publicName}</CardDescription>
           </div>
           <CardAction>
-            <Button disabled>Request rental</Button>
+            <Button asChild>
+              <Link to="/orders/new" search={{ bicycleIds: bicycle.id }}>
+                Request rental
+              </Link>
+            </Button>
           </CardAction>
         </CardHeader>
         <CardContent className="grid gap-5 py-4">
