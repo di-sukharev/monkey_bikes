@@ -137,5 +137,21 @@ export class AdminUserService {
 }
 
 function isTransactionConflict(error: unknown) {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034'
+  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+    return true
+  }
+
+  if (!error || typeof error !== 'object' || !('cause' in error)) {
+    return false
+  }
+
+  const cause = error.cause
+  if (!cause || typeof cause !== 'object') {
+    return false
+  }
+
+  return (
+    ('kind' in cause && cause.kind === 'TransactionWriteConflict') ||
+    ('originalCode' in cause && cause.originalCode === '40001')
+  )
 }

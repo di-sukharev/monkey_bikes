@@ -9,12 +9,15 @@ import { AdminUserService } from './admin/service'
 import { createAuthRoutes } from './auth/routes'
 import { AuthService } from './auth/service'
 import { errorResponse, handleError } from './http/errors'
+import { createManufacturerRoutes } from './manufacturer/routes'
+import { ManufacturerProfileService } from './manufacturer/service'
 
 type AppBindings = {
   Variables: {
     adminUserService: AdminUserService
     authService: AuthService
     env: AppEnv
+    manufacturerProfileService: ManufacturerProfileService
   }
 }
 
@@ -26,6 +29,7 @@ type CreateAppOptions = {
 export function createApp({ env, prisma }: CreateAppOptions) {
   const adminUserService = new AdminUserService(prisma)
   const authService = new AuthService(prisma, env)
+  const manufacturerProfileService = new ManufacturerProfileService(prisma)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: (result, c) => {
       if (!result.success) {
@@ -46,7 +50,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
         return env.CORS_ORIGINS.includes(origin) ? origin : null
       },
       allowHeaders: ['Content-Type', 'Authorization', 'X-Client-Platform'],
-      allowMethods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+      allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'OPTIONS'],
       credentials: true,
       maxAge: 600,
     }),
@@ -55,6 +59,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('adminUserService', adminUserService)
     c.set('authService', authService)
     c.set('env', env)
+    c.set('manufacturerProfileService', manufacturerProfileService)
     await next()
   })
 
@@ -72,6 +77,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   })
 
   app.route('/api/auth', createAuthRoutes())
+  app.route('/api/manufacturer', createManufacturerRoutes())
   app.route('/api/admin', createAdminRoutes())
 
   app.doc('/openapi.json', {

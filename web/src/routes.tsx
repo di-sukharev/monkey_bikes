@@ -1,6 +1,13 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 
-import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
+import {
+  AdminManufacturersPage,
+  AdminUsersPage,
+  AppPage,
+  HomePage,
+  ManufacturerProfilePage,
+  RootLayout,
+} from './pages'
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -24,7 +31,25 @@ const adminUsersRoute = createRoute({
   component: AdminUsersPage,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, appRoute, adminUsersRoute])
+const adminManufacturersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/manufacturers',
+  component: AdminManufacturersPage,
+})
+
+const manufacturerProfileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manufacturer/profile',
+  component: ManufacturerProfilePage,
+})
+
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  appRoute,
+  adminUsersRoute,
+  adminManufacturersRoute,
+  manufacturerProfileRoute,
+])
 
 export const router = createRouter({ routeTree })
 

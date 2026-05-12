@@ -22,16 +22,27 @@ enum UserStatus {
   @@map("user_status")
 }
 
+enum ManufacturerProfileStatus {
+  approved
+  blocked
+  draft
+  moderation
+  rejected
+
+  @@map("manufacturer_profile_status")
+}
+
 model User {
-  id           String        @id @default(cuid())
-  email        String        @unique
-  passwordHash String
-  displayName  String?
-  role         UserRole      @default(user)
-  status       UserStatus    @default(active)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  sessions     AuthSession[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  passwordHash        String
+  displayName         String?
+  role                UserRole             @default(user)
+  status              UserStatus           @default(active)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  sessions            AuthSession[]
+  manufacturerProfile ManufacturerProfile?
 
   @@index([role])
   @@index([status])
@@ -53,4 +64,27 @@ model AuthSession {
   @@index([userId])
   @@index([expiresAt])
   @@map("auth_sessions")
+}
+
+model ManufacturerProfile {
+  id                String                    @id @default(cuid())
+  userId            String                    @unique
+  legalName         String
+  publicName        String
+  region            String?
+  city              String
+  phone             String
+  email             String
+  description       String
+  status            ManufacturerProfileStatus @default(draft)
+  moderationComment String?
+  submittedAt       DateTime?
+  reviewedAt        DateTime?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("manufacturer_profiles")
 }

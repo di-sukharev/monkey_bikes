@@ -47,6 +47,8 @@ Web и mobile используют одинаковые принципы:
 
 Не создавайте новый form/query/auth abstraction, пока существующий паттерн не перестал решать задачу.
 
+Web UI использует Tailwind CSS v4 и shadcn/ui primitives из `web/src/components/ui`. Для новых web-экранов сначала берите существующие primitives (`Button`, `Card`, `Field`, `Input`, `Table`, `NativeSelect`, `Alert` и т.д.) и сохраняйте настоящую HTML-семантику: page titles остаются `h1/h2`, формы связывают ошибки с полями, а визуальный компонент не должен подменять доступную структуру. Этот checkout намеренно содержит полный shadcn registry для будущей discoverability; в обычной фиче добавляйте новые shadcn-зависимости только вместе с реально используемым компонентом.
+
 `landing` - отдельный Astro workspace для статической landing-страницы. Он не владеет auth-flow и не должен дублировать browser-клиент из `web`; если landing начинает читать API или общие DTO, подключайте `@web-app-demo/contracts` и проверяйте producer/consumer стороны так же, как для `web` и `mobile`.
 
 ## Testing

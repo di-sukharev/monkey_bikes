@@ -10,7 +10,7 @@
     "build": "bun run prisma:generate && tsc --noEmit",
     "typecheck": "bun run prisma:generate && tsc --noEmit",
     "test": "bun run test:unit && bun run test:integration",
-    "test:unit": "bun test src/env.test.ts src/contracts.test.ts src/admin/seed-admin-config.test.ts src/admin/seed-admin-user.test.ts src/auth/access-tokens.test.ts src/auth/passwords.test.ts src/auth/refresh-tokens.test.ts",
+    "test:unit": "bun scripts/test-unit.mjs",
     "test:integration": "bun scripts/test-integration.mjs",
     "smoke:docker": "bun scripts/docker-smoke.mjs",
     "seed:admin": "bun run prisma:generate && bun scripts/seed-admin.ts",

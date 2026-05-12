@@ -64,10 +64,10 @@ test('admin manages users list roles and statuses', async ({ page }) => {
   await registerUser(managedEmail)
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Login' }).click()
+  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
   await page.getByLabel('Email').fill(adminEmail)
   await page.getByLabel('Password').fill(e2ePassword)
-  await page.getByRole('button', { name: 'Login' }).click()
+  await page.locator('form').getByRole('button', { name: 'Login' }).click()
 
   await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
   await page.goto('/admin/users')
@@ -85,7 +85,52 @@ test('admin manages users list roles and statuses', async ({ page }) => {
   await expect(statusSelect).toHaveValue('blocked')
 })
 
-async function registerUser(email: string) {
+test('manufacturer submits a profile and admin approves it', async ({ page }) => {
+  const adminEmail = uniqueEmail('web-e2e-maker-admin')
+  const manufacturerEmail = uniqueEmail('web-e2e-maker')
+  const publicName = `Tiny Bikes ${Date.now()}`
+
+  await registerUser(adminEmail)
+  await promoteUserToAdmin(adminEmail)
+
+  await page.goto('/')
+  await page.getByLabel('Account type').getByRole('button', { name: 'Manufacturer' }).click()
+  await page.getByLabel('Name').fill('Tiny Bikes Maker')
+  await page.getByLabel('Email').fill(manufacturerEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.getByRole('button', { name: 'Create account' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+  await page.goto('/manufacturer/profile')
+  await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible()
+  await page.getByLabel('Legal name').fill(`${publicName} LLC`)
+  await page.getByLabel('Public name').fill(publicName)
+  await page.getByLabel('Contact email').fill(manufacturerEmail)
+  await page.getByLabel('Phone').fill('+7 999 000-00-00')
+  await page.getByLabel('Region').fill('Moscow')
+  await page.getByLabel('City').fill('Moscow')
+  await page.getByLabel('Description').fill('Small bicycles for rehearsals and performances.')
+  await page.getByRole('button', { name: 'Save draft' }).click()
+  await expect(page.getByText('Profile saved as draft')).toBeVisible()
+  await page.getByRole('button', { name: 'Submit for moderation' }).click()
+  await expect(page.getByText('Profile submitted for moderation')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Logout' }).click()
+  await page.goto('/')
+  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
+  await page.getByLabel('Email').fill(adminEmail)
+  await page.getByLabel('Password').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Login' }).click()
+
+  await page.goto('/admin/manufacturers')
+  await expect(page.getByRole('heading', { name: 'Manufacturers' })).toBeVisible()
+  const row = page.getByRole('row').filter({ hasText: publicName })
+  await expect(row).toBeVisible()
+  await row.getByRole('button', { name: 'Approve' }).click()
+  await expect(page.getByText(`${publicName} updated`)).toBeVisible()
+})
+
+async function registerUser(email: string, role: 'manufacturer' | 'user' = 'user') {
   const response = await fetch(`${backendUrl}/api/auth/register`, {
     method: 'POST',
     headers: {
@@ -96,6 +141,7 @@ async function registerUser(email: string) {
       email,
       password: e2ePassword,
       displayName: email.split('@')[0],
+      role,
     }),
   })
 

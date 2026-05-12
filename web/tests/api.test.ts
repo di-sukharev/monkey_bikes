@@ -265,6 +265,120 @@ test('ApiClient exposes admin user patch errors', async () => {
   })
 })
 
+test('ApiClient manages the current manufacturer profile', async () => {
+  let accessToken: string | null = 'manufacturer-access-token'
+  const calls: Array<{ path: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const path = new URL(String(input)).pathname
+    calls.push({
+      path,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (path === '/api/manufacturer/profile' && init?.method === 'PUT') {
+      return json({ profile: manufacturerProfileResponse('draft') }, 200)
+    }
+
+    if (path === '/api/manufacturer/profile/submit') {
+      return json({ profile: manufacturerProfileResponse('moderation') }, 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const saved = await client.upsertManufacturerProfile(manufacturerProfilePayload('Tiny Bikes'))
+  const submitted = await client.submitManufacturerProfile()
+
+  expect(saved.profile.status).toBe('draft')
+  expect(submitted.profile.status).toBe('moderation')
+  expect(calls).toEqual([
+    {
+      path: '/api/manufacturer/profile',
+      method: 'PUT',
+      body: manufacturerProfilePayload('Tiny Bikes'),
+    },
+    {
+      path: '/api/manufacturer/profile/submit',
+      method: 'POST',
+      body: undefined,
+    },
+  ])
+})
+
+test('ApiClient sends admin manufacturer moderation filters and decisions', async () => {
+  let accessToken: string | null = 'admin-access-token'
+  const calls: Array<{ path: string; search: string; method: string | undefined; body: unknown }> =
+    []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (url.pathname === '/api/admin/manufacturers') {
+      return json(
+        {
+          items: [],
+          page: 1,
+          pageSize: 10,
+          total: 0,
+        },
+        200,
+      )
+    }
+
+    if (url.pathname === '/api/admin/manufacturers/manufacturer_1/status') {
+      return json({ profile: adminManufacturerProfileResponse('approved') }, 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const list = await client.adminManufacturers({ status: 'moderation', pageSize: 10 })
+  const decision = await client.updateAdminManufacturerStatus('manufacturer_1', {
+    status: 'approved',
+  })
+
+  expect(list.total).toBe(0)
+  expect(decision.profile.status).toBe('approved')
+  expect(calls).toEqual([
+    {
+      path: '/api/admin/manufacturers',
+      search: '?page=1&pageSize=10&status=moderation',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/admin/manufacturers/manufacturer_1/status',
+      search: '',
+      method: 'PATCH',
+      body: {
+        status: 'approved',
+      },
+    },
+  ])
+})
+
 test('bootstrapAuthSession waits for stale-cookie cleanup before completing', async () => {
   const events: string[] = []
   let completed = false
@@ -321,4 +435,47 @@ function json(body: unknown, status: number) {
       'Content-Type': 'application/json',
     },
   })
+}
+
+function manufacturerProfilePayload(publicName: string) {
+  return {
+    legalName: `${publicName} LLC`,
+    publicName,
+    region: 'Moscow',
+    city: 'Moscow',
+    phone: '+7 999 000-00-00',
+    email: 'maker@example.com',
+    description: 'Small bicycles for rehearsals and performances.',
+  }
+}
+
+function manufacturerProfileResponse(status: 'approved' | 'draft' | 'moderation' | 'rejected' | 'blocked') {
+  return {
+    id: 'manufacturer_1',
+    userId: 'user_1',
+    ...manufacturerProfilePayload('Tiny Bikes'),
+    status,
+    moderationComment: null,
+    submittedAt: status === 'draft' ? null : '2026-05-12T10:00:00.000Z',
+    reviewedAt: status === 'approved' ? '2026-05-12T11:00:00.000Z' : null,
+    createdAt: '2026-05-12T09:00:00.000Z',
+    updatedAt: '2026-05-12T10:00:00.000Z',
+  }
+}
+
+function adminManufacturerProfileResponse(
+  status: 'approved' | 'draft' | 'moderation' | 'rejected' | 'blocked',
+) {
+  return {
+    ...manufacturerProfileResponse(status),
+    user: {
+      id: 'user_1',
+      email: 'maker@example.com',
+      displayName: 'Maker',
+      role: 'manufacturer',
+      status: 'active',
+      createdAt: '2026-05-12T09:00:00.000Z',
+      updatedAt: '2026-05-12T09:00:00.000Z',
+    },
+  }
 }

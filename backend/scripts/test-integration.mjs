@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { readdirSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   composeEnv,
@@ -64,4 +65,24 @@ if (process.env.TEST_SKIP_DOCKER !== '1') {
 
 run('bun', ['run', 'prisma:generate'], { env })
 run('bun', ['run', 'prisma:deploy'], { env })
-run('bun', ['test', 'src/auth/auth.integration.test.ts'], { env })
+
+const integrationTests = collectTestFiles(resolve(backendRoot, 'src'))
+  .filter((file) => file.endsWith('.integration.test.ts'))
+  .map((file) => relative(backendRoot, file))
+  .sort()
+
+if (integrationTests.length === 0) {
+  process.stderr.write('No backend integration tests found\n')
+  process.exit(1)
+}
+
+run('bun', ['test', ...integrationTests], { env })
+
+function collectTestFiles(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) return collectTestFiles(path)
+    if (entry.isFile()) return [path]
+    return []
+  })
+}

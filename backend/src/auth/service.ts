@@ -53,7 +53,7 @@ export class AuthService {
           email: input.email,
           passwordHash,
           displayName: input.displayName,
-          role: 'user',
+          role: input.role,
           status: 'active',
         },
       })

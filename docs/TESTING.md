@@ -16,11 +16,21 @@
 bun run test:backend
 bun run test:backend:integration
 bun run test:web
-DATABASE_URL="postgresql://postgres:postgres@localhost:54329/web_app_demo?schema=public" bun run --cwd backend prisma:validate
+bun run --cwd backend prisma:validate
 bun run smoke:backend:docker
 ```
 
-Backend tests находятся рядом с backend-кодом и проверяют auth-механику на уровне contracts/services/routes. Integration runner поднимает `postgres_test`, применяет migrations и прогоняет register/login/refresh/logout/guard/error-shape сценарии. По умолчанию test DB port вычисляется от абсолютного пути репозитория, чтобы параллельные checkout-ы не конфликтовали; задайте `POSTGRES_TEST_PORT`, если нужен фиксированный порт.
+Backend tests находятся рядом с backend-кодом и проверяют auth-механику на уровне contracts/services/routes. Integration runner по умолчанию поднимает `postgres_test`, применяет migrations и прогоняет register/login/refresh/logout/guard/error-shape сценарии. По умолчанию test DB port вычисляется от абсолютного пути репозитория, чтобы параллельные checkout-ы не конфликтовали; задайте `POSTGRES_TEST_PORT`, если нужен фиксированный порт.
+
+В этом проекте обычная dev database живет в Homebrew PostgreSQL на
+`localhost:5432`. Чтобы integration tests тоже шли через локальный Homebrew
+PostgreSQL без Docker, используйте отдельную базу с suffix `_test`:
+
+```bash
+TEST_SKIP_DOCKER=1 \
+TEST_DATABASE_URL="postgresql://<postgres-user>:<postgres-password>@localhost:5432/bicycle_monkey_rent_test?schema=public" \
+bun run test:backend:integration
+```
 
 Docker smoke собирает backend image, стартует его против `postgres_test`, ждёт `/health` и удаляет только свой smoke-контейнер.
 
@@ -48,6 +58,14 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:<test-port>/web_app_demo_
 E2E_BACKEND_PORT=<backend-port>
 E2E_WEB_PORT=<web-port>
 E2E_SKIP_DOCKER=1
+```
+
+Для Homebrew PostgreSQL используйте test database на `5432`:
+
+```bash
+E2E_SKIP_DOCKER=1 \
+DATABASE_URL="postgresql://<postgres-user>:<postgres-password>@localhost:5432/bicycle_monkey_rent_test?schema=public" \
+bun run e2e:web
 ```
 
 По умолчанию Playwright вычисляет `POSTGRES_TEST_PORT` от абсолютного пути репозитория и откажется запускаться на базе без suffix `_test`, чтобы E2E случайно не писал в dev/prod данные.

@@ -16,6 +16,7 @@ export const passwordSchema = z
   .max(128, 'Password must be at most 128 characters')
 
 export const userRoleSchema = z.enum(['admin', 'manufacturer', 'user'])
+const selfRegistrationRoleSchema = z.enum(['manufacturer', 'user']).default('user')
 
 export const userStatusSchema = z.enum(['active', 'blocked'])
 
@@ -33,6 +34,7 @@ export const registerRequestSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   displayName: displayNameSchema,
+  role: selfRegistrationRoleSchema,
 })
 
 export const loginRequestSchema = z.object({

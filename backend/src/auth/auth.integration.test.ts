@@ -21,7 +21,12 @@ maybeDescribe('auth API integration', () => {
   const prisma = createPrisma(databaseUrl!)
   const app = createApp({ env, prisma })
 
-  async function registerUser(email: string, displayName?: string) {
+  async function registerUser(
+    email: string,
+    options: string | { displayName?: string; role?: 'manufacturer' | 'user' } = {},
+  ) {
+    const displayName = typeof options === 'string' ? options : options.displayName
+    const role = typeof options === 'string' ? undefined : options.role
     const response = await app.request('/api/auth/register', {
       method: 'POST',
       headers: {
@@ -32,6 +37,7 @@ maybeDescribe('auth API integration', () => {
         email,
         password: 'password123',
         ...(displayName === undefined ? {} : { displayName }),
+        ...(role === undefined ? {} : { role }),
       }),
     })
 
@@ -53,6 +59,7 @@ maybeDescribe('auth API integration', () => {
 
   beforeEach(async () => {
     await prisma.authSession.deleteMany()
+    await prisma.manufacturerProfile.deleteMany()
     await prisma.user.deleteMany()
   })
 

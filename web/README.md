@@ -7,6 +7,8 @@
 - React
 - TypeScript
 - Vite
+- Tailwind CSS
+- shadcn/ui
 - TanStack Query
 - TanStack Form
 - TanStack Router
@@ -38,6 +40,12 @@ VITE_API_URL=http://localhost:3000
 ## Практика
 
 Для серверного состояния используйте TanStack Query, для форм - TanStack Form, для валидации - общие Zod-схемы из `packages/contracts`. Access token хранится только в памяти клиента; refresh идёт через HttpOnly cookie, выставленную backend.
+
+UI-примитивы лежат в `src/components/ui` и сгенерированы через shadcn/ui. Этот шаблон намеренно содержит полный registry для discoverability, но новые экраны должны сначала использовать уже существующие компоненты оттуда (`Button`, `Card`, `Field`, `Input`, `Table`, `NativeSelect`, `Alert` и т.д.) и сохранять настоящую HTML-семантику поверх визуальных primitives. Новые shadcn-компоненты добавляйте из директории `web`:
+
+```bash
+bunx shadcn@latest add <component>
+```
 
 ## E2E
 

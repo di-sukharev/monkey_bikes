@@ -14,16 +14,18 @@ Backend-слой шаблона для API, auth, интеграций и сер
 
 ## Команды
 
+Из папки `backend`:
+
 ```bash
-docker compose up -d postgres
-cp backend/.env.example backend/.env
+cp .env.example .env
+brew services start postgresql@14
 bun run dev
 bun run typecheck
 bun run test
 bun run test:unit
 bun run test:integration
 bun run smoke:docker
-DATABASE_URL="postgresql://postgres:postgres@localhost:54329/web_app_demo?schema=public" bun run prisma:validate
+bun run prisma:validate
 bun run prisma:generate
 bun run prisma:migrate
 bun run prisma:deploy
@@ -31,7 +33,39 @@ bun run prisma:deploy
 
 Из корня репозитория используйте `bun run dev:backend`, `bun run build:backend`, `bun run typecheck:backend` и `bun run test:backend`.
 
-`bun run test:integration` поднимает `postgres_test` из `../docker-compose.yml`, применяет Prisma migrations к `web_app_demo_test` и запускает DB-backed auth API tests. Если Docker уже управляется отдельно, задайте `TEST_SKIP_DOCKER=1` и `TEST_DATABASE_URL`.
+## Локальная БД
+
+Для обычной разработки этот проект использует Homebrew PostgreSQL на стандартном
+порту `5432`, а не Docker Compose port `54329`.
+
+Проверьте сервис:
+
+```bash
+brew services list
+brew services start postgresql@14
+psql -h localhost -p 5432 -U <postgres-user> -d postgres
+```
+
+В `backend/.env` должны быть заданы локальные базы:
+
+```bash
+DATABASE_URL="postgresql://<postgres-user>:<postgres-password>@localhost:5432/bicycle_monkey_rent?schema=public"
+DATABASE_URL_TEST="postgresql://<postgres-user>:<postgres-password>@localhost:5432/bicycle_monkey_rent_test?schema=public"
+```
+
+Если базы еще не созданы:
+
+```bash
+createdb -h localhost -p 5432 -U <postgres-user> bicycle_monkey_rent
+createdb -h localhost -p 5432 -U <postgres-user> bicycle_monkey_rent_test
+bun run prisma:deploy
+```
+
+Backend загружает `backend/.env` через `dotenv`, а Prisma config берет
+`DATABASE_URL` из этого же файла. Поэтому миграции и dev-server должны смотреть
+на одну и ту же Homebrew database.
+
+`bun run test:integration` по умолчанию поднимает `postgres_test` из `../docker-compose.yml`, применяет Prisma migrations к `web_app_demo_test` и запускает DB-backed auth API tests. Для локальной Homebrew test database задайте `TEST_SKIP_DOCKER=1` и `TEST_DATABASE_URL` на базу с suffix `_test`.
 
 `bun run smoke:docker` собирает backend Docker image, стартует его против `postgres_test`, ждёт `/health` и затем удаляет только созданный smoke-контейнер.
 

@@ -1,9 +1,16 @@
 import {
   apiErrorSchema,
+  adminManufacturerStatusUpdateRequestSchema,
+  adminManufacturerProfileSchema,
+  adminManufacturersQuerySchema,
+  adminManufacturersResponseSchema,
   adminUpdateUserRequestSchema,
   adminUserResponseSchema,
   adminUsersQuerySchema,
   adminUsersResponseSchema,
+  type AdminManufacturerStatusUpdateRequest,
+  type AdminManufacturersQuery,
+  type AdminManufacturersResponse,
   type AdminUpdateUserRequest,
   type AdminUserResponse,
   type AdminUsersQuery,
@@ -12,6 +19,14 @@ import {
   loginRequestSchema,
   logoutRequestSchema,
   meResponseSchema,
+  manufacturerProfileGetResponseSchema,
+  manufacturerProfileResponseSchema,
+  manufacturerProfileSubmitResponseSchema,
+  manufacturerProfileUpsertRequestSchema,
+  type ManufacturerProfileGetResponse,
+  type ManufacturerProfileResponse,
+  type ManufacturerProfileSubmitResponse,
+  type ManufacturerProfileUpsertRequest,
   refreshRequestSchema,
   refreshResponseSchema,
   registerRequestSchema,
@@ -23,9 +38,12 @@ import {
   type RefreshResponse,
   type RegisterRequest,
 } from '@web-app-demo/contracts'
-import type { z } from 'zod'
+import { z } from 'zod'
 
 const apiBaseUrl = (import.meta.env?.VITE_API_URL ?? 'http://localhost:3000').replace(/\/$/, '')
+const adminManufacturerStatusResponseSchema = z.object({
+  profile: adminManufacturerProfileSchema,
+})
 
 type ApiClientOptions = {
   getAccessToken: () => string | null
@@ -34,7 +52,7 @@ type ApiClientOptions = {
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PATCH'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH'
   body?: unknown
   auth?: boolean
   retryOnUnauthorized?: boolean
@@ -127,6 +145,74 @@ export class ApiClient {
       body: payload,
       auth: true,
     })
+  }
+
+  manufacturerProfile(): Promise<ManufacturerProfileGetResponse> {
+    return this.request('/api/manufacturer/profile', manufacturerProfileGetResponseSchema, {
+      auth: true,
+    })
+  }
+
+  upsertManufacturerProfile(
+    input: ManufacturerProfileUpsertRequest,
+  ): Promise<ManufacturerProfileResponse> {
+    const payload = manufacturerProfileUpsertRequestSchema.parse(input)
+    return this.request('/api/manufacturer/profile', manufacturerProfileResponseSchema, {
+      method: 'PUT',
+      body: payload,
+      auth: true,
+    })
+  }
+
+  submitManufacturerProfile(): Promise<ManufacturerProfileSubmitResponse> {
+    return this.request(
+      '/api/manufacturer/profile/submit',
+      manufacturerProfileSubmitResponseSchema,
+      {
+        method: 'POST',
+        auth: true,
+      },
+    )
+  }
+
+  adminManufacturers(
+    input: Partial<AdminManufacturersQuery> = {},
+  ): Promise<AdminManufacturersResponse> {
+    const query = adminManufacturersQuerySchema.parse(input)
+    const params = new URLSearchParams({
+      page: String(query.page),
+      pageSize: String(query.pageSize),
+    })
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    return this.request(
+      `/api/admin/manufacturers?${params.toString()}`,
+      adminManufacturersResponseSchema,
+      {
+        auth: true,
+      },
+    )
+  }
+
+  updateAdminManufacturerStatus(id: string, input: AdminManufacturerStatusUpdateRequest) {
+    const payload = adminManufacturerStatusUpdateRequestSchema.parse(input)
+    const body =
+      payload.moderationComment === null
+        ? { status: payload.status }
+        : payload
+
+    return this.request(
+      `/api/admin/manufacturers/${encodeURIComponent(id)}/status`,
+      adminManufacturerStatusResponseSchema,
+      {
+        method: 'PATCH',
+        body,
+        auth: true,
+      },
+    )
   }
 
   async logout(input: LogoutRequest = {}) {

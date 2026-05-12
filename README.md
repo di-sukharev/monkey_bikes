@@ -10,30 +10,40 @@ When installing this template from a GitHub URL in a fresh Codex session, give t
 Install this repository into the project. First read README.md, AGENTS.md, and docs/*.md. Before setup, ask me what I want to build first, which surfaces I need now (web, mobile, backend/API, or full-stack), and whether I need deployment now. If deployment is needed, ask whether to use DigitalOcean or Yandex Cloud. Do not require cloud credentials for local development.
 ```
 
-Local development does not require DigitalOcean or Yandex Cloud. Cloud tokens, `doctl auth init`, `yc init`, registry access, managed PostgreSQL, and Expo/EAS/App Store/Google Play accounts are needed only when the user chooses deployment or mobile release work. The agent may create local uncommitted `.env` files from `.env.example`, generate a local-only `JWT_SECRET`, start Docker PostgreSQL, apply migrations, and run validation. Anything that requires external authorization or a paid account must be called out before the agent attempts it.
+Local development does not require DigitalOcean or Yandex Cloud. Cloud tokens, `doctl auth init`, `yc init`, registry access, managed PostgreSQL, and Expo/EAS/App Store/Google Play accounts are needed only when the user chooses deployment or mobile release work. This project uses the local Homebrew PostgreSQL on the standard `5432` port for day-to-day backend development. The agent may create local uncommitted `.env` files from `.env.example`, generate a local-only `JWT_SECRET`, apply migrations, and run validation. Anything that requires external authorization or a paid account must be called out before the agent attempts it.
 
 ## Что внутри
 
 - `backend` - Bun + Hono + Prisma + PostgreSQL, custom JWT auth, Zod validation, OpenAPI.
-- `web` - React + Vite + TanStack Query/Form/Router, готовый auth-flow.
+- `web` - React + Vite + Tailwind CSS + shadcn/ui + TanStack Query/Form/Router, готовый auth-flow.
 - `landing` - отдельный Astro-проект для статической landing-страницы.
 - `mobile` - Expo + React Native + Expo Router + TanStack Query/Form, auth-flow с SecureStore.
 - `packages/contracts` - общие Zod-схемы и TypeScript-типы API.
-- `docker-compose.yml` - локальный PostgreSQL на порту `54329`; test DB по умолчанию использует repo-derived port в тестовых runner-ах, либо `POSTGRES_TEST_PORT`.
+- `docker-compose.yml` - optional PostgreSQL services for Docker-based test/smoke runs. Обычная локальная разработка в этом проекте использует Homebrew PostgreSQL на `localhost:5432`.
 - `docs/TESTING.md` - backend, Playwright и Maestro testing contract.
 
 ## Быстрый старт
 
+Основной локальный путь для этого репозитория - уже установленный PostgreSQL через Homebrew:
+
 ```bash
 bun install
-docker compose up -d postgres
 cp backend/.env.example backend/.env
-bun run --cwd backend prisma:migrate
+brew services start postgresql@14
+createdb -h localhost -p 5432 -U <postgres-user> bicycle_monkey_rent
+createdb -h localhost -p 5432 -U <postgres-user> bicycle_monkey_rent_test
+bun run --cwd backend prisma:deploy
 bun run dev:backend
 bun run dev:web
 bun run dev:landing
 bun run dev:mobile
 ```
+
+После `cp backend/.env.example backend/.env` замените `YOUR_POSTGRES_USER` и
+`YOUR_POSTGRES_PASSWORD` на локальную роль PostgreSQL. Dev database должна быть
+`bicycle_monkey_rent`, test database - `bicycle_monkey_rent_test`, обе на
+`localhost:5432`. Не используйте `54329` для обычного dev-запуска: этот порт
+относится только к старому Docker Compose варианту.
 
 Для web можно создать `web/.env`:
 
@@ -79,5 +89,7 @@ bun run --cwd backend seed:admin
 Контракты API живут в `packages/contracts` и импортируются всеми слоями. Backend валидирует вход через эти Zod-схемы, web/mobile используют их же в TanStack Form и API-клиентах.
 
 Backend устроен по потоку `route -> validation -> auth/session guard -> service -> Prisma -> DTO`. Routes остаются тонкими, бизнес-логика auth живёт в feature service, а `src/index.ts` только поднимает Bun server.
+
+Web UI строится на Tailwind CSS v4 и локальных shadcn/ui-примитивах из `web/src/components/ui`. В этом шаблоне registry добавлен заранее для discoverability, но новые экраны всё равно должны сохранять semantic HTML поверх визуальных primitives и не копировать ad hoc CSS вместо существующих компонентов.
 
 Подробнее: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), тесты: [docs/TESTING.md](docs/TESTING.md), деплой: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
