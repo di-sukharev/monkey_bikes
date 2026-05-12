@@ -1,4 +1,8 @@
 import {
+  adminOrderResponseSchema,
+  adminOrdersQuerySchema,
+  adminOrdersResponseSchema,
+  adminOrderStatusUpdateRequestSchema,
   apiErrorSchema,
   adminBicycleModerationRequestSchema,
   adminBicycleResponseSchema,
@@ -34,10 +38,16 @@ import {
   logoutRequestSchema,
   meResponseSchema,
   orderCreateRequestSchema,
+  orderCancelRequestSchema,
   orderResponseSchema,
   ordersQuerySchema,
   ordersResponseSchema,
+  type AdminOrderResponse,
+  type AdminOrdersQuery,
+  type AdminOrdersResponse,
+  type AdminOrderStatusUpdateInput,
   type OrderCreateInput,
+  type OrderCancelInput,
   type OrderResponse,
   type OrdersQuery,
   type OrdersResponse,
@@ -91,11 +101,13 @@ type RequestOptions = {
 export class ApiRequestError extends Error {
   readonly status: number
   readonly code: string
+  readonly details: unknown
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, details?: unknown) {
     super(message)
     this.status = status
     this.code = code
+    this.details = details
   }
 }
 
@@ -359,6 +371,50 @@ export class ApiClient {
     })
   }
 
+  cancelOrder(id: string, input: OrderCancelInput = {}): Promise<OrderResponse> {
+    const payload = orderCancelRequestSchema.parse(input)
+    return this.request(`/api/orders/${encodeURIComponent(id)}/cancel`, orderResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    })
+  }
+
+  adminOrders(input: Partial<AdminOrdersQuery> = {}): Promise<AdminOrdersResponse> {
+    const query = adminOrdersQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    return this.request(`/api/admin/orders?${params.toString()}`, adminOrdersResponseSchema, {
+      auth: true,
+    })
+  }
+
+  adminOrder(id: string): Promise<AdminOrderResponse> {
+    return this.request(`/api/admin/orders/${encodeURIComponent(id)}`, adminOrderResponseSchema, {
+      auth: true,
+    })
+  }
+
+  updateAdminOrderStatus(
+    id: string,
+    input: AdminOrderStatusUpdateInput,
+  ): Promise<AdminOrderResponse> {
+    const payload = adminOrderStatusUpdateRequestSchema.parse(input)
+    return this.request(
+      `/api/admin/orders/${encodeURIComponent(id)}/status`,
+      adminOrderResponseSchema,
+      {
+        method: 'PATCH',
+        body: payload,
+        auth: true,
+      },
+    )
+  }
+
   adminBicycles(input: Partial<AdminBicyclesQuery> = {}): Promise<AdminBicyclesResponse> {
     const query = adminBicyclesQuerySchema.parse(input)
     const params = paginatedParams(query.page, query.pageSize)
@@ -512,7 +568,12 @@ async function toApiError(response: Response) {
 
   try {
     const parsed = apiErrorSchema.parse(await response.json())
-    return new ApiRequestError(response.status, parsed.error.code, parsed.error.message)
+    return new ApiRequestError(
+      response.status,
+      parsed.error.code,
+      parsed.error.message,
+      parsed.error.details,
+    )
   } catch {
     return new ApiRequestError(response.status, 'INTERNAL_ERROR', fallbackMessage)
   }

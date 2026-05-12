@@ -83,6 +83,7 @@ model User {
   sessions            AuthSession[]
   manufacturerProfile ManufacturerProfile?
   orders              Order[]
+  orderStatusHistory  OrderStatusHistory[]
 
   @@index([role])
   @@index([status])
@@ -153,6 +154,7 @@ model Bicycle {
   wheelDiameterCm             Int
   recommendedAnimalDimensions String
   safetyNotes                 String
+  availabilityLockVersion     Int                 @default(0)
   createdAt                   DateTime            @default(now())
   updatedAt                   DateTime            @updatedAt
   manufacturerProfile         ManufacturerProfile @relation(fields: [manufacturerProfileId], references: [id], onDelete: Restrict)
@@ -188,9 +190,11 @@ model Order {
   updatedAt                  DateTime        @updatedAt
   user                       User            @relation(fields: [userId], references: [id], onDelete: Restrict)
   items                      OrderItem[]
+  statusHistory              OrderStatusHistory[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
+  @@index([status, startsOn, endsOn])
   @@index([startsOn, endsOn])
   @@map("orders")
 }
@@ -217,4 +221,20 @@ model OrderItem {
   @@unique([orderId, bicycleId])
   @@index([bicycleId])
   @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id              String      @id @default(cuid())
+  orderId         String
+  fromStatus      OrderStatus
+  toStatus        OrderStatus
+  changedByUserId String
+  comment         String?
+  createdAt       DateTime    @default(now())
+  order           Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedByUser   User        @relation(fields: [changedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@index([changedByUserId, createdAt])
+  @@map("order_status_history")
 }

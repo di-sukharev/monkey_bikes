@@ -634,6 +634,139 @@ test('ApiClient creates and lists rental requests without client money fields', 
   ])
 })
 
+test('ApiClient manages order cancellation and admin status transitions', async () => {
+  let accessToken: string | null = 'order-access-token'
+  const calls: Array<{ path: string; search: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      method: init?.method,
+      body: init?.body ? JSON.parse(String(init.body)) : undefined,
+    })
+
+    if (url.pathname === '/api/orders/order_1/cancel') {
+      return json({ order: { ...orderResponse(), status: 'cancelled' } }, 200)
+    }
+
+    if (url.pathname === '/api/admin/orders') {
+      return json(
+        {
+          items: [adminOrderResponse()],
+          page: 1,
+          pageSize: 20,
+          total: 1,
+        },
+        200,
+      )
+    }
+
+    if (url.pathname === '/api/admin/orders/order_1' && init?.method !== 'PATCH') {
+      return json({ order: adminOrderResponse() }, 200)
+    }
+
+    if (url.pathname === '/api/admin/orders/order_1/status') {
+      return json({ order: adminOrderResponse('confirmed') }, 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const cancelled = await client.cancelOrder('order_1', { comment: ' Customer changed dates. ' })
+  const list = await client.adminOrders({ status: 'request' })
+  const detail = await client.adminOrder('order_1')
+  const confirmed = await client.updateAdminOrderStatus('order_1', {
+    status: 'confirmed',
+    comment: '',
+  })
+
+  expect(cancelled.order.status).toBe('cancelled')
+  expect(list.total).toBe(1)
+  expect(detail.order.availabilityWarnings[0]?.type).toBe('technical_limits')
+  expect(confirmed.order.status).toBe('confirmed')
+  expect(calls).toEqual([
+    {
+      path: '/api/orders/order_1/cancel',
+      search: '',
+      method: 'POST',
+      body: { comment: 'Customer changed dates.' },
+    },
+    {
+      path: '/api/admin/orders',
+      search: '?page=1&pageSize=20&status=request',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/admin/orders/order_1',
+      search: '',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/admin/orders/order_1/status',
+      search: '',
+      method: 'PATCH',
+      body: { status: 'confirmed', comment: null },
+    },
+  ])
+})
+
+test('ApiClient preserves domain error details for admin order conflicts', async () => {
+  let accessToken: string | null = 'admin-access-token'
+
+  globalThis.fetch = async () =>
+    json(
+      {
+        error: {
+          code: 'ORDER_AVAILABILITY_CONFLICT',
+          message: 'Selected bicycles are unavailable for these dates',
+          details: {
+            conflicts: [
+              {
+                bicycleId: 'bike_1',
+                bicycleTitle: 'Tiny Performer S',
+                conflictingOrderId: 'order_2',
+                startsOn: '2026-05-12',
+                endsOn: '2026-05-13',
+                status: 'confirmed',
+              },
+            ],
+          },
+        },
+      },
+      409,
+    )
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  await expect(client.updateAdminOrderStatus('order_1', { status: 'confirmed' })).rejects.toMatchObject({
+    status: 409,
+    code: 'ORDER_AVAILABILITY_CONFLICT',
+    details: {
+      conflicts: [
+        {
+          conflictingOrderId: 'order_2',
+        },
+      ],
+    },
+  })
+})
+
 test('bootstrapAuthSession waits for stale-cookie cleanup before completing', async () => {
   const events: string[] = []
   let completed = false
@@ -842,5 +975,65 @@ function orderResponse() {
         },
       },
     ],
+  }
+}
+
+function adminOrderResponse(status: 'cancelled' | 'confirmed' | 'request' = 'request') {
+  const order = orderResponse()
+
+  return {
+    ...order,
+    status,
+    user: {
+      id: 'user_1',
+      email: 'renter@example.com',
+      displayName: 'Renter',
+      status: 'active',
+    },
+    statusHistory:
+      status === 'request'
+        ? []
+        : [
+            {
+              id: 'history_1',
+              orderId: 'order_1',
+              fromStatus: 'request',
+              toStatus: status,
+              changedByUserId: 'admin_1',
+              changedByUser: {
+                id: 'admin_1',
+                email: 'admin@example.com',
+                displayName: 'Admin',
+                status: 'active',
+              },
+              comment: status === 'confirmed' ? null : 'Cancelled.',
+              createdAt: '2026-05-12T11:00:00.000Z',
+            },
+          ],
+    availabilityWarnings: [
+      {
+        type: 'technical_limits',
+        severity: 'info',
+        bicycleId: 'bike_1',
+        bicycleTitle: 'Tiny Performer S',
+        conflictingOrderId: null,
+        message: 'Review technical limits before confirmation.',
+      },
+    ],
+    items: order.items.map((item) => ({
+      ...item,
+      liveBicycle: {
+        id: item.bicycleId,
+        status: 'available',
+        deliveryAvailable: true,
+        manufacturerStatus: 'approved',
+        maxLoadKg: 12,
+        seatHeightCm: 22,
+        frameLengthCm: 40,
+        wheelDiameterCm: 16,
+        recommendedAnimalDimensions: 'Small trained animals up to 70 cm height',
+        safetyNotes: 'Use only with trained handlers and indoor safety mats.',
+      },
+    })),
   }
 }

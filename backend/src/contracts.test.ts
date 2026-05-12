@@ -3,13 +3,17 @@ import {
   adminBicycleModerationRequestSchema,
   adminBicycleSchema,
   adminManufacturerStatusUpdateRequestSchema,
+  adminOrderSchema,
+  adminOrderStatusUpdateRequestSchema,
   adminUpdateUserRequestSchema,
   adminUsersQuerySchema,
+  apiErrorCodeSchema,
   bicycleSchema,
   bicycleUpsertRequestSchema,
   manufacturerProfileSchema,
   manufacturerProfileSubmitResponseSchema,
   manufacturerProfileUpsertRequestSchema,
+  orderCancelRequestSchema,
   orderCreateRequestSchema,
   orderSchema,
   publicBicyclesQuerySchema,
@@ -423,6 +427,129 @@ describe('contracts', () => {
         },
       ],
     }).items[0]?.pricePerDaySnapshotKopecks).toBe(250000)
+  })
+
+  test('normalizes order status transition contracts and domain error codes', () => {
+    expect(orderCancelRequestSchema.parse({ comment: ' Customer schedule changed. ' })).toEqual({
+      comment: 'Customer schedule changed.',
+    })
+    expect(orderCancelRequestSchema.parse({})).toEqual({ comment: null })
+
+    expect(adminOrderStatusUpdateRequestSchema.parse({
+      status: 'confirmed',
+      comment: '',
+    })).toEqual({
+      status: 'confirmed',
+      comment: null,
+    })
+
+    expect(adminOrderStatusUpdateRequestSchema.parse({
+      status: 'cancelled',
+      comment: 'Unavailable on requested dates.',
+    }).comment).toBe('Unavailable on requested dates.')
+
+    expect(() =>
+      adminOrderStatusUpdateRequestSchema.parse({
+        status: 'cancelled',
+      }),
+    ).toThrow()
+
+    expect(apiErrorCodeSchema.parse('ORDER_AVAILABILITY_CONFLICT')).toBe(
+      'ORDER_AVAILABILITY_CONFLICT',
+    )
+
+    const adminOrder = adminOrderSchema.parse({
+      id: 'order_1',
+      userId: 'user_1',
+      status: 'request',
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      rentalDays: 2,
+      fulfillmentType: 'delivery',
+      deliveryAddress: 'Circus arena, gate 4',
+      contactName: 'Trainer',
+      contactPhone: '+7 999 111-22-33',
+      userComment: 'Keep the bicycles indoors.',
+      adminComment: null,
+      rentalAmountKopecks: 700000,
+      depositAmountKopecks: 700000,
+      deliveryAmountKopecks: 0,
+      totalAmountKopecks: 1400000,
+      safetyAgreementAcceptedAt: '2026-05-12T10:00:00.000Z',
+      createdAt: '2026-05-12T10:00:00.000Z',
+      updatedAt: '2026-05-12T10:00:00.000Z',
+      user: {
+        id: 'user_1',
+        email: 'renter@example.com',
+        displayName: 'Renter',
+        status: 'active',
+      },
+      statusHistory: [
+        {
+          id: 'history_1',
+          orderId: 'order_1',
+          fromStatus: 'request',
+          toStatus: 'confirmed',
+          changedByUserId: 'admin_1',
+          changedByUser: {
+            id: 'admin_1',
+            email: 'admin@example.com',
+            displayName: 'Admin',
+            status: 'active',
+          },
+          comment: 'Approved.',
+          createdAt: '2026-05-12T11:00:00.000Z',
+        },
+      ],
+      availabilityWarnings: [
+        {
+          type: 'technical_limits',
+          severity: 'info',
+          bicycleId: 'bike_1',
+          bicycleTitle: 'Tiny Performer S',
+          conflictingOrderId: null,
+          message: 'Review technical limits before confirmation.',
+        },
+      ],
+      items: [
+        {
+          id: 'item_1',
+          orderId: 'order_1',
+          bicycleId: 'bike_1',
+          pricePerDaySnapshotKopecks: 250000,
+          depositSnapshotKopecks: 500000,
+          createdAt: '2026-05-12T10:00:00.000Z',
+          bicycle: {
+            id: 'bike_1',
+            title: 'Tiny Performer S',
+            size: 'S',
+            city: 'Moscow',
+            deliveryAvailable: true,
+            pickupAddress: 'Main storage, door 2',
+            manufacturer: {
+              id: 'manufacturer_1',
+              publicName: 'Tiny Bikes',
+              city: 'Moscow',
+              region: null,
+            },
+          },
+          liveBicycle: {
+            id: 'bike_1',
+            status: 'available',
+            deliveryAvailable: true,
+            manufacturerStatus: 'approved',
+            maxLoadKg: 12,
+            seatHeightCm: 22,
+            frameLengthCm: 40,
+            wheelDiameterCm: 16,
+            recommendedAnimalDimensions: 'Small trained animals up to 70 cm height',
+            safetyNotes: 'Use only with trained handlers and indoor safety mats.',
+          },
+        },
+      ],
+    })
+
+    expect(adminOrder.statusHistory[0]?.toStatus).toBe('confirmed')
   })
 })
 

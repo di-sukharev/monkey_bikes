@@ -64,6 +64,14 @@ export function orderDetailQueryKey(userId: string | null | undefined, id: strin
   return ['orders', userId ?? null, id] as const
 }
 
+export function orderAdminListQueryKey(page: number, status: OrderStatus | 'all') {
+  return ['admin', 'orders', page, status] as const
+}
+
+export function orderAdminDetailQueryKey(id: string) {
+  return ['admin', 'orders', id] as const
+}
+
 export function parseBicycleIds(value: unknown) {
   if (Array.isArray(value)) {
     return uniqueIds(value.flatMap((item) => String(item).split(',')))

@@ -261,6 +261,202 @@ maybeDescribe('order API integration', () => {
     expect(otherListBody.items).toHaveLength(0)
   })
 
+  test('lets admins confirm or cancel requests and writes status history', async () => {
+    const admin = await createAdmin('orders-admin@example.com')
+    const user = await registerUser('admin-flow-renter@example.com', 'Renter')
+    const bicycle = await createAvailableBicycle('Admin Flow Maker')
+    const createBody = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+    })
+
+    const list = await app.request('/api/admin/orders?status=request&pageSize=10', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const listBody = await list.json()
+    expect(list.status).toBe(200)
+    expect(listBody.items.map((order: { id: string }) => order.id)).toContain(createBody.order.id)
+    expect(listBody.items[0].availabilityWarnings.some(
+      (warning: { type: string }) => warning.type === 'technical_limits',
+    )).toBe(true)
+
+    const confirm = await app.request(`/api/admin/orders/${createBody.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'confirmed',
+        comment: 'Approved after availability review.',
+      }),
+    })
+    const confirmBody = await confirm.json()
+    expect(confirm.status).toBe(200)
+    expect(confirmBody.order.status).toBe('confirmed')
+    expect(confirmBody.order.adminComment).toBe('Approved after availability review.')
+    expect(confirmBody.order.statusHistory).toHaveLength(1)
+    expect(confirmBody.order.statusHistory[0]).toMatchObject({
+      fromStatus: 'request',
+      toStatus: 'confirmed',
+      changedByUserId: admin.user.id,
+      comment: 'Approved after availability review.',
+    })
+
+    const repeatConfirm = await app.request(`/api/admin/orders/${createBody.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({ status: 'confirmed' }),
+    })
+    expect(repeatConfirm.status).toBe(409)
+    expect(await prisma.orderStatusHistory.count({ where: { orderId: createBody.order.id } })).toBe(1)
+
+    const cancellableBody = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-06-01',
+      endsOn: '2026-06-01',
+    })
+    const cancelWithoutComment = await app.request(`/api/admin/orders/${cancellableBody.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({ status: 'cancelled' }),
+    })
+    expect(cancelWithoutComment.status).toBe(400)
+
+    const cancel = await app.request(`/api/admin/orders/${cancellableBody.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'cancelled',
+        comment: 'Dates no longer work.',
+      }),
+    })
+    const cancelBody = await cancel.json()
+    expect(cancel.status).toBe(200)
+    expect(cancelBody.order.status).toBe('cancelled')
+    expect(cancelBody.order.statusHistory[0]).toMatchObject({
+      fromStatus: 'request',
+      toStatus: 'cancelled',
+      changedByUserId: admin.user.id,
+      comment: 'Dates no longer work.',
+    })
+  })
+
+  test('blocks conflicting confirmations with inclusive date rules', async () => {
+    const admin = await createAdmin('conflict-admin@example.com')
+    const user = await registerUser('conflict-renter@example.com', 'Renter')
+    const bicycle = await createAvailableBicycle('Conflict Maker')
+    const first = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+    })
+    const touching = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-05-13',
+      endsOn: '2026-05-14',
+    })
+    const adjacent = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-05-14',
+      endsOn: '2026-05-15',
+    })
+
+    const confirmFirst = await confirmOrder(admin.accessToken, first.order.id)
+    expect(confirmFirst.status).toBe(200)
+
+    const confirmTouching = await confirmOrder(admin.accessToken, touching.order.id)
+    const confirmTouchingBody = await confirmTouching.json()
+    expect(confirmTouching.status).toBe(409)
+    expect(confirmTouchingBody.error.code).toBe('ORDER_AVAILABILITY_CONFLICT')
+    expect(confirmTouchingBody.error.details.conflicts[0]).toMatchObject({
+      bicycleId: bicycle.id,
+      conflictingOrderId: first.order.id,
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      status: 'confirmed',
+    })
+
+    const confirmAdjacent = await confirmOrder(admin.accessToken, adjacent.order.id)
+    expect(confirmAdjacent.status).toBe(200)
+  })
+
+  test('serializes concurrent confirmations for the same bicycle', async () => {
+    const admin = await createAdmin('concurrent-order-admin@example.com')
+    const user = await registerUser('concurrent-renter@example.com', 'Renter')
+    const bicycle = await createAvailableBicycle('Concurrent Maker')
+    const first = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-07-01',
+      endsOn: '2026-07-03',
+    })
+    const second = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-07-02',
+      endsOn: '2026-07-04',
+    })
+
+    const responses = await Promise.all([
+      confirmOrder(admin.accessToken, first.order.id),
+      confirmOrder(admin.accessToken, second.order.id),
+    ])
+    const statuses = responses.map((response) => response.status).sort()
+
+    expect(statuses).toEqual([200, 409])
+    expect(await prisma.order.count({ where: { status: 'confirmed' } })).toBe(1)
+    expect(await prisma.orderStatusHistory.count()).toBe(1)
+  })
+
+  test('lets users cancel only their own pending requests', async () => {
+    const admin = await createAdmin('cancel-admin@example.com')
+    const user = await registerUser('cancel-owner@example.com', 'Owner')
+    const otherUser = await registerUser('cancel-other@example.com', 'Other Owner')
+    const bicycle = await createAvailableBicycle('Cancel Maker')
+    const request = await createOrder(user.accessToken, [bicycle.id])
+
+    const otherCancel = await app.request(`/api/orders/${request.order.id}/cancel`, {
+      method: 'POST',
+      headers: authJsonHeaders(otherUser.accessToken),
+      body: JSON.stringify({}),
+    })
+    expect(otherCancel.status).toBe(404)
+
+    const cancel = await app.request(`/api/orders/${request.order.id}/cancel`, {
+      method: 'POST',
+      headers: authJsonHeaders(user.accessToken),
+      body: JSON.stringify({ comment: 'No longer needed.' }),
+    })
+    const cancelBody = await cancel.json()
+    expect(cancel.status).toBe(200)
+    expect(cancelBody.order.status).toBe('cancelled')
+    expect(await prisma.orderStatusHistory.count({ where: { orderId: request.order.id } })).toBe(1)
+
+    const confirmed = await createOrder(user.accessToken, [bicycle.id], {
+      startsOn: '2026-08-01',
+      endsOn: '2026-08-01',
+    })
+    expect((await confirmOrder(admin.accessToken, confirmed.order.id)).status).toBe(200)
+    const cancelConfirmed = await app.request(`/api/orders/${confirmed.order.id}/cancel`, {
+      method: 'POST',
+      headers: authJsonHeaders(user.accessToken),
+      body: JSON.stringify({}),
+    })
+    expect(cancelConfirmed.status).toBe(409)
+  })
+
+  test('blocks confirmation when live bicycle state changes after request creation', async () => {
+    const admin = await createAdmin('live-state-admin@example.com')
+    const user = await registerUser('live-state-renter@example.com', 'Renter')
+    const bicycle = await createAvailableBicycle('Live State Maker')
+    const request = await createOrder(user.accessToken, [bicycle.id])
+
+    await prisma.bicycle.update({
+      where: { id: bicycle.id },
+      data: { status: 'maintenance' },
+    })
+
+    const confirm = await confirmOrder(admin.accessToken, request.order.id)
+    const confirmBody = await confirm.json()
+    expect(confirm.status).toBe(409)
+    expect(confirmBody.error.code).toBe('BICYCLE_NOT_AVAILABLE')
+    expect(confirmBody.error.details.warnings[0]).toMatchObject({
+      type: 'bicycle_status',
+      bicycleId: bicycle.id,
+      severity: 'error',
+    })
+  })
+
   async function registerUser(
     email: string,
     options: string | { displayName?: string; role?: 'manufacturer' | 'user' } = {},
@@ -283,6 +479,41 @@ maybeDescribe('order API integration', () => {
 
     expect(response.status).toBe(201)
     return response.json()
+  }
+
+  async function createAdmin(email: string) {
+    const body = await registerUser(email, 'Admin')
+    await prisma.user.update({
+      where: { email },
+      data: {
+        role: 'admin',
+        status: 'active',
+      },
+    })
+    return body
+  }
+
+  async function createOrder(
+    accessToken: string,
+    bicycleIds: string[],
+    overrides: Record<string, unknown> = {},
+  ) {
+    const response = await app.request('/api/orders', {
+      method: 'POST',
+      headers: authJsonHeaders(accessToken),
+      body: JSON.stringify(validOrderPayload(bicycleIds, overrides)),
+    })
+    const body = await response.json()
+    expect(response.status).toBe(201)
+    return body
+  }
+
+  function confirmOrder(accessToken: string, orderId: string) {
+    return app.request(`/api/admin/orders/${orderId}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(accessToken),
+      body: JSON.stringify({ status: 'confirmed' }),
+    })
   }
 
   async function createAvailableBicycle(

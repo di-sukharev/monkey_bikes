@@ -17,7 +17,7 @@ import { BicycleService } from './bicycle/service'
 import { errorResponse, handleError } from './http/errors'
 import { createManufacturerRoutes } from './manufacturer/routes'
 import { ManufacturerProfileService } from './manufacturer/service'
-import { createOrderRoutes } from './order/routes'
+import { createAdminOrderRoutes, createOrderRoutes } from './order/routes'
 import { OrderService } from './order/service'
 
 type AppBindings = {
@@ -97,6 +97,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/orders', createOrderRoutes())
   app.route('/api/admin', createAdminRoutes())
   app.route('/api/admin', createAdminBicycleRoutes())
+  app.route('/api/admin', createAdminOrderRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

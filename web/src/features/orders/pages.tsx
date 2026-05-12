@@ -1,13 +1,23 @@
 import { Link, useParams, useSearch } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { OrderDto, OrderStatus, PublicBicycleDto } from '@web-app-demo/contracts'
+import type {
+  AdminOrderDto,
+  AdminOrderWarningDto,
+  OrderDto,
+  OrderStatus,
+  PublicBicycleDto,
+} from '@web-app-demo/contracts'
 import {
+  AlertTriangleIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   ClipboardListIcon,
   MapPinIcon,
+  ShieldCheckIcon,
+  UserRoundIcon,
+  XCircleIcon,
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -40,7 +50,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 import { pageShellClass } from '@/lib/page-layout'
+import { ApiRequestError } from '@/lib/api'
 import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/use-auth'
@@ -49,6 +61,8 @@ import {
   emptyOrderForm,
   formatMoney,
   formatOrderDates,
+  orderAdminDetailQueryKey,
+  orderAdminListQueryKey,
   orderDetailQueryKey,
   orderStatuses,
   ordersQueryKey,
@@ -58,6 +72,7 @@ import {
 import { OrderStatusBadge } from './status-badge'
 
 const ordersPageSize = 20
+const adminOrdersPageSize = 20
 
 export function OrderRequestPage() {
   const auth = useAuth()
@@ -395,11 +410,26 @@ export function OrdersPage() {
 
 export function OrderDetailPage() {
   const auth = useAuth()
+  const queryClient = useQueryClient()
   const { id } = useParams({ strict: false }) as { id: string }
+  const [cancelComment, setCancelComment] = useState('')
+  const [notice, setNotice] = useState<string | null>(null)
   const orderQuery = useQuery({
     queryKey: orderDetailQueryKey(auth.user?.id, id),
     enabled: auth.user?.role === 'user',
     queryFn: () => auth.api.order(id),
+  })
+  const cancelOrder = useMutation({
+    mutationFn: () =>
+      auth.api.cancelOrder(id, {
+        comment: cancelComment,
+      }),
+    onSuccess: async (response) => {
+      setNotice('Request cancelled')
+      setCancelComment('')
+      await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
+      queryClient.setQueryData(orderDetailQueryKey(auth.user?.id, id), response)
+    },
   })
 
   if (auth.isBootstrapping || orderQuery.isLoading) {
@@ -496,6 +526,428 @@ export function OrderDetailPage() {
               <AlertDescription>{order.userComment}</AlertDescription>
             </Alert>
           )}
+
+          {notice && (
+            <Alert>
+              <CircleCheckIcon />
+              <AlertTitle>{notice}</AlertTitle>
+              <AlertDescription>The request status has been updated.</AlertDescription>
+            </Alert>
+          )}
+
+          {cancelOrder.error && (
+            <Alert variant="destructive">
+              <CircleAlertIcon />
+              <AlertTitle>Could not cancel request</AlertTitle>
+              <AlertDescription>{formatRequestError(cancelOrder.error)}</AlertDescription>
+            </Alert>
+          )}
+
+          {order.status === 'request' && (
+            <section className="grid gap-3 border-t pt-4">
+              <div className="grid gap-1">
+                <h2 className="text-base font-semibold">Cancel request</h2>
+                <p className="text-sm text-muted-foreground">
+                  Cancellation is available until administrator confirmation.
+                </p>
+              </div>
+              <Textarea
+                className="min-h-20"
+                disabled={cancelOrder.isPending}
+                placeholder="Optional comment"
+                value={cancelComment}
+                aria-label="Cancellation comment"
+                onChange={(event) => setCancelComment(event.target.value)}
+              />
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={cancelOrder.isPending}
+                  onClick={() => cancelOrder.mutate()}
+                >
+                  <XCircleIcon data-icon="inline-start" />
+                  Cancel request
+                </Button>
+              </div>
+            </section>
+          )}
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+export function AdminOrdersPage() {
+  const auth = useAuth()
+  const [page, setPage] = useState(1)
+  const [status, setStatus] = useState<OrderStatus | 'all'>('request')
+  const queryKey = orderAdminListQueryKey(page, status)
+  const ordersQuery = useQuery({
+    queryKey,
+    enabled: auth.user?.role === 'admin',
+    queryFn: () =>
+      auth.api.adminOrders({
+        page,
+        pageSize: adminOrdersPageSize,
+        ...(status === 'all' ? {} : { status }),
+      }),
+  })
+
+  if (auth.isBootstrapping) {
+    return <LoadingState message="Checking session..." />
+  }
+
+  if (!auth.user) {
+    return (
+      <GateCard
+        eyebrow="Admin orders"
+        title="Login required"
+        description="Sign in with an administrator account to review rental requests."
+        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+      />
+    )
+  }
+
+  if (auth.user.role !== 'admin') {
+    return (
+      <GateCard
+        eyebrow="Admin orders"
+        title="Access denied"
+        description="Your account does not have permission to review rental requests."
+      />
+    )
+  }
+
+  const data = ordersQuery.data
+  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / adminOrdersPageSize))
+
+  return (
+    <section className={cn(pageShellClass, 'grid gap-4')}>
+      <Card>
+        <CardHeader className="border-b">
+          <div className="grid gap-2">
+            <Badge variant="outline" className="w-fit">
+              Admin orders
+            </Badge>
+            <h1 className="text-3xl font-semibold tracking-tight">Orders</h1>
+            <CardDescription>Review rental requests, availability, and status history.</CardDescription>
+          </div>
+          {data && (
+            <CardAction>
+              <Badge variant="secondary">
+                {data.total} total, page {data.page} of {totalPages}
+              </Badge>
+            </CardAction>
+          )}
+        </CardHeader>
+        <CardContent className="grid gap-4 py-4">
+          <NativeSelect
+            aria-label="Admin order status filter"
+            className="w-full max-w-56"
+            value={status}
+            onChange={(event) => {
+              setPage(1)
+              setStatus(event.target.value as OrderStatus | 'all')
+            }}
+          >
+            <NativeSelectOption value="all">All statuses</NativeSelectOption>
+            {orderStatuses.map((nextStatus) => (
+              <NativeSelectOption key={nextStatus} value={nextStatus}>
+                {nextStatus}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+
+          {ordersQuery.isLoading && (
+            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+              <Spinner />
+              Loading orders...
+            </div>
+          )}
+
+          {ordersQuery.isError && (
+            <Alert variant="destructive">
+              <CircleAlertIcon />
+              <AlertTitle>Could not load orders</AlertTitle>
+              <AlertDescription>{formatRequestError(ordersQuery.error)}</AlertDescription>
+            </Alert>
+          )}
+
+          {data && data.items.length === 0 && (
+            <Empty className="border">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ClipboardListIcon />
+                </EmptyMedia>
+                <EmptyTitle>No orders found.</EmptyTitle>
+                <EmptyDescription>The current status filter did not return any orders.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
+
+          {data && data.items.length > 0 && (
+            <div className="overflow-x-auto rounded-lg border">
+              <Table className="min-w-[980px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Request</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Dates</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead className="w-[140px]">Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.items.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell>
+                        <div className="grid gap-1">
+                          <span className="font-medium">{order.items.map((item) => item.bicycle.title).join(', ')}</span>
+                          <span className="text-sm text-muted-foreground">{order.fulfillmentType}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="grid gap-1">
+                          <span>{order.user.displayName ?? order.user.email}</span>
+                          <span className="text-sm text-muted-foreground">{order.contactPhone}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell><OrderStatusBadge status={order.status} /></TableCell>
+                      <TableCell>{formatOrderDates(order)}</TableCell>
+                      <TableCell>{formatMoney(order.totalAmountKopecks)}</TableCell>
+                      <TableCell>
+                        <Button type="button" variant="outline" size="sm" asChild>
+                          <Link to="/admin/orders/$id" params={{ id: order.id }}>Open</Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Pagination className="justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || ordersQuery.isFetching}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              <ChevronLeftIcon data-icon="inline-start" />
+              Previous
+            </Button>
+          </PaginationItem>
+          <PaginationItem>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || ordersQuery.isFetching}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+              <ChevronRightIcon data-icon="inline-end" />
+            </Button>
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    </section>
+  )
+}
+
+export function AdminOrderDetailPage() {
+  const auth = useAuth()
+  const queryClient = useQueryClient()
+  const { id } = useParams({ strict: false }) as { id: string }
+  const [comment, setComment] = useState('')
+  const [notice, setNotice] = useState<string | null>(null)
+  const orderQuery = useQuery({
+    queryKey: orderAdminDetailQueryKey(id),
+    enabled: auth.user?.role === 'admin',
+    queryFn: () => auth.api.adminOrder(id),
+  })
+  const updateStatus = useMutation({
+    mutationFn: (status: 'cancelled' | 'confirmed') =>
+      auth.api.updateAdminOrderStatus(id, {
+        status,
+        comment,
+      }),
+    onSuccess: async (response) => {
+      setNotice(`Order ${response.order.status}`)
+      setComment('')
+      queryClient.setQueryData(orderAdminDetailQueryKey(id), response)
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      await queryClient.invalidateQueries({ queryKey: ['orders', response.order.userId] })
+    },
+  })
+
+  if (auth.isBootstrapping || orderQuery.isLoading) {
+    return <LoadingState message="Loading order..." />
+  }
+
+  if (!auth.user) {
+    return (
+      <GateCard
+        eyebrow="Admin order"
+        title="Login required"
+        description="Sign in with an administrator account to review this rental request."
+        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+      />
+    )
+  }
+
+  if (auth.user.role !== 'admin') {
+    return (
+      <GateCard
+        eyebrow="Admin order"
+        title="Access denied"
+        description="Your account does not have permission to review rental requests."
+      />
+    )
+  }
+
+  if (orderQuery.isError) {
+    return (
+      <GateCard
+        eyebrow="Admin order"
+        title="Order unavailable"
+        description={formatRequestError(orderQuery.error)}
+        action={<Button asChild><Link to="/admin/orders">Back to orders</Link></Button>}
+      />
+    )
+  }
+
+  const order = orderQuery.data?.order
+  if (!order) {
+    return <LoadingState message="Loading order..." />
+  }
+
+  const requestPending = order.status === 'request'
+  const errorWarnings = order.availabilityWarnings.filter((warning) => warning.severity === 'error')
+
+  return (
+    <section className={cn(pageShellClass, 'grid gap-4')}>
+      <Card>
+        <CardHeader className="border-b">
+          <div className="grid gap-2">
+            <div className="flex flex-wrap gap-2">
+              <OrderStatusBadge status={order.status} />
+              <Badge variant="outline">{formatOrderDates(order)}</Badge>
+              <Badge variant="secondary">{formatMoney(order.totalAmountKopecks)}</Badge>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight">Admin order</h1>
+            <CardDescription>{order.rentalDays} rental day(s), {order.fulfillmentType}</CardDescription>
+          </div>
+          <CardAction>
+            <Button type="button" variant="outline" asChild>
+              <Link to="/admin/orders">Back to orders</Link>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent className="grid gap-4 py-4">
+          {notice && (
+            <Alert>
+              <CircleCheckIcon />
+              <AlertTitle>{notice}</AlertTitle>
+              <AlertDescription>Status history has been updated.</AlertDescription>
+            </Alert>
+          )}
+
+          {updateStatus.error && (
+            <Alert variant="destructive">
+              <CircleAlertIcon />
+              <AlertTitle>Could not update order</AlertTitle>
+              <AlertDescription>
+                {formatRequestError(updateStatus.error)}
+                <RequestErrorDetails error={updateStatus.error} />
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {errorWarnings.length > 0 && (
+            <Alert variant="destructive">
+              <CircleAlertIcon />
+              <AlertTitle>Confirmation is blocked</AlertTitle>
+              <AlertDescription>Resolve availability or catalog state conflicts before confirming.</AlertDescription>
+            </Alert>
+          )}
+
+          <AdminWarnings warnings={order.availabilityWarnings} />
+          <SelectedAdminOrderItemsTable order={order} />
+
+          <div className="grid gap-3 md:grid-cols-4">
+            <Fact label="Rental" value={formatMoney(order.rentalAmountKopecks)} />
+            <Fact label="Deposit" value={formatMoney(order.depositAmountKopecks)} />
+            <Fact label="Delivery" value={formatMoney(order.deliveryAmountKopecks)} />
+            <Fact label="Total" value={formatMoney(order.totalAmountKopecks)} />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Alert>
+              <UserRoundIcon />
+              <AlertTitle>Customer</AlertTitle>
+              <AlertDescription>
+                {order.user.displayName ?? order.user.email}, {order.contactName}, {order.contactPhone}
+              </AlertDescription>
+            </Alert>
+            <Alert>
+              <MapPinIcon />
+              <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}</AlertTitle>
+              <AlertDescription>
+                {order.fulfillmentType === 'delivery'
+                  ? order.deliveryAddress
+                  : order.items.map((item) => item.bicycle.pickupAddress).join('; ')}
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <StatusHistoryTable order={order} />
+
+          {requestPending && (
+            <section className="grid gap-3 border-t pt-4">
+              <div className="grid gap-1">
+                <h2 className="text-base font-semibold">Decision</h2>
+                <p className="text-sm text-muted-foreground">
+                  Confirm only when availability, logistics, contacts, and safety limits are acceptable.
+                </p>
+              </div>
+              <Textarea
+                className="min-h-24"
+                disabled={updateStatus.isPending}
+                placeholder="Comment for status history"
+                value={comment}
+                aria-label="Admin order comment"
+                onChange={(event) => setComment(event.target.value)}
+              />
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={updateStatus.isPending || comment.trim().length === 0}
+                  onClick={() => updateStatus.mutate('cancelled')}
+                >
+                  <XCircleIcon data-icon="inline-start" />
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  disabled={updateStatus.isPending || errorWarnings.length > 0}
+                  onClick={() => updateStatus.mutate('confirmed')}
+                >
+                  <ShieldCheckIcon data-icon="inline-start" />
+                  Confirm
+                </Button>
+              </div>
+            </section>
+          )}
         </CardContent>
       </Card>
     </section>
@@ -566,6 +1018,183 @@ function SelectedOrderItemsTable({ order }: { order: OrderDto }) {
       </Table>
     </div>
   )
+}
+
+function SelectedAdminOrderItemsTable({ order }: { order: AdminOrderDto }) {
+  return (
+    <div className="overflow-x-auto rounded-lg border">
+      <Table className="min-w-[980px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Bicycle</TableHead>
+            <TableHead>Snapshot</TableHead>
+            <TableHead>Live status</TableHead>
+            <TableHead>Safety limits</TableHead>
+            <TableHead>Pickup</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {order.items.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell>
+                <div className="grid gap-1">
+                  <span className="font-medium">{item.bicycle.title}</span>
+                  <span className="text-sm text-muted-foreground">{item.bicycle.manufacturer.publicName}</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="grid gap-1">
+                  <span>{formatMoney(item.pricePerDaySnapshotKopecks)} / day</span>
+                  <span className="text-sm text-muted-foreground">Deposit {formatMoney(item.depositSnapshotKopecks)}</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant={item.liveBicycle.status === 'available' ? 'secondary' : 'destructive'}>
+                    {item.liveBicycle.status}
+                  </Badge>
+                  <Badge variant={item.liveBicycle.manufacturerStatus === 'approved' ? 'secondary' : 'destructive'}>
+                    maker {item.liveBicycle.manufacturerStatus}
+                  </Badge>
+                  <Badge variant={item.liveBicycle.deliveryAvailable ? 'secondary' : 'outline'}>
+                    {item.liveBicycle.deliveryAvailable ? 'delivery' : 'pickup only'}
+                  </Badge>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="grid gap-1 text-sm">
+                  <span>Max load {item.liveBicycle.maxLoadKg} kg</span>
+                  <span className="text-muted-foreground">
+                    Seat {item.liveBicycle.seatHeightCm} cm, frame {item.liveBicycle.frameLengthCm} cm, wheel {item.liveBicycle.wheelDiameterCm} cm
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>{item.bicycle.pickupAddress}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function AdminWarnings({ warnings }: { warnings: AdminOrderWarningDto[] }) {
+  if (warnings.length === 0) {
+    return (
+      <Alert>
+        <CircleCheckIcon />
+        <AlertTitle>No blocking availability warnings</AlertTitle>
+        <AlertDescription>Review contacts, logistics, and safety notes before confirming.</AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="grid gap-2">
+      {warnings.map((warning, index) => (
+        <Alert
+          key={`${warning.type}-${warning.bicycleId ?? 'order'}-${index}`}
+          variant={warning.severity === 'error' ? 'destructive' : 'default'}
+        >
+          {warning.severity === 'error' ? <CircleAlertIcon /> : <AlertTriangleIcon />}
+          <AlertTitle>{warning.bicycleTitle ?? 'Order warning'}</AlertTitle>
+          <AlertDescription>{warning.message}</AlertDescription>
+        </Alert>
+      ))}
+    </div>
+  )
+}
+
+function StatusHistoryTable({ order }: { order: AdminOrderDto }) {
+  if (order.statusHistory.length === 0) {
+    return (
+      <Alert>
+        <ClipboardListIcon />
+        <AlertTitle>No status history yet</AlertTitle>
+        <AlertDescription>The first administrator or customer transition will be recorded here.</AlertDescription>
+      </Alert>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-lg border">
+      <Table className="min-w-[760px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>Transition</TableHead>
+            <TableHead>Actor</TableHead>
+            <TableHead>Comment</TableHead>
+            <TableHead>Created</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {order.statusHistory.map((history) => (
+            <TableRow key={history.id}>
+              <TableCell>
+                <div className="flex flex-wrap gap-2">
+                  <OrderStatusBadge status={history.fromStatus} />
+                  <OrderStatusBadge status={history.toStatus} />
+                </div>
+              </TableCell>
+              <TableCell>{history.changedByUser.displayName ?? history.changedByUser.email}</TableCell>
+              <TableCell>{history.comment ?? '-'}</TableCell>
+              <TableCell>{new Date(history.createdAt).toLocaleString()}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  )
+}
+
+function RequestErrorDetails({ error }: { error: unknown }) {
+  if (!(error instanceof ApiRequestError)) return null
+
+  const details = error.details
+  if (!details || typeof details !== 'object') return null
+
+  if ('conflicts' in details && Array.isArray(details.conflicts)) {
+    return (
+      <ul className="mt-2 list-disc pl-4">
+        {details.conflicts.map((conflict, index) => (
+          <li key={index}>{formatConflict(conflict)}</li>
+        ))}
+      </ul>
+    )
+  }
+
+  if ('warnings' in details && Array.isArray(details.warnings)) {
+    return (
+      <ul className="mt-2 list-disc pl-4">
+        {details.warnings.map((warning, index) => (
+          <li key={index}>{formatWarning(warning)}</li>
+        ))}
+      </ul>
+    )
+  }
+
+  return null
+}
+
+function formatConflict(value: unknown) {
+  if (!value || typeof value !== 'object') return 'Availability conflict'
+  const conflict = value as {
+    bicycleTitle?: unknown
+    conflictingOrderId?: unknown
+    startsOn?: unknown
+    endsOn?: unknown
+  }
+  const title = typeof conflict.bicycleTitle === 'string' ? conflict.bicycleTitle : 'Bicycle'
+  const orderId = typeof conflict.conflictingOrderId === 'string' ? conflict.conflictingOrderId : 'another order'
+  const startsOn = typeof conflict.startsOn === 'string' ? conflict.startsOn : '?'
+  const endsOn = typeof conflict.endsOn === 'string' ? conflict.endsOn : '?'
+  return `${title} conflicts with ${orderId} (${startsOn} - ${endsOn}).`
+}
+
+function formatWarning(value: unknown) {
+  if (!value || typeof value !== 'object') return 'Availability warning'
+  const warning = value as { message?: unknown }
+  return typeof warning.message === 'string' ? warning.message : 'Availability warning'
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

@@ -7,7 +7,13 @@ import {
   ManufacturerBicyclesPage,
 } from './features/bicycles/pages'
 import { AdminManufacturersPage, ManufacturerProfilePage } from './features/manufacturers/pages'
-import { OrderDetailPage, OrderRequestPage, OrdersPage } from './features/orders/pages'
+import {
+  AdminOrderDetailPage,
+  AdminOrdersPage,
+  OrderDetailPage,
+  OrderRequestPage,
+  OrdersPage,
+} from './features/orders/pages'
 import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
 
 const rootRoute = createRootRoute({
@@ -42,6 +48,18 @@ const adminBicyclesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/bicycles',
   component: AdminBicyclesPage,
+})
+
+const adminOrdersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/orders',
+  component: AdminOrdersPage,
+})
+
+const adminOrderDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/orders/$id',
+  component: AdminOrderDetailPage,
 })
 
 const manufacturerProfileRoute = createRoute({
@@ -95,6 +113,8 @@ const routeTree = rootRoute.addChildren([
   adminUsersRoute,
   adminManufacturersRoute,
   adminBicyclesRoute,
+  adminOrdersRoute,
+  adminOrderDetailRoute,
   manufacturerProfileRoute,
   manufacturerBicyclesRoute,
   catalogRoute,
