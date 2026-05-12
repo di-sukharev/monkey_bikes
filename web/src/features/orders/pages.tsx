@@ -6,6 +6,7 @@ import type {
   AdminOrderWarningDto,
   BicycleStatus,
   OrderDto,
+  OrderListScope,
   OrderStatus,
   PaymentType,
   PublicBicycleDto,
@@ -80,9 +81,18 @@ import {
   orderStatuses,
   ordersQueryKey,
   parseBicycleIds,
+  requestErrorNextStep,
   selectedBicyclesTotal,
 } from './model'
 import { OrderStatusBadge } from './status-badge'
+import {
+  CustomerCancelPanel,
+  CustomerFulfillmentPanel,
+  CustomerOrderFilters,
+  CustomerOrderNextStep,
+  CustomerOrdersTable,
+  CustomerOrderTotals,
+} from './customer-order-panels'
 
 const ordersPageSize = 20
 const adminOrdersPageSize = 20
@@ -245,8 +255,9 @@ export function OrderRequestPage() {
 export function OrdersPage() {
   const auth = useAuth()
   const [page, setPage] = useState(1)
+  const [scope, setScope] = useState<OrderListScope>('current')
   const [status, setStatus] = useState<OrderStatus | 'all'>('all')
-  const queryKey = ordersQueryKey(auth.user?.id, page, status)
+  const queryKey = ordersQueryKey(auth.user?.id, page, scope, status)
 
   const ordersQuery = useQuery({
     queryKey,
@@ -255,6 +266,7 @@ export function OrdersPage() {
       auth.api.orders({
         page,
         pageSize: ordersPageSize,
+        scope,
         ...(status === 'all' ? {} : { status }),
       }),
   })
@@ -296,7 +308,7 @@ export function OrdersPage() {
               Orders
             </Badge>
             <h1 className="text-3xl font-semibold tracking-tight">My orders</h1>
-            <CardDescription>Rental requests and current order statuses.</CardDescription>
+            <CardDescription>Current and historical rental requests, payment state, and handoff details.</CardDescription>
           </div>
           {data && (
             <CardAction>
@@ -307,22 +319,20 @@ export function OrdersPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <NativeSelect
-            aria-label="Order status filter"
-            className="w-full max-w-56"
-            value={status}
-            onChange={(event) => {
+          <CustomerOrderFilters
+            disabled={ordersQuery.isFetching}
+            scope={scope}
+            status={status}
+            onScopeChange={(nextScope) => {
               setPage(1)
-              setStatus(event.target.value as OrderStatus | 'all')
+              setScope(nextScope)
+              setStatus('all')
             }}
-          >
-            <NativeSelectOption value="all">All statuses</NativeSelectOption>
-            {orderStatuses.map((nextStatus) => (
-              <NativeSelectOption key={nextStatus} value={nextStatus}>
-                {nextStatus}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+            onStatusChange={(nextStatus) => {
+              setPage(1)
+              setStatus(nextStatus)
+            }}
+          />
 
           {ordersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
@@ -346,48 +356,16 @@ export function OrdersPage() {
                   <ClipboardListIcon />
                 </EmptyMedia>
                 <EmptyTitle>No orders found.</EmptyTitle>
-                <EmptyDescription>Create a request from the public catalog.</EmptyDescription>
+                <EmptyDescription>
+                  {scope === 'history'
+                    ? 'Returned and cancelled orders will appear here.'
+                    : 'Create a request from the public catalog.'}
+                </EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
 
-          {data && data.items.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border">
-              <Table className="min-w-[980px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Request</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Payments</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="w-[140px]">Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.items.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell>
-                        <div className="grid gap-1">
-                          <span className="font-medium">{order.items.map((item) => item.bicycle.title).join(', ')}</span>
-                          <span className="text-sm text-muted-foreground">{order.fulfillmentType}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell><OrderStatusBadge status={order.status} /></TableCell>
-                      <TableCell><PaymentStatusSummary order={order} /></TableCell>
-                      <TableCell>{formatOrderDates(order)}</TableCell>
-                      <TableCell>{formatMoney(order.totalAmountKopecks)}</TableCell>
-                      <TableCell>
-                        <Button type="button" variant="outline" size="sm" asChild>
-                          <Link to="/orders/$id" params={{ id: order.id }}>Open</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          {data && data.items.length > 0 && <CustomerOrdersTable orders={data.items} />}
         </CardContent>
       </Card>
 
@@ -430,6 +408,7 @@ export function OrderDetailPage() {
   const [cancelComment, setCancelComment] = useState('')
   const [notice, setNotice] = useState<string | null>(null)
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null)
+  const [paymentActionError, setPaymentActionError] = useState<unknown>(null)
   const [pendingPaymentAction, setPendingPaymentAction] = useState<PendingPaymentAction>(null)
   const orderQuery = useQuery({
     queryKey: orderDetailQueryKey(auth.user?.id, id),
@@ -449,28 +428,44 @@ export function OrderDetailPage() {
     },
   })
   const createPayment = useMutation({
+    onMutate: () => {
+      setPaymentActionError(null)
+      setPaymentNotice(null)
+    },
     mutationFn: async (type: PaymentType) => {
       setPendingPaymentAction({ kind: 'create', type })
       return auth.api.createOrderPayment(id, type)
     },
     onSuccess: async (response) => {
+      setPaymentActionError(null)
       setPaymentNotice(`${formatPaymentType(response.payment.type)} payment ${response.payment.status}`)
       await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
       await queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(auth.user?.id, id) })
+    },
+    onError: (error) => {
+      setPaymentActionError(error)
     },
     onSettled: () => {
       setPendingPaymentAction(null)
     },
   })
   const completePayment = useMutation({
+    onMutate: () => {
+      setPaymentActionError(null)
+      setPaymentNotice(null)
+    },
     mutationFn: async ({ paymentId, action }: { paymentId: string; action: StubPaymentAction }) => {
       setPendingPaymentAction({ kind: 'complete', paymentId, action })
       return auth.api.completeStubPayment(paymentId, action)
     },
     onSuccess: async (response) => {
+      setPaymentActionError(null)
       setPaymentNotice(`${formatPaymentType(response.payment.type)} payment ${response.payment.status}`)
       await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
       await queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(auth.user?.id, id) })
+    },
+    onError: (error) => {
+      setPaymentActionError(error)
     },
     onSettled: () => {
       setPendingPaymentAction(null)
@@ -507,8 +502,15 @@ export function OrderDetailPage() {
       <GateCard
         eyebrow="Order"
         title="Order unavailable"
-        description={formatRequestError(orderQuery.error)}
-        action={<Button asChild><Link to="/orders">Back to orders</Link></Button>}
+        description={orderDetailErrorDescription(orderQuery.error)}
+        action={
+          <div className="grid gap-3">
+            <p className="text-sm text-muted-foreground">{requestErrorNextStep(orderQuery.error)}</p>
+            <Button className="w-fit" asChild>
+              <Link to="/orders">Back to orders</Link>
+            </Button>
+          </div>
+        }
       />
     )
   }
@@ -539,24 +541,12 @@ export function OrderDetailPage() {
           </CardAction>
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
+          <CustomerOrderNextStep order={order} />
           <SelectedOrderItemsTable order={order} />
 
-          <div className="grid gap-3 md:grid-cols-4">
-            <Fact label="Rental" value={formatMoney(order.rentalAmountKopecks)} />
-            <Fact label="Deposit" value={formatMoney(order.depositAmountKopecks)} />
-            <Fact label="Delivery" value={formatMoney(order.deliveryAmountKopecks)} />
-            <Fact label="Total" value={formatMoney(order.totalAmountKopecks)} />
-          </div>
+          <CustomerOrderTotals order={order} />
 
-          <Alert>
-            <MapPinIcon />
-            <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}</AlertTitle>
-            <AlertDescription>
-              {order.fulfillmentType === 'delivery'
-                ? order.deliveryAddress
-                : order.items.map((item) => item.bicycle.pickupAddress).join('; ')}
-            </AlertDescription>
-          </Alert>
+          <CustomerFulfillmentPanel order={order} />
 
           <Alert>
             <CircleCheckIcon />
@@ -576,7 +566,7 @@ export function OrderDetailPage() {
             order={order}
             mode="user"
             notice={paymentNotice}
-            error={createPayment.error ?? completePayment.error}
+            error={paymentActionError}
             pendingAction={pendingPaymentAction}
             onCreate={(type) => createPayment.mutate(type)}
             onComplete={(paymentId, action) => completePayment.mutate({ paymentId, action })}
@@ -590,42 +580,14 @@ export function OrderDetailPage() {
             </Alert>
           )}
 
-          {cancelOrder.error && (
-            <Alert variant="destructive">
-              <CircleAlertIcon />
-              <AlertTitle>Could not cancel request</AlertTitle>
-              <AlertDescription>{formatRequestError(cancelOrder.error)}</AlertDescription>
-            </Alert>
-          )}
-
           {order.status === 'request' && (
-            <section className="grid gap-3 border-t pt-4">
-              <div className="grid gap-1">
-                <h2 className="text-base font-semibold">Cancel request</h2>
-                <p className="text-sm text-muted-foreground">
-                  Cancellation is available until administrator confirmation.
-                </p>
-              </div>
-              <Textarea
-                className="min-h-20"
-                disabled={cancelOrder.isPending}
-                placeholder="Optional comment"
-                value={cancelComment}
-                aria-label="Cancellation comment"
-                onChange={(event) => setCancelComment(event.target.value)}
-              />
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={cancelOrder.isPending}
-                  onClick={() => cancelOrder.mutate()}
-                >
-                  <XCircleIcon data-icon="inline-start" />
-                  Cancel request
-                </Button>
-              </div>
-            </section>
+            <CustomerCancelPanel
+              comment={cancelComment}
+              disabled={cancelOrder.isPending}
+              error={cancelOrder.error}
+              onCancel={() => cancelOrder.mutate()}
+              onCommentChange={setCancelComment}
+            />
           )}
         </CardContent>
       </Card>
@@ -1282,6 +1244,14 @@ function RequestErrorDetails({ error }: { error: unknown }) {
   }
 
   return null
+}
+
+function orderDetailErrorDescription(error: unknown) {
+  if (error instanceof ApiRequestError && error.code === 'NOT_FOUND') {
+    return 'This order is not available for the current customer session.'
+  }
+
+  return formatRequestError(error)
 }
 
 function formatConflict(value: unknown) {

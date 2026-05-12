@@ -4,6 +4,7 @@ import {
   adminBicycleSchema,
   adminOrderChecklistInputSchema,
   adminManufacturerStatusUpdateRequestSchema,
+  adminOrdersQuerySchema,
   adminOrderSchema,
   adminOrderStatusUpdateRequestSchema,
   adminUpdateUserRequestSchema,
@@ -16,6 +17,7 @@ import {
   manufacturerProfileUpsertRequestSchema,
   orderCancelRequestSchema,
   orderCreateRequestSchema,
+  ordersQuerySchema,
   orderSchema,
   paymentResponseSchema,
   paymentSchema,
@@ -385,7 +387,7 @@ describe('contracts', () => {
       }),
     ).toThrow()
 
-    expect(orderSchema.parse({
+    const publicOrder = orderSchema.parse({
       id: 'order_1',
       userId: 'user_1',
       status: 'request',
@@ -397,7 +399,6 @@ describe('contracts', () => {
       contactName: 'Trainer',
       contactPhone: '+7 999 111-22-33',
       userComment: 'Keep the bicycles indoors.',
-      adminComment: null,
       rentalAmountKopecks: 700000,
       depositAmountKopecks: 700000,
       deliveryAmountKopecks: 0,
@@ -431,7 +432,9 @@ describe('contracts', () => {
           },
         },
       ],
-    }).items[0]?.pricePerDaySnapshotKopecks).toBe(250000)
+    })
+    expect(publicOrder.items[0]?.pricePerDaySnapshotKopecks).toBe(250000)
+    expect('adminComment' in publicOrder).toBe(false)
 
     const payment = paymentSchema.parse({
       id: 'payment_1',
@@ -452,6 +455,24 @@ describe('contracts', () => {
   })
 
   test('normalizes order status transition contracts and domain error codes', () => {
+    expect(ordersQuerySchema.parse({ scope: 'current', pageSize: 10 })).toEqual({
+      page: 1,
+      pageSize: 10,
+      scope: 'current',
+    })
+    expect(ordersQuerySchema.parse({ scope: 'history', status: 'returned' }).status).toBe('returned')
+    expect(() =>
+      ordersQuerySchema.parse({
+        scope: 'current',
+        status: 'returned',
+      }),
+    ).toThrow()
+    expect(() =>
+      adminOrdersQuerySchema.parse({
+        scope: 'current',
+      }),
+    ).toThrow()
+
     expect(orderCancelRequestSchema.parse({ comment: ' Customer schedule changed. ' })).toEqual({
       comment: 'Customer schedule changed.',
     })

@@ -358,6 +358,10 @@ export class ApiClient {
       params.set('status', query.status)
     }
 
+    if (query.scope !== 'all') {
+      params.set('scope', query.scope)
+    }
+
     return this.request(`/api/orders?${params.toString()}`, ordersResponseSchema, {
       auth: true,
     })

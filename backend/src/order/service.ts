@@ -14,6 +14,7 @@ import type {
 import {
   maxOrderAmountKopecks,
   maxOrderRentalDays,
+  orderStatusesForScope,
   rentalDaysInclusive as contractRentalDaysInclusive,
 } from '@web-app-demo/contracts'
 
@@ -313,7 +314,7 @@ export class OrderService {
   async listCurrentUserOrders(user: AuthenticatedUser, query: OrdersQuery) {
     const where = {
       userId: user.id,
-      ...(query.status ? { status: query.status } : {}),
+      ...orderStatusWhere(query),
     }
     const skip = (query.page - 1) * query.pageSize
 
@@ -416,7 +417,7 @@ export class OrderService {
 
   async listAdminOrders(query: AdminOrdersQuery) {
     const where = {
-      ...(query.status ? { status: query.status } : {}),
+      ...orderStatusWhere(query),
     }
     const skip = (query.page - 1) * query.pageSize
 
@@ -839,6 +840,7 @@ export class OrderService {
   private async toAdminOrderDto(order: AdminOrderRecord): Promise<AdminOrderDto> {
     return {
       ...toOrderDto(order),
+      adminComment: order.adminComment,
       user: order.user,
       items: order.items.map(toAdminOrderItemDto),
       statusHistory: order.statusHistory.map(toOrderStatusHistoryDto),
@@ -898,6 +900,22 @@ function assertOrderMoneyFits(label: string, amountKopecks: number) {
       'VALIDATION_ERROR',
       `${label} exceeds the maximum supported amount`,
     )
+  }
+}
+
+function orderStatusWhere(query: OrdersQuery | AdminOrdersQuery) {
+  if (query.status) {
+    return { status: query.status }
+  }
+
+  if (!('scope' in query) || query.scope === 'all') {
+    return {}
+  }
+
+  return {
+    status: {
+      in: orderStatusesForScope(query.scope),
+    },
   }
 }
 
@@ -1243,7 +1261,6 @@ function toOrderDto(order: OrderRecord): OrderDto {
     contactName: order.contactName,
     contactPhone: order.contactPhone,
     userComment: order.userComment,
-    adminComment: order.adminComment,
     rentalAmountKopecks: order.rentalAmountKopecks,
     depositAmountKopecks: order.depositAmountKopecks,
     deliveryAmountKopecks: order.deliveryAmountKopecks,

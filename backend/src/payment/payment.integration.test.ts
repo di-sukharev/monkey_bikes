@@ -146,11 +146,21 @@ maybeDescribe('payment API integration', () => {
   test('completes stub payments idempotently and allows retry after failed or cancelled attempts', async () => {
     const admin = await createAdmin('payment-flow-admin@example.com')
     const user = await registerUser('payment-flow-owner@example.com', 'Owner')
+    const otherUser = await registerUser('payment-flow-other@example.com', 'Other')
     const bicycle = await createAvailableBicycle('Payment Flow Maker')
     const request = await createOrder(user.accessToken, [bicycle.id])
     expect((await confirmOrder(admin.accessToken, request.order.id)).status).toBe(200)
 
     const rentBody = await createPayment(user.accessToken, request.order.id, 'rent')
+    const otherUserRentSuccess = await completePayment(
+      otherUser.accessToken,
+      rentBody.payment.id,
+      'stub-success',
+    )
+    const otherUserRentSuccessBody = await otherUserRentSuccess.json()
+    expect(otherUserRentSuccess.status).toBe(404)
+    expect(otherUserRentSuccessBody.error.code).toBe('PAYMENT_NOT_FOUND')
+
     const rentSuccess = await completePayment(user.accessToken, rentBody.payment.id, 'stub-success')
     const rentSuccessBody = await rentSuccess.json()
     expect(rentSuccess.status).toBe(200)

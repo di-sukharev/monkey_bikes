@@ -1,14 +1,19 @@
-import type { FulfillmentType, OrderDto, OrderStatus, PublicBicycleDto } from '@web-app-demo/contracts'
+import type {
+  ApiErrorCode,
+  FulfillmentType,
+  OrderDto,
+  OrderListScope,
+  OrderStatus,
+  PublicBicycleDto,
+} from '@web-app-demo/contracts'
+import { orderListScopeSchema, orderStatusesForScope } from '@web-app-demo/contracts'
 
-export const orderStatuses: OrderStatus[] = [
-  'request',
-  'confirmed',
-  'issued',
-  'returned',
-  'cancelled',
-]
+import { ApiRequestError } from '@/lib/api'
+
+export const orderStatuses: OrderStatus[] = orderStatusesForScope('all')
 
 export const fulfillmentTypes: FulfillmentType[] = ['pickup', 'delivery']
+export const orderListScopes: OrderListScope[] = orderListScopeSchema.options
 
 export type OrderFormValues = {
   bicycleIds: string[]
@@ -56,8 +61,13 @@ export function selectedBicyclesTotal(bicycles: PublicBicycleDto[]) {
   }
 }
 
-export function ordersQueryKey(userId: string | null | undefined, page: number, status: OrderStatus | 'all') {
-  return ['orders', userId ?? null, page, status] as const
+export function ordersQueryKey(
+  userId: string | null | undefined,
+  page: number,
+  scope: OrderListScope,
+  status: OrderStatus | 'all',
+) {
+  return ['orders', userId ?? null, page, scope, status] as const
 }
 
 export function orderDetailQueryKey(userId: string | null | undefined, id: string) {
@@ -82,6 +92,68 @@ export function parseBicycleIds(value: unknown) {
   }
 
   return []
+}
+
+export function orderStatusesForListScope(scope: OrderListScope) {
+  return orderStatusesForScope(scope)
+}
+
+export function orderListScopeLabel(scope: OrderListScope) {
+  switch (scope) {
+    case 'all':
+      return 'All'
+    case 'current':
+      return 'Current'
+    case 'history':
+      return 'History'
+  }
+}
+
+export function orderNextStep(order: OrderDto) {
+  switch (order.status) {
+    case 'request':
+      return 'Waiting for administrator confirmation. You can cancel the request until it is confirmed.'
+    case 'confirmed':
+      return order.paymentRequirementsMet
+        ? 'Payments are complete. Wait for the administrator to issue the order.'
+        : 'Complete rent and deposit payments to make the order ready for issue.'
+    case 'issued':
+      return 'The bicycle has been issued. Coordinate return with the administrator at the agreed location.'
+    case 'returned':
+      return 'The order is returned. No further action is required.'
+    case 'cancelled':
+      return 'The order is cancelled. Create a new request from the catalog if you need another rental.'
+  }
+}
+
+export function requestErrorNextStep(error: unknown) {
+  const code = error instanceof ApiRequestError ? error.code as ApiErrorCode : null
+
+  switch (code) {
+    case 'UNAUTHORIZED':
+      return 'Sign in again and retry the action.'
+    case 'FORBIDDEN':
+      return 'Use a customer account for this action.'
+    case 'NOT_FOUND':
+    case 'PAYMENT_NOT_FOUND':
+      return 'Open your orders list and refresh the order details.'
+    case 'ORDER_NOT_CANCELLABLE':
+      return 'The order is already confirmed or later. Contact the administrator if plans changed.'
+    case 'PAYMENT_NOT_ALLOWED':
+      return 'Payments become available after administrator confirmation.'
+    case 'PAYMENT_NOT_COMPLETABLE':
+      return 'This payment attempt is closed. Create a new attempt when retry is available.'
+    case 'PAYMENT_PROVIDER_DISABLED':
+      return 'Payment processing is disabled in this environment. Contact the administrator.'
+    case 'PAYMENT_DEV_ENDPOINTS_DISABLED':
+      return 'Payment completion is disabled in this environment. Wait for administrator assistance.'
+    case 'PAYMENT_ACTIVE_ATTEMPT_EXISTS':
+      return 'Continue or finish the active payment attempt before creating another one.'
+    case 'VALIDATION_ERROR':
+      return 'Review the entered data and retry.'
+    default:
+      return 'Refresh the page and retry. If the problem remains, contact the administrator.'
+  }
 }
 
 function uniqueIds(values: string[]) {

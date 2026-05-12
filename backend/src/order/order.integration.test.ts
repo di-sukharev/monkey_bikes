@@ -284,6 +284,13 @@ maybeDescribe('order API integration', () => {
       (warning: { type: string }) => warning.type === 'technical_limits',
     )).toBe(true)
 
+    const listWithScope = await app.request('/api/admin/orders?scope=current', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const listWithScopeBody = await listWithScope.json()
+    expect(listWithScope.status).toBe(400)
+    expect(listWithScopeBody.error.code).toBe('VALIDATION_ERROR')
+
     const confirm = await app.request(`/api/admin/orders/${createBody.order.id}/status`, {
       method: 'PATCH',
       headers: authJsonHeaders(admin.accessToken),
@@ -430,13 +437,70 @@ maybeDescribe('order API integration', () => {
       startsOn: '2026-08-01',
       endsOn: '2026-08-01',
     })
-    expect((await confirmOrder(admin.accessToken, confirmed.order.id)).status).toBe(200)
+    const confirm = await app.request(`/api/admin/orders/${confirmed.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'confirmed',
+        comment: 'Internal availability note.',
+      }),
+    })
+    expect(confirm.status).toBe(200)
+    const confirmedDetail = await app.request(`/api/orders/${confirmed.order.id}`, {
+      headers: authHeaders(user.accessToken),
+    })
+    const confirmedDetailBody = await confirmedDetail.json()
+    expect(confirmedDetail.status).toBe(200)
+    expect('adminComment' in confirmedDetailBody.order).toBe(false)
     const cancelConfirmed = await app.request(`/api/orders/${confirmed.order.id}/cancel`, {
       method: 'POST',
       headers: authJsonHeaders(user.accessToken),
       body: JSON.stringify({}),
     })
     expect(cancelConfirmed.status).toBe(409)
+
+    const currentList = await app.request('/api/orders?scope=current&pageSize=10', {
+      headers: authHeaders(user.accessToken),
+    })
+    const currentListBody = await currentList.json()
+    expect(currentList.status).toBe(200)
+    expect(currentListBody.items.map((order: { status: string }) => order.status)).toEqual(['confirmed'])
+    expect(currentListBody.items.every((order: Record<string, unknown>) => !('adminComment' in order))).toBe(true)
+
+    const historyList = await app.request('/api/orders?scope=history&pageSize=10', {
+      headers: authHeaders(user.accessToken),
+    })
+    const historyListBody = await historyList.json()
+    expect(historyList.status).toBe(200)
+    expect(historyListBody.items.map((order: { status: string }) => order.status)).toEqual(['cancelled'])
+
+    const invalidScopedStatus = await app.request('/api/orders?scope=current&status=returned', {
+      headers: authHeaders(user.accessToken),
+    })
+    const invalidScopedStatusBody = await invalidScopedStatus.json()
+    expect(invalidScopedStatus.status).toBe(400)
+    expect(invalidScopedStatusBody.error.code).toBe('VALIDATION_ERROR')
+
+    const invalidScope = await app.request('/api/orders?scope=stale', {
+      headers: authHeaders(user.accessToken),
+    })
+    const invalidScopeBody = await invalidScope.json()
+    expect(invalidScope.status).toBe(400)
+    expect(invalidScopeBody.error.code).toBe('VALIDATION_ERROR')
+
+    const invalidStatus = await app.request('/api/orders?status=lost', {
+      headers: authHeaders(user.accessToken),
+    })
+    const invalidStatusBody = await invalidStatus.json()
+    expect(invalidStatus.status).toBe(400)
+    expect(invalidStatusBody.error.code).toBe('VALIDATION_ERROR')
+
+    const invalidAdminStatus = await app.request('/api/admin/orders?status=lost', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const invalidAdminStatusBody = await invalidAdminStatus.json()
+    expect(invalidAdminStatus.status).toBe(400)
+    expect(invalidAdminStatusBody.error.code).toBe('VALIDATION_ERROR')
   })
 
   test('blocks confirmation when live bicycle state changes after request creation', async () => {

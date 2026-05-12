@@ -39,6 +39,12 @@ export const orderStatusSchema = z.enum([
   'returned',
 ])
 
+export const orderListScopeSchema = z.enum(['all', 'current', 'history'])
+
+const currentOrderStatuses = ['request', 'confirmed', 'issued'] as const
+const historyOrderStatuses = ['cancelled', 'returned'] as const
+const allOrderStatuses = ['request', 'confirmed', 'issued', 'returned', 'cancelled'] as const
+
 export const fulfillmentTypeSchema = z.enum(['delivery', 'pickup'])
 
 export const orderCreateRequestSchema = z
@@ -88,9 +94,23 @@ export const ordersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   status: orderStatusSchema.optional(),
-})
+  scope: orderListScopeSchema.default('all'),
+}).refine(
+  (value) =>
+    value.scope === 'all' ||
+    value.status === undefined ||
+    orderStatusesForScope(value.scope).includes(value.status),
+  {
+    message: 'Status must belong to the selected order scope',
+    path: ['status'],
+  },
+)
 
-export const adminOrdersQuerySchema = ordersQuerySchema
+export const adminOrdersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  status: orderStatusSchema.optional(),
+}).strict()
 
 export const orderCancelRequestSchema = z
   .object({
@@ -201,7 +221,6 @@ export const orderSchema = z.object({
   contactName: z.string(),
   contactPhone: z.string(),
   userComment: z.string().nullable(),
-  adminComment: z.string().nullable(),
   rentalAmountKopecks: moneyKopecks,
   depositAmountKopecks: moneyKopecks,
   deliveryAmountKopecks: moneyKopecks,
@@ -286,6 +305,7 @@ export const adminOrderWarningSchema = z.object({
 })
 
 export const adminOrderSchema = orderSchema.extend({
+  adminComment: z.string().nullable(),
   user: orderUserSummarySchema,
   items: z.array(adminOrderItemSchema).min(1),
   statusHistory: z.array(orderStatusHistorySchema),
@@ -316,6 +336,7 @@ export const adminOrdersResponseSchema = z.object({
 })
 
 export type OrderStatus = z.infer<typeof orderStatusSchema>
+export type OrderListScope = z.infer<typeof orderListScopeSchema>
 export type FulfillmentType = z.infer<typeof fulfillmentTypeSchema>
 export type OrderCreateRequest = z.output<typeof orderCreateRequestSchema>
 export type OrderCreateInput = z.input<typeof orderCreateRequestSchema>
@@ -343,3 +364,9 @@ export type OrderResponse = z.infer<typeof orderResponseSchema>
 export type OrdersResponse = z.infer<typeof ordersResponseSchema>
 export type AdminOrderResponse = z.infer<typeof adminOrderResponseSchema>
 export type AdminOrdersResponse = z.infer<typeof adminOrdersResponseSchema>
+
+export function orderStatusesForScope(scope: OrderListScope): OrderStatus[] {
+  if (scope === 'current') return [...currentOrderStatuses]
+  if (scope === 'history') return [...historyOrderStatuses]
+  return [...allOrderStatuses]
+}

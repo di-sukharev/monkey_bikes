@@ -606,10 +606,12 @@ test('ApiClient creates and lists rental requests without client money fields', 
 
   const created = await client.createOrder(input)
   const list = await client.orders({ page: 1, pageSize: 20, status: 'request' })
+  const currentList = await client.orders({ scope: 'current' })
   const detail = await client.order('order_1')
 
   expect(created.order.totalAmountKopecks).toBe(1000000)
   expect(list.total).toBe(1)
+  expect(currentList.total).toBe(1)
   expect(detail.order.id).toBe('order_1')
   expect(calls).toEqual([
     {
@@ -624,6 +626,12 @@ test('ApiClient creates and lists rental requests without client money fields', 
     {
       path: '/api/orders',
       search: '?page=1&pageSize=20&status=request',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/orders',
+      search: '?page=1&pageSize=20&scope=current',
       method: 'GET',
       body: undefined,
     },
@@ -1087,7 +1095,6 @@ function orderResponse() {
     contactName: 'Trainer',
     contactPhone: '+7 999 111-22-33',
     userComment: null,
-    adminComment: null,
     rentalAmountKopecks: 500000,
     depositAmountKopecks: 500000,
     deliveryAmountKopecks: 0,
@@ -1144,6 +1151,7 @@ function adminOrderResponse(
   return {
     ...order,
     status,
+    adminComment: null,
     user: {
       id: 'user_1',
       email: 'renter@example.com',

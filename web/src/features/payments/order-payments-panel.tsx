@@ -21,7 +21,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { formatRequestError } from '@/lib/request-error'
-import { formatMoney } from '../orders/model'
+import { formatMoney, requestErrorNextStep } from '../orders/model'
 import {
   activePaymentFor,
   canCreatePayment,
@@ -109,7 +109,10 @@ export function OrderPaymentsPanel({
         <Alert variant="destructive">
           <CircleAlertIcon />
           <AlertTitle>Payment action failed</AlertTitle>
-          <AlertDescription>{formatRequestError(error)}</AlertDescription>
+          <AlertDescription>
+            {formatRequestError(error)}
+            <span className="mt-1 block">{requestErrorNextStep(error)}</span>
+          </AlertDescription>
         </Alert>
       ) : null}
 
