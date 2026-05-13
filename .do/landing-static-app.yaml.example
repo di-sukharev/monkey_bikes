@@ -1,0 +1,25 @@
+name: bicycle-rent-landing
+region: fra
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+static_sites:
+  - name: landing
+    github:
+      repo: di-sukharev/monkey_bikes
+      branch: master
+      deploy_on_push: true
+    source_dir: /
+    environment_slug: node-js
+    build_command: bun run build:landing
+    output_dir: landing/dist
+    index_document: index.html
+    envs:
+      - key: PUBLIC_WEB_APP_URL
+        value: https://REPLACE_WITH_WEB_DEFAULT_INGRESS
+        scope: BUILD_TIME
+        type: GENERAL
+      - key: PUBLIC_LANDING_URL
+        value: ${_self.PUBLIC_URL}
+        scope: BUILD_TIME
+        type: GENERAL

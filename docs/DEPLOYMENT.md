@@ -1,126 +1,257 @@
 # Deployment
 
-Use this document after the user has chosen deployment. Local setup from `README.md` does not require DigitalOcean or Yandex Cloud credentials.
+Этот проект деплоится в DigitalOcean через `doctl` после выбора облака и GitHub source. Локальная разработка из `README.md` не требует DigitalOcean.
 
-Перед деплоем выберите облако по аудитории проекта:
+Текущий production-план:
 
-- International/default: DigitalOcean.
-- РФ-аудитория: Yandex Cloud, потому что DigitalOcean может быть недоступен без VPN.
+- Source repo: `di-sukharev/monkey_bikes`.
+- Branch: `master`.
+- Backend: App Platform service из `backend/Dockerfile`.
+- Web: App Platform Static Site, сборка `bun run build:web`, публикация `web/dist`.
+- Landing: App Platform Static Site, сборка `bun run build:landing`, публикация `landing/dist`.
+- Database: DigitalOcean Managed PostgreSQL в `fra1`.
+- App Platform region: `fra`.
 
-Секреты не храните в репозитории. Минимальные backend env:
+Не храните production secrets в репозитории. Конкретные app specs с реальными URL и секретами держите только локально, например в `.scratch/`.
+
+## Prerequisites
+
+1. `doctl` уже авторизован:
 
 ```bash
-DATABASE_URL=postgresql://...
+doctl account get
+```
+
+2. DigitalOcean имеет доступ к GitHub repo `di-sukharev/monkey_bikes`.
+3. В GitHub `master` лежит весь monorepo, а не только bootstrap `README.md`:
+
+```bash
+git push -u origin master
+```
+
+Минимально в repo должны быть `backend/`, `web/`, `landing/`, `packages/contracts/`, `package.json` и `bun.lock`.
+
+## Static Site build model
+
+DigitalOcean App Platform Static Sites не принимают локальный `dist` как артефакт через `doctl apps create`. App Platform читает Git-source, запускает `build_command` и публикует `output_dir`.
+
+Для этого repo:
+
+- web: `build_command: bun run build:web`, `output_dir: web/dist`;
+- landing: `build_command: bun run build:landing`, `output_dir: landing/dist`;
+- web должен иметь `catchall_document: index.html`, потому что это SPA на TanStack Router.
+
+## Managed PostgreSQL
+
+Создайте production database cluster:
+
+```bash
+doctl databases create bicycle-rent-pg \
+  --region fra1 \
+  --size db-s-1vcpu-1gb \
+  --num-nodes 1
+```
+
+Backend App Platform spec подключает этот cluster как database component `bicycle-rent-db` и использует bindable variable:
+
+```yaml
+DATABASE_URL=${bicycle-rent-db.DATABASE_URL}
+```
+
+Если cluster уже существует, не создавайте второй. Используйте тот же `cluster_name` в backend spec.
+
+## App specs
+
+Commit-safe templates находятся в `.do/`:
+
+- `.do/backend-app.yaml.example`
+- `.do/web-static-app.yaml.example`
+- `.do/landing-static-app.yaml.example`
+
+Перед деплоем скопируйте их в `.scratch/`, подставьте реальные значения и не коммитьте concrete specs:
+
+```bash
+mkdir -p .scratch/deploy
+cp .do/backend-app.yaml.example .scratch/deploy/backend-app.yaml
+cp .do/web-static-app.yaml.example .scratch/deploy/web-static-app.yaml
+cp .do/landing-static-app.yaml.example .scratch/deploy/landing-static-app.yaml
+```
+
+В `.scratch/deploy/backend-app.yaml` замените:
+
+- `REPLACE_WITH_AT_LEAST_32_RANDOM_CHARS` на production `JWT_SECRET`;
+- `https://REPLACE_WITH_WEB_DEFAULT_INGRESS` временно на `https://placeholder.invalid` для первого backend deploy, затем на реальный web URL.
+
+В `.scratch/deploy/web-static-app.yaml` замените:
+
+- `https://REPLACE_WITH_BACKEND_DEFAULT_INGRESS` на backend default ingress.
+
+В `.scratch/deploy/landing-static-app.yaml` замените:
+
+- `https://REPLACE_WITH_WEB_DEFAULT_INGRESS` на web default ingress.
+
+Проверяйте specs перед созданием apps:
+
+```bash
+doctl apps spec validate .scratch/deploy/backend-app.yaml
+doctl apps spec validate .scratch/deploy/web-static-app.yaml
+doctl apps spec validate .scratch/deploy/landing-static-app.yaml
+```
+
+## Deployment order
+
+### 1. Backend first deploy
+
+Для первого backend deploy используйте временный `CORS_ORIGINS=https://placeholder.invalid`, потому что web URL еще неизвестен.
+
+```bash
+doctl apps create \
+  --spec .scratch/deploy/backend-app.yaml \
+  --format ID,DefaultIngress,ActiveDeployment.ID \
+  --wait
+```
+
+Сохраните backend app id и default ingress:
+
+```bash
+export DO_BACKEND_APP_ID=<backend-app-id>
+export DO_BACKEND_URL=https://<backend-default-ingress>
+```
+
+Backend app содержит `PRE_DEPLOY` job `migrate`, который выполняет:
+
+```bash
+bun run prisma:deploy
+```
+
+### 2. Web Static Site
+
+Подставьте `DO_BACKEND_URL` в `VITE_API_URL` внутри `.scratch/deploy/web-static-app.yaml`, затем создайте web app:
+
+```bash
+doctl apps create \
+  --spec .scratch/deploy/web-static-app.yaml \
+  --format ID,DefaultIngress,ActiveDeployment.ID \
+  --wait
+```
+
+Сохраните web app id и default ingress:
+
+```bash
+export DO_WEB_APP_ID=<web-app-id>
+export DO_WEB_URL=https://<web-default-ingress>
+```
+
+### 3. Backend CORS update
+
+Вернитеcь в `.scratch/deploy/backend-app.yaml` и замените `CORS_ORIGINS` на точный web origin:
+
+```yaml
+CORS_ORIGINS: https://<web-default-ingress>
+```
+
+Затем обновите backend app:
+
+```bash
+doctl apps update "$DO_BACKEND_APP_ID" \
+  --spec .scratch/deploy/backend-app.yaml \
+  --format ID,DefaultIngress,ActiveDeployment.ID \
+  --wait
+```
+
+### 4. Landing Static Site
+
+Подставьте `DO_WEB_URL` в `PUBLIC_WEB_APP_URL` внутри `.scratch/deploy/landing-static-app.yaml`, затем создайте landing app:
+
+```bash
+doctl apps create \
+  --spec .scratch/deploy/landing-static-app.yaml \
+  --format ID,DefaultIngress,ActiveDeployment.ID \
+  --wait
+```
+
+## Production env contract
+
+Backend production env:
+
+```bash
+APP_ENV=production
+DATABASE_URL=${bicycle-rent-db.DATABASE_URL}
 JWT_SECRET=<at-least-32-random-characters>
-CORS_ORIGINS=https://web.example.com,https://mobile-preview.example.com
+CORS_ORIGINS=https://<web-default-ingress>
 ACCESS_TOKEN_TTL_SECONDS=900
 REFRESH_TOKEN_TTL_DAYS=30
 COOKIE_SECURE=true
+PAYMENT_PROVIDER=stub
+PAYMENT_STUB_DEV_ENDPOINTS_ENABLED=false
+PAYMENT_CURRENCY=RUB
 ```
 
-## DigitalOcean через doctl
+Production web auth depends on cross-origin cookies between the web static host and backend host. In production the backend sets the HttpOnly refresh cookie as `Secure` and `SameSite=None`; do not weaken CORS or cookie security to work around browser failures.
 
-1. Установите `doctl`.
-2. Создайте token в DigitalOcean и выполните:
+## Seed first admin
+
+Do not commit seed credentials. Use a temporary App Platform console/job with backend env and a one-time password:
 
 ```bash
-doctl auth init
+# Example only: provide real values in the remote console/job environment, not in git.
+SEED_ADMIN_EMAIL=admin@example.com \
+SEED_ADMIN_PASSWORD=<temporary-strong-password> \
+SEED_ADMIN_DISPLAY_NAME="Admin" \
+SEED_ADMIN_ALLOW_NON_LOCAL=true \
+bun run seed:admin
 ```
 
-3. Создайте Managed PostgreSQL или укажите внешний PostgreSQL.
-4. Соберите backend image из корня репозитория:
+After login, rotate the password through the product/admin process when available.
+
+## Validation
+
+Recommended local preflight before cloud deploy:
 
 ```bash
-docker build -f backend/Dockerfile -t registry.digitalocean.com/<registry>/web-app-demo-backend:latest .
+bun run typecheck
+bun run build:backend
+bun run build:web
+bun run build:landing
 ```
 
-5. Залогиньтесь в registry и отправьте image:
+Cloud checks after deploy:
 
 ```bash
-doctl registry login
-docker push registry.digitalocean.com/<registry>/web-app-demo-backend:latest
+curl "$DO_BACKEND_URL/health"
+curl -I "$DO_WEB_URL/"
+curl -I "$DO_WEB_URL/admin"
 ```
 
-6. Создайте App Platform spec с backend web service, healthcheck `/health`, env-переменными и managed database connection. Можно сгенерировать spec через `doctl apps spec create` или подготовить YAML по текущей структуре сервиса, затем выполнить `doctl apps create --spec <path-to-spec.yaml>`. Если app уже создан, используйте `doctl apps update <app-id> --spec <path-to-spec.yaml>`.
+Manual smoke:
 
-7. Примените миграции в one-off console/job:
+- web root loads;
+- direct SPA route `/admin` returns the static app shell;
+- register/login works;
+- reload keeps session through refresh cookie;
+- logout clears session;
+- landing root links to web catalog/admin/manufacturer routes.
+
+If auth refresh fails on default `*.ondigitalocean.app` hostnames, fix the cookie/CORS behavior before calling the deployment complete.
+
+## Useful logs
 
 ```bash
-bun run --cwd backend prisma:deploy
+doctl apps logs "$DO_BACKEND_APP_ID" api --type build --tail 200
+doctl apps logs "$DO_BACKEND_APP_ID" api --type deploy --tail 200
+doctl apps logs "$DO_BACKEND_APP_ID" api --type run --tail 200
 ```
 
-## Yandex Cloud через yc
-
-1. Установите Yandex Cloud CLI.
-2. Настройте профиль:
+For deployment history:
 
 ```bash
-yc init
+doctl apps list-deployments "$DO_BACKEND_APP_ID"
 ```
 
-3. Создайте Container Registry и соберите backend image:
+## References
 
-```bash
-docker build -f backend/Dockerfile -t cr.yandex/<registry-id>/web-app-demo-backend:latest .
-docker push cr.yandex/<registry-id>/web-app-demo-backend:latest
-```
-
-4. Создайте Serverless Container:
-
-```bash
-yc serverless container create --name web-app-demo-backend
-```
-
-5. Задеплойте revision. Приложение читает порт из `PORT`, Yandex задаёт его автоматически.
-
-```bash
-yc serverless container revision deploy \
-  --container-name web-app-demo-backend \
-  --image cr.yandex/<registry-id>/web-app-demo-backend:latest \
-  --cores 1 \
-  --memory 512MB \
-  --execution-timeout 30s \
-  --environment DATABASE_URL=<postgres-url>,JWT_SECRET=<secret>,CORS_ORIGINS=<origins>,COOKIE_SECURE=true
-```
-
-6. Подключите PostgreSQL: Managed PostgreSQL, внешний Postgres или другой совместимый endpoint. После деплоя примените Prisma migrations через защищённый one-off запуск с теми же env:
-
-```bash
-bun run --cwd backend prisma:deploy
-```
-
-## Expo / EAS
-
-1. Войдите в Expo account:
-
-```bash
-bunx eas-cli login
-```
-
-2. Привяжите проект:
-
-```bash
-cd mobile
-bunx eas-cli project:init
-```
-
-3. Настройте публичный API URL:
-
-```bash
-bunx eas-cli env:create --name EXPO_PUBLIC_API_URL --value https://api.example.com --environment production
-```
-
-4. Development build:
-
-```bash
-bunx eas-cli build --profile development --platform android
-bunx eas-cli build --profile development --platform ios
-```
-
-5. Production build:
-
-```bash
-bunx eas-cli build --profile production --platform all
-```
-
-Для App Store нужен Apple Developer Program. Для Google Play нужен Google Play Developer account.
+- App Spec: https://docs.digitalocean.com/products/app-platform/reference/app-spec/
+- Static Sites: https://docs.digitalocean.com/products/app-platform/how-to/manage-static-sites/
+- Bun Buildpack: https://docs.digitalocean.com/products/app-platform/reference/buildpacks/bun/
+- `doctl apps`: https://docs.digitalocean.com/reference/doctl/reference/apps/
+- Managed PostgreSQL create: https://docs.digitalocean.com/reference/doctl/reference/databases/create/

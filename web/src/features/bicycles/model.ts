@@ -3,7 +3,7 @@ import type {
   BicycleDto,
   BicycleSize,
   BicycleStatus,
-  BicycleUpsertInput,
+  BicycleUpsertRequest,
   ManufacturerProfileStatus,
 } from '@web-app-demo/contracts'
 
@@ -21,7 +21,7 @@ export const bicycleStatuses: BicycleStatus[] = [
   'archived',
 ]
 
-export type BicycleFormValues = BicycleUpsertInput
+export type BicycleFormValues = BicycleUpsertRequest
 export type AdminBicycleStatusTarget = AdminBicycleStatusUpdateRequest['status']
 
 const producerEditableStatuses: BicycleStatus[] = ['available', 'draft', 'moderation', 'rejected']

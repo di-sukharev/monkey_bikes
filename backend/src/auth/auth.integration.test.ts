@@ -234,6 +234,54 @@ maybeDescribe('auth API integration', () => {
     expect(refreshBody.refreshToken).toBeUndefined()
   })
 
+  test('production web auth uses cross-site secure refresh cookies', async () => {
+    const productionApp = createApp({
+      env: {
+        ...env,
+        APP_ENV: 'production',
+        COOKIE_SECURE: false,
+      },
+      prisma,
+    })
+
+    const register = await productionApp.request('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Client-Platform': 'web',
+      },
+      body: JSON.stringify({
+        email: 'production-web-cookie@example.com',
+        password: 'password123',
+      }),
+    })
+    const setCookie = register.headers.get('set-cookie')
+
+    expect(register.status).toBe(201)
+    expect(setCookie).toContain('web_app_demo_refresh=')
+    expect(setCookie).toContain('HttpOnly')
+    expect(setCookie).toContain('Path=/api/auth')
+    expect(setCookie).toContain('Secure')
+    expect(setCookie).toContain('SameSite=None')
+
+    const logout = await productionApp.request('/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: setCookie!.split(';')[0],
+        'X-Client-Platform': 'web',
+      },
+      body: JSON.stringify({}),
+    })
+    const clearCookie = logout.headers.get('set-cookie')
+
+    expect(logout.status).toBe(204)
+    expect(clearCookie).toContain('web_app_demo_refresh=')
+    expect(clearCookie).toContain('Path=/api/auth')
+    expect(clearCookie).toContain('Secure')
+    expect(clearCookie).toContain('SameSite=None')
+  })
+
   test('guards me and returns stable validation errors', async () => {
     const unauthorizedMe = await app.request('/api/auth/me')
     expect(unauthorizedMe.status).toBe(401)

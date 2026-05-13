@@ -313,6 +313,7 @@ export function AdminOrderChecklistTransitionPanel({
       },
     }))
   }
+}
 
 function initialDrafts(order: AdminOrderDto, type: OrderChecklistType) {
   const existingByBicycle = new Map(

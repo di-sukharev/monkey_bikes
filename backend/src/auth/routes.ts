@@ -231,9 +231,12 @@ export function createAuthRoutes() {
   routes.openapi(logoutRoute, async (c) => {
     const auth = c.get('authService')
     const body = c.req.valid('json')
+    const env = c.get('env')
     await auth.logout(body.refreshToken ?? getRefreshCookie(c))
     deleteCookie(c, refreshCookieName, {
       path: '/api/auth',
+      secure: refreshCookieSecure(env),
+      sameSite: refreshCookieSameSite(env),
     })
 
     return c.body(null, 204)
@@ -257,11 +260,19 @@ function getRefreshCookie(c: Context) {
 function setRefreshCookie(c: Context, refreshToken: string, env: AppEnv) {
   setCookie(c, refreshCookieName, refreshToken, {
     httpOnly: true,
-    secure: env.COOKIE_SECURE,
-    sameSite: 'Lax',
+    secure: refreshCookieSecure(env),
+    sameSite: refreshCookieSameSite(env),
     path: '/api/auth',
     maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60,
   })
+}
+
+function refreshCookieSecure(env: AppEnv) {
+  return env.APP_ENV === 'production' ? true : env.COOKIE_SECURE
+}
+
+function refreshCookieSameSite(env: AppEnv): 'None' | 'Lax' {
+  return env.APP_ENV === 'production' ? 'None' : 'Lax'
 }
 
 function responseForClient<T extends { refreshToken: string }>(c: Context, response: T) {
