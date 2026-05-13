@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const isRegister = mode === 'register';
 
-    const form = useForm({
+  const form = useForm({
     defaultValues: {
       email: '',
       password: '',
@@ -82,26 +82,26 @@ export default function HomeScreen() {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.dashboard} testID={TEST_IDS.auth.dashboard}>
             <ThemedText type="small" themeColor="textSecondary">
-              Current user
+              Личный кабинет
             </ThemedText>
             <ThemedText type="title">{auth.user.displayName ?? auth.user.email}</ThemedText>
             <ThemedText themeColor="textSecondary" testID={TEST_IDS.auth.userEmail}>
               {auth.user.email}
             </ThemedText>
             <ThemedView type="backgroundElement" style={styles.factBox}>
-              <ThemedText type="smallBold">User ID</ThemedText>
+              <ThemedText type="smallBold">ID пользователя</ThemedText>
               <ThemedText type="code" themeColor="textSecondary">
                 {auth.user.id}
               </ThemedText>
             </ThemedView>
             <Pressable
-              accessibilityLabel="Logout"
+              accessibilityLabel="Выйти"
               accessibilityRole="button"
               style={styles.primaryButton}
               testID={TEST_IDS.auth.logoutButton}
               onPress={() => void auth.logout()}>
               <ThemedText type="smallBold" style={styles.primaryButtonText}>
-                Logout
+                Выйти
               </ThemedText>
             </Pressable>
           </View>
@@ -122,33 +122,33 @@ export default function HomeScreen() {
             showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
               <ThemedText type="small" themeColor="textSecondary">
-                Golden path template
+                Monkey Bikes
               </ThemedText>
               <ThemedText type="title" style={styles.title}>
-                Auth, Zod contracts, Query, and Form are ready.
+                Аренда маленьких велосипедов для цирковых номеров.
               </ThemedText>
             </View>
 
             <ThemedView type="backgroundElement" style={styles.card}>
               <View style={styles.segmented}>
                 <Pressable
-                  accessibilityLabel="Register"
+                  accessibilityLabel="Регистрация"
                   accessibilityRole="button"
                   style={[styles.segment, isRegister && styles.segmentActive]}
                   testID={TEST_IDS.auth.registerTab}
                   onPress={() => setMode('register')}>
                   <ThemedText type="smallBold" themeColor={isRegister ? 'text' : 'textSecondary'}>
-                    Register
+                    Регистрация
                   </ThemedText>
                 </Pressable>
                 <Pressable
-                  accessibilityLabel="Login"
+                  accessibilityLabel="Вход"
                   accessibilityRole="button"
                   style={[styles.segment, !isRegister && styles.segmentActive]}
                   testID={TEST_IDS.auth.loginTab}
                   onPress={() => setMode('login')}>
                   <ThemedText type="smallBold" themeColor={!isRegister ? 'text' : 'textSecondary'}>
-                    Login
+                    Вход
                   </ThemedText>
                 </Pressable>
               </View>
@@ -157,7 +157,7 @@ export default function HomeScreen() {
                 <form.Field name="displayName">
                   {(field) => (
                     <Field
-                      label="Name"
+                      label="Имя"
                       testID={TEST_IDS.auth.nameInput}
                       value={field.state.value ?? ''}
                       autoComplete="name"
@@ -188,7 +188,7 @@ export default function HomeScreen() {
               <form.Field name="password">
                 {(field) => (
                   <Field
-                    label="Password"
+                    label="Пароль"
                     testID={TEST_IDS.auth.passwordInput}
                     value={field.state.value}
                     autoComplete={isRegister ? 'new-password' : 'current-password'}
@@ -205,14 +205,14 @@ export default function HomeScreen() {
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => (
                   <Pressable
-                    accessibilityLabel={isRegister ? 'Create account' : 'Login'}
+                    accessibilityLabel={isRegister ? 'Создать аккаунт' : 'Войти'}
                     accessibilityRole="button"
                     disabled={isSubmitting}
                     style={[styles.primaryButton, isSubmitting && styles.disabled]}
                     testID={TEST_IDS.auth.submitButton}
                     onPress={() => void form.handleSubmit()}>
                     <ThemedText type="smallBold" style={styles.primaryButtonText}>
-                      {isSubmitting ? 'Working...' : isRegister ? 'Create account' : 'Login'}
+                      {isSubmitting ? 'Отправляем...' : isRegister ? 'Создать аккаунт' : 'Войти'}
                     </ThemedText>
                   </Pressable>
                 )}

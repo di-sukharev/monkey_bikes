@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
-const refreshTokenKey = 'web_app_demo_refresh_token';
+const refreshTokenKey = 'monkey_bikes_refresh_token';
 
 export async function getStoredRefreshToken() {
   if (Platform.OS === 'web') {

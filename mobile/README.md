@@ -1,6 +1,6 @@
 # Mobile
 
-Мобильное приложение шаблона на Expo и React Native. Здесь уже есть минимальный auth-flow, который работает с теми же API-контрактами, что и web.
+Мобильное приложение Monkey Bikes на Expo и React Native. Поверхность активна для пользовательских сценариев аренды: вход, каталог, заявка, платежная заглушка и отслеживание заказов. Админские и производственные сценарии остаются web-first, пока их явно не перенесут в mobile.
 
 ## Стек
 
@@ -12,7 +12,25 @@
 - TanStack Form
 - Expo SecureStore
 - Zod contracts из `@web-app-demo/contracts`
+- EAS development builds
 - Maestro E2E smoke flow
+
+## EAS
+
+Проект привязан к Expo account `dima-sukharev`:
+
+- full name: `@dima-sukharev/monkey-bikes`
+- project ID: `00aceb31-9425-4837-b928-5a70d5b64d45`
+- URL: https://expo.dev/accounts/dima-sukharev/projects/monkey-bikes
+- iOS bundle ID / Android package: `com.dimasukharev.monkeybikes`
+- URL scheme: `monkeybikes`
+
+Проверка привязки:
+
+```bash
+bunx eas-cli whoami
+bunx eas-cli project:info
+```
 
 ## Команды
 
@@ -37,6 +55,12 @@ bun run e2e:maestro
 EXPO_PUBLIC_API_URL=http://localhost:43180
 ```
 
+Для iOS simulator обычно подходит:
+
+```bash
+EXPO_PUBLIC_API_URL=http://127.0.0.1:43180
+```
+
 На Android emulator используйте:
 
 ```bash
@@ -47,18 +71,25 @@ EXPO_PUBLIC_API_URL=http://10.0.2.2:43180
 
 ## Development Build
 
-1. Зарегистрируйтесь или войдите в Expo account.
-2. Установите EAS CLI, если его нет: `bunx eas-cli --version`.
-3. Войдите: `bunx eas-cli login`.
-4. Привяжите проект: `bunx eas-cli project:init`.
-5. Соберите development build:
+`expo-dev-client` уже установлен. Нативные `ios` и `android` папки не хранятся в репозитории; их генерирует Expo prebuild/development build workflow.
 
 ```bash
 bunx eas-cli build --profile development --platform android
+bunx eas-cli build --profile development-simulator --platform ios
+```
+
+Если нужен iOS build для физического устройства, используйте профиль `development` и будьте готовы к Apple credentials/device registration:
+
+```bash
 bunx eas-cli build --profile development --platform ios
 ```
 
-`expo-dev-client` уже установлен. Нативные `ios` и `android` папки не хранятся в шаблоне; их генерирует Expo prebuild/development build workflow.
+Перед сборкой можно явно задать API URL:
+
+```bash
+EXPO_PUBLIC_API_URL=http://127.0.0.1:43180 bunx eas-cli build --profile development-simulator --platform ios
+EXPO_PUBLIC_API_URL=http://10.0.2.2:43180 bunx eas-cli build --profile development --platform android
+```
 
 ## Maestro E2E
 
@@ -70,9 +101,17 @@ export PATH="$HOME/.maestro/bin:$PATH"
 bun run e2e:maestro
 ```
 
-Перед запуском backend должен быть доступен по `EXPO_PUBLIC_API_URL`, с которым собран или запущен mobile bundle. Для iOS simulator обычно подходит `http://127.0.0.1:43180`, для Android emulator - `http://10.0.2.2:43180`.
+Перед запуском backend должен быть доступен по `EXPO_PUBLIC_API_URL`, с которым собран или запущен mobile bundle. Для runner preflight задайте `E2E_API_HEALTH_URL`, например `http://127.0.0.1:43180/health`.
 
 Стабильные selectors лежат в `src/constants/testIds.ts`, flow - в `.maestro/flows/auth-smoke.yaml`, runner - в `scripts/e2e/run-maestro.mjs`. Подробный runbook: `../docs/TESTING.md`.
+
+## Чего пока не хватает
+
+- Продуктового каталога велосипедов в mobile: сейчас есть только auth shell.
+- Экранов карточки велосипеда, фильтров, выбора дат и создания заявки.
+- Мобильного просмотра своих заказов, оплаты через заглушку и статусов выдачи/возврата.
+- Ролевой навигации для производителя и администратора, если решим переносить эти сценарии в mobile.
+- Финальных иконок/splash assets под бренд Monkey Bikes; текущие assets еще шаблонные.
 
 ## Практика
 

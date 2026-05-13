@@ -68,16 +68,36 @@ Commit-safe templates находятся в `.do/`:
 - `.do/web-static-app.yaml.example`
 - `.do/landing-static-app.yaml.example`
 
-Перед деплоем скопируйте их в `.scratch/`, подставьте реальные значения и не коммитьте concrete specs:
+Перед деплоем готовьте concrete specs только в `.scratch/`, подставляйте реальные значения через helper script и не коммитьте concrete specs.
+
+Для первого backend deploy, когда web URL еще неизвестен:
 
 ```bash
-mkdir -p .scratch/deploy
-cp .do/backend-app.yaml.example .scratch/deploy/backend-app.yaml
-cp .do/web-static-app.yaml.example .scratch/deploy/web-static-app.yaml
-cp .do/landing-static-app.yaml.example .scratch/deploy/landing-static-app.yaml
+JWT_SECRET="$(openssl rand -hex 32)" \
+bun run deploy:do:specs backend-initial
 ```
 
-В `.scratch/deploy/backend-app.yaml` замените:
+После создания backend app подготовьте web static spec:
+
+```bash
+DO_BACKEND_URL="https://<backend-default-ingress>" \
+bun run deploy:do:specs web
+```
+
+После создания web app подготовьте финальный backend CORS spec и landing spec:
+
+```bash
+JWT_SECRET="<same-secret-used-for-first-backend-deploy>" \
+DO_WEB_URL="https://<web-default-ingress>" \
+bun run deploy:do:specs backend-final
+
+DO_WEB_URL="https://<web-default-ingress>" \
+bun run deploy:do:specs landing
+```
+
+The script refuses empty YAML `value:` fields and unresolved `REPLACE_WITH_*` placeholders. This prevents the common shell-substitution mistake where a non-exported env var silently writes an empty `JWT_SECRET`, `CORS_ORIGINS`, `VITE_API_URL`, or `PUBLIC_WEB_APP_URL`.
+
+Если по какой-то причине готовите specs вручную, проверьте эти замены:
 
 - `REPLACE_WITH_AT_LEAST_32_RANDOM_CHARS` на production `JWT_SECRET`;
 - `https://REPLACE_WITH_WEB_DEFAULT_INGRESS` временно на `https://placeholder.invalid` для первого backend deploy, затем на реальный web URL.
@@ -234,6 +254,20 @@ Manual smoke:
 - landing root links to web catalog/admin/manufacturer routes.
 
 If auth refresh fails on default `*.ondigitalocean.app` hostnames, fix the cookie/CORS behavior before calling the deployment complete.
+
+## Template deployment failure modes to prevent
+
+These issues occurred during the first DigitalOcean deployment and should stay covered by the template:
+
+- DigitalOcean App Platform must be connected to GitHub before `doctl apps create`; otherwise the API returns `GitHub user not authenticated`.
+- The GitHub branch used by App Platform must contain the full monorepo, not only bootstrap files; Static Sites build from Git source, not from a locally uploaded `dist`.
+- Backend Docker builds with `bun install --frozen-lockfile` must copy every workspace `package.json` before install, including `landing/package.json`.
+- Backend App Platform config must set both `http_port: 8080` and runtime `PORT=8080`; do not rely on implicit port behavior.
+- Concrete specs must be generated with non-empty values; empty `JWT_SECRET` causes backend startup failure, empty `CORS_ORIGINS` removes CORS allow-origin headers, empty `VITE_API_URL` makes the static web app call its own `/api/*`, and empty `PUBLIC_WEB_APP_URL` breaks landing links.
+- Web and landing Static Site build commands should run `bun install --frozen-lockfile && bun run build:*`; App Platform build cache can otherwise reuse stale `node_modules` and produce incompatible Vite/plugin TypeScript errors.
+- DigitalOcean Managed PostgreSQL URLs use `sslmode=require`; with the Prisma `@prisma/adapter-pg` stack this project normalizes that URL to include `uselibpqcompat=true`, avoiding TLS failures against the managed database certificate chain.
+- Cross-origin web auth on default `*.ondigitalocean.app` hosts requires exact backend `CORS_ORIGINS`, frontend `credentials: 'include'`, and refresh cookies with `HttpOnly`, `Secure`, and `SameSite=None`.
+- Do not call deployment complete until a real browser smoke proves registration, refresh-after-reload, and logout on the deployed web/API hosts.
 
 ## Useful logs
 

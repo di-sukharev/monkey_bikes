@@ -6,7 +6,7 @@ tags:
 - launchApp:
     clearState: true
     clearKeychain: true
-- assertVisible: Golden path template
+- assertVisible: Monkey Bikes
 - tapOn:
     id: ${NAME_INPUT_ID}
 - inputText: ${E2E_DISPLAY_NAME}

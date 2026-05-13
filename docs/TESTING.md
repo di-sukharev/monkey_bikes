@@ -91,7 +91,7 @@ Prerequisites:
 
 - Java 17+;
 - Xcode/iOS Simulator для iOS или Android Studio/emulator для Android;
-- установленный Expo development build с `bundleIdentifier/package` `com.webappdemo.mobile`;
+- установленный Expo development build с `bundleIdentifier/package` `com.dimasukharev.monkeybikes`;
 - backend доступен по тому `EXPO_PUBLIC_API_URL`, с которым собран или запущен bundle.
 - для runner preflight задайте host-reachable `E2E_API_HEALTH_URL`, например `http://127.0.0.1:43180/health`.
 
@@ -100,6 +100,7 @@ Development build пример:
 ```bash
 cd mobile
 EXPO_PUBLIC_API_URL=http://127.0.0.1:43180 bunx eas-cli build --profile development --platform ios
+EXPO_PUBLIC_API_URL=http://127.0.0.1:43180 bunx eas-cli build --profile development-simulator --platform ios
 EXPO_PUBLIC_API_URL=http://10.0.2.2:43180 bunx eas-cli build --profile development --platform android
 ```
 
@@ -113,7 +114,7 @@ bun run --cwd mobile e2e:maestro
 
 ```bash
 MAESTRO_DEVICE="iPhone 16 Pro"
-MAESTRO_APP_ID=com.webappdemo.mobile
+MAESTRO_APP_ID=com.dimasukharev.monkeybikes
 E2E_DISPLAY_NAME="Mobile E2E User"
 E2E_EMAIL="mobile-e2e@example.com"
 E2E_PASSWORD=password123

@@ -48,11 +48,12 @@ Status: selected.
 
 - Product goal: rental marketplace for small bicycles, with customer, manufacturer, and administrator workflows described in `docs/tech-requirements.md`.
 - Repository remote: new-project mode by default; remove the template `origin` unless the user explicitly says they are contributing to the template. Add the user's own GitHub remote as `origin` only when provided or requested.
-- Active surfaces: web app, backend API, shared contracts, Prisma schema/migrations, and product/testing documentation.
-- Deferred surfaces: landing and mobile remain secondary unless the user explicitly asks to activate them.
+- Active surfaces: web app, mobile app, backend API, shared contracts, Prisma schema/migrations, and product/testing documentation.
+- Deferred surfaces: landing remains secondary unless the user explicitly asks to activate it.
 - Backend/API: active; auth/session, admin user management, manufacturer registration/profile/moderation, shared Zod contracts, and PostgreSQL persistence are part of the current foundation.
-- Deployment/release: local-only until the user explicitly asks for deployment; selected provider and release targets not selected yet.
-- Validation: for web/backend work run the smallest meaningful slice, usually backend unit tests, backend integration tests against `DATABASE_URL_TEST`, web tests, typecheck, lint/build when UI or contracts change, and Playwright for user-visible cross-layer flows.
+- Mobile: active; Expo/EAS development builds, mobile auth/session, customer catalog, rental request, payment stub, and order tracking flows are in scope. Admin-heavy workflows may stay web-first unless explicitly brought into mobile.
+- Deployment/release: local-only for backend/web until the user explicitly asks for deployment; mobile release work uses EAS under the selected Expo account and starts with internal development builds.
+- Validation: for web/backend work run the smallest meaningful slice, usually backend unit tests, backend integration tests against `DATABASE_URL_TEST`, web tests, typecheck, lint/build when UI or contracts change, and Playwright for user-visible cross-layer flows. For mobile work run mobile typecheck/lint, Expo config/doctor checks, and Maestro only when a runnable development build and device are available.
 <!-- PROJECT_FOCUS_END -->
 
 If the user later asks to work on a deferred surface, update this block and any equivalent agent file such as `CLAUDE.md` first, remove or rewrite the deferred note in that surface's README, then set up and validate that surface normally.

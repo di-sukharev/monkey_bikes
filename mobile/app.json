@@ -1,18 +1,19 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "Monkey Bikes",
+    "slug": "monkey-bikes",
+    "owner": "dima-sukharev",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "monkeybikes",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.webappdemo.mobile",
+      "bundleIdentifier": "com.dimasukharev.monkeybikes",
       "icon": "./assets/expo.icon"
     },
     "android": {
-      "package": "com.webappdemo.mobile",
+      "package": "com.dimasukharev.monkeybikes",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -36,11 +37,19 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "00aceb31-9425-4837-b928-5a70d5b64d45"
+      }
     }
   }
 }
