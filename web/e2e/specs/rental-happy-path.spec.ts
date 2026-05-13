@@ -98,6 +98,17 @@ test('completes the rental happy path from catalog request to returned order', a
   await page.goto(`/orders/${orderId}`)
   await expect(page.getByRole('heading', { name: 'Rental request' })).toBeVisible()
   await expect(page.getByText('confirmed', { exact: true })).toBeVisible()
+
+  await page.goto('/bicycles')
+  await expect(page.getByRole('heading', { name: 'Bicycles', exact: true })).toBeVisible()
+  await page.getByLabel('Starts on').fill(startsOn)
+  await page.getByLabel('Ends on').fill(endsOn)
+  await expect(page.getByText('No bicycles found.')).toBeVisible()
+  await expect(page.getByText(bicycleTitle)).not.toBeVisible()
+
+  await page.goto(`/orders/${orderId}`)
+  await expect(page.getByRole('heading', { name: 'Rental request' })).toBeVisible()
+  await expect(page.getByText('confirmed', { exact: true })).toBeVisible()
   await page.getByLabel('Create Rent payment').click()
   await expect(page.getByText('Rent payment pending')).toBeVisible()
   await page.getByLabel('Mark Rent payment as succeeded').click()

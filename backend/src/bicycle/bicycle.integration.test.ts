@@ -178,6 +178,25 @@ maybeDescribe('bicycle API integration', () => {
     expect(publicListBody.items[0].submittedAt).toBeUndefined()
     expect(publicListBody.items[0].reviewedAt).toBeUndefined()
 
+    const customer = await registerUser('catalog-renter@example.com')
+    await createConfirmedOrderForBicycle(customer.user.id, smallBike.id, '2026-05-20', '2026-05-21')
+
+    const conflictingDateList = await app.request(
+      '/api/bicycles?startsOn=2026-05-19&endsOn=2026-05-20&pageSize=10',
+    )
+    const conflictingDateListBody = await conflictingDateList.json()
+    expect(conflictingDateList.status).toBe(200)
+    expect(conflictingDateListBody.items).toHaveLength(0)
+
+    const adjacentDateList = await app.request(
+      '/api/bicycles?startsOn=2026-05-22&endsOn=2026-05-23&pageSize=10',
+    )
+    const adjacentDateListBody = await adjacentDateList.json()
+    expect(adjacentDateList.status).toBe(200)
+    expect(adjacentDateListBody.items.map((bike: { title: string }) => bike.title)).toEqual([
+      'Small Catalog Bike',
+    ])
+
     const publicDetail = await app.request(`/api/bicycles/${smallBike.id}`)
     const publicDetailBody = await publicDetail.json()
     expect(publicDetail.status).toBe(200)
@@ -556,6 +575,55 @@ maybeDescribe('bicycle API integration', () => {
     const submitBody = await submit.json()
     expect(submit.status).toBe(200)
     return submitBody.bicycle
+  }
+
+  async function createConfirmedOrderForBicycle(
+    userId: string,
+    bicycleId: string,
+    startsOn: string,
+    endsOn: string,
+  ) {
+    const bicycle = await prisma.bicycle.findUniqueOrThrow({
+      where: { id: bicycleId },
+      include: { manufacturerProfile: true },
+    })
+
+    return prisma.order.create({
+      data: {
+        userId,
+        status: 'confirmed',
+        startsOn,
+        endsOn,
+        rentalDays: 2,
+        fulfillmentType: 'pickup',
+        deliveryAddress: null,
+        contactName: 'Trainer',
+        contactPhone: '+7 999 111-22-33',
+        userComment: null,
+        adminComment: 'Confirmed catalog availability fixture.',
+        rentalAmountKopecks: bicycle.pricePerDayKopecks * 2,
+        depositAmountKopecks: bicycle.depositKopecks,
+        deliveryAmountKopecks: 0,
+        totalAmountKopecks: bicycle.pricePerDayKopecks * 2 + bicycle.depositKopecks,
+        safetyAgreementAcceptedAt: new Date(),
+        items: {
+          create: {
+            bicycleId: bicycle.id,
+            pricePerDaySnapshotKopecks: bicycle.pricePerDayKopecks,
+            depositSnapshotKopecks: bicycle.depositKopecks,
+            bicycleTitleSnapshot: bicycle.title,
+            bicycleSizeSnapshot: bicycle.size,
+            bicycleCitySnapshot: bicycle.city,
+            bicyclePickupAddressSnapshot: bicycle.pickupAddress,
+            bicycleDeliveryAvailableSnapshot: bicycle.deliveryAvailable,
+            manufacturerProfileIdSnapshot: bicycle.manufacturerProfile.id,
+            manufacturerPublicNameSnapshot: bicycle.manufacturerProfile.publicName,
+            manufacturerRegionSnapshot: bicycle.manufacturerProfile.region,
+            manufacturerCitySnapshot: bicycle.manufacturerProfile.city,
+          },
+        },
+      },
+    })
   }
 
   async function createIssuedOrderForBicycle(userId: string, bicycleId: string) {

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import { dateOnlyStringSchema } from './date'
+
 const moneyKopecks = z.number().int().min(0).max(1_000_000_000)
 
 export const paymentTypeSchema = z.enum(['deposit', 'rent'])
@@ -46,8 +48,8 @@ export const adminPaymentSchema = paymentSchema.extend({
   order: z.object({
     id: z.string(),
     status: adminPaymentOrderStatusSchema,
-    startsOn: z.string(),
-    endsOn: z.string(),
+    startsOn: dateOnlyStringSchema,
+    endsOn: dateOnlyStringSchema,
     user: z.object({
       id: z.string(),
       email: z.string().email(),

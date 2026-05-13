@@ -4,7 +4,9 @@ import {
   type FulfillmentType,
   type OrderCreateInput,
 } from '@web-app-demo/contracts'
+import { ShieldCheckIcon } from 'lucide-react'
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
@@ -157,6 +159,16 @@ export function OrderForm({
             />
           )}
         />
+
+        <Alert>
+          <ShieldCheckIcon />
+          <AlertTitle>Safety agreement</AlertTitle>
+          <AlertDescription>
+            Use the bicycle only with trained supervision, within the stated load and fit limits,
+            on a controlled surface. Stop the rental activity immediately if the rider shows stress
+            or the environment becomes unsafe.
+          </AlertDescription>
+        </Alert>
 
         <form.Field
           name="safetyAgreementAccepted"

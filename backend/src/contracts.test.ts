@@ -12,6 +12,7 @@ import {
   adminOrderStatusUpdateRequestSchema,
   adminBicycleUtilizationReportResponseSchema,
   adminManufacturerReportResponseSchema,
+  adminPaymentSchema,
   adminReportListQuerySchema,
   adminReportPeriodQuerySchema,
   adminReportSummaryResponseSchema,
@@ -462,6 +463,22 @@ describe('contracts', () => {
     })
     expect(payment.type).toBe('rent')
     expect(paymentResponseSchema.parse({ payment }).payment.status).toBe('pending')
+    expect(() =>
+      adminPaymentSchema.parse({
+        ...payment,
+        order: {
+          id: 'order_1',
+          status: 'confirmed',
+          startsOn: '2026-02-30',
+          endsOn: '2026-03-01',
+          user: {
+            id: 'user_1',
+            email: 'renter@example.com',
+            displayName: null,
+          },
+        },
+      }),
+    ).toThrow()
   })
 
   test('normalizes order status transition contracts and domain error codes', () => {

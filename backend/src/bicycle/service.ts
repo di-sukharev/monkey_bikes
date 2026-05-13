@@ -11,6 +11,7 @@ import type {
 
 import type { AuthenticatedUser } from '../auth/service'
 import type { DbClient } from '../db'
+import type { Prisma } from '../generated/prisma/client'
 import { AppError } from '../http/errors'
 
 type BicycleRecord = {
@@ -381,19 +382,18 @@ export class BicycleService {
   }
 }
 
-function publicBicyclesWhere(query: PublicBicyclesQuery) {
+function publicBicyclesWhere(query: PublicBicyclesQuery): Prisma.BicycleWhereInput {
   return {
     status: 'available' as const,
     ...approvedManufacturerProfileWhere(),
     ...(query.sizes ? { size: { in: query.sizes } } : {}),
     ...(query.city ? { city: { equals: query.city, mode: 'insensitive' as const } } : {}),
-    // Date filters are parsed at the contract boundary now. Order-overlap availability
-    // becomes meaningful when orders are introduced in the next tasks.
+    ...availableForRentalPeriodWhere(query),
     ...priceWhere(query),
   }
 }
 
-function publicBicycleWhere(id: string) {
+function publicBicycleWhere(id: string): Prisma.BicycleWhereInput {
   return {
     id,
     status: 'available' as const,
@@ -401,13 +401,13 @@ function publicBicycleWhere(id: string) {
   }
 }
 
-function approvedManufacturerProfileWhere() {
+function approvedManufacturerProfileWhere(): Prisma.BicycleWhereInput {
   return {
     manufacturerProfile: { is: { status: 'approved' as const } },
   }
 }
 
-function priceWhere(query: PublicBicyclesQuery) {
+function priceWhere(query: PublicBicyclesQuery): Prisma.BicycleWhereInput {
   if (query.minPriceKopecks === undefined && query.maxPriceKopecks === undefined) {
     return {}
   }
@@ -416,6 +416,24 @@ function priceWhere(query: PublicBicyclesQuery) {
     pricePerDayKopecks: {
       ...(query.minPriceKopecks === undefined ? {} : { gte: query.minPriceKopecks }),
       ...(query.maxPriceKopecks === undefined ? {} : { lte: query.maxPriceKopecks }),
+    },
+  }
+}
+
+function availableForRentalPeriodWhere(query: PublicBicyclesQuery): Prisma.BicycleWhereInput {
+  if (!query.startsOn || !query.endsOn) {
+    return {}
+  }
+
+  return {
+    orderItems: {
+      none: {
+        order: {
+          status: { in: ['confirmed', 'issued'] },
+          startsOn: { lte: query.endsOn },
+          endsOn: { gte: query.startsOn },
+        },
+      },
     },
   }
 }

@@ -78,6 +78,7 @@ export function CatalogPage() {
   const [maxPriceKopecks, setMaxPriceKopecks] = useState('')
   const [startsOn, setStartsOn] = useState('')
   const [endsOn, setEndsOn] = useState('')
+  const hasCompleteRentalPeriod = startsOn !== '' && endsOn !== ''
 
   const catalogQuery = useQuery({
     queryKey: ['catalog', 'bicycles', page, sizes, city, minPriceKopecks, maxPriceKopecks, startsOn, endsOn],
@@ -89,8 +90,7 @@ export function CatalogPage() {
         ...(city.trim() ? { city } : {}),
         ...(minPriceKopecks ? { minPriceKopecks: Number(minPriceKopecks) } : {}),
         ...(maxPriceKopecks ? { maxPriceKopecks: Number(maxPriceKopecks) } : {}),
-        ...(startsOn ? { startsOn } : {}),
-        ...(endsOn ? { endsOn } : {}),
+        ...(hasCompleteRentalPeriod ? { startsOn, endsOn } : {}),
       }),
   })
 
