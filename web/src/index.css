@@ -154,3 +154,9 @@
     cursor: pointer;
   }
 }
+
+@keyframes table-skeleton-reveal {
+  to {
+    opacity: 1;
+  }
+}

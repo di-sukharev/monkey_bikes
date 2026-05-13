@@ -139,13 +139,18 @@ function TableSkeleton({
   className,
   columns,
   label = "Загружаем таблицу...",
-  rows = 5,
+  rows = 2,
   tableClassName,
   ...props
 }: TableSkeletonProps) {
   const columnIndexes = Array.from({ length: Math.max(1, columns) }, (_, index) => index)
   const rowIndexes = Array.from({ length: Math.max(1, rows) }, (_, index) => index)
   const lastColumnIndex = columnIndexes.length - 1
+  const gridTemplateColumns =
+    actionColumn && columnIndexes.length > 1
+      ? `repeat(${columnIndexes.length - 1}, minmax(7rem, 1fr)) minmax(8rem, 0.7fr)`
+      : `repeat(${columnIndexes.length}, minmax(7rem, 1fr))`
+  const gridStyle = { gridTemplateColumns } satisfies React.CSSProperties
 
   return (
     <div
@@ -154,32 +159,44 @@ function TableSkeleton({
       aria-live="polite"
       data-slot="table-skeleton"
       role="status"
-      className={cn("overflow-x-auto rounded-lg border", className)}
+      className={cn(
+        "min-h-36 overflow-hidden rounded-base border-2 border-dashed border-border bg-secondary-background shadow-shadow",
+        className,
+      )}
       {...props}
     >
-      <Table aria-hidden="true" className={tableClassName}>
-        <TableHeader>
-          <TableRow className="hover:bg-secondary-background">
+      <div className="w-full overflow-x-auto">
+        <div
+          aria-hidden="true"
+          className={cn(
+            "min-h-36 w-full bg-secondary-background opacity-0 [animation:table-skeleton-reveal_120ms_ease-out_120ms_forwards]",
+            tableClassName,
+          )}
+        >
+          <div className="grid h-12 items-center border-b-2 border-border/60" style={gridStyle}>
             {columnIndexes.map((columnIndex) => (
-              <TableHead key={columnIndex}>
+              <div key={columnIndex} className="px-4">
                 <Skeleton
                   className={cn(
                     "h-4",
                     tableSkeletonHeaderWidths[columnIndex % tableSkeletonHeaderWidths.length],
                   )}
                 />
-              </TableHead>
+              </div>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </div>
+
           {rowIndexes.map((rowIndex) => (
-            <TableRow key={rowIndex} className="hover:bg-secondary-background">
+            <div
+              key={rowIndex}
+              className="grid h-12 items-center border-b-2 border-border/40 last:border-b-0"
+              style={gridStyle}
+            >
               {columnIndexes.map((columnIndex) => {
                 const isActionColumn = actionColumn && columnIndex === lastColumnIndex
 
                 return (
-                  <TableCell key={columnIndex}>
+                  <div key={columnIndex} className="px-4">
                     {columnIndex === 0 ? (
                       <div className="grid min-w-36 gap-2">
                         <Skeleton
@@ -193,19 +210,19 @@ function TableSkeleton({
                     ) : (
                       <Skeleton
                         className={cn(
-                          isActionColumn ? "h-8 w-24" : "h-4",
+                          isActionColumn ? "h-8 w-24" : "h-4 max-w-full",
                           !isActionColumn &&
                             tableSkeletonWidths[(rowIndex + columnIndex) % tableSkeletonWidths.length],
                         )}
                       />
                     )}
-                  </TableCell>
+                  </div>
                 )
               })}
-            </TableRow>
+            </div>
           ))}
-        </TableBody>
-      </Table>
+        </div>
+      </div>
       <span className="sr-only">{label}</span>
     </div>
   )

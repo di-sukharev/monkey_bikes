@@ -9,7 +9,6 @@ import {
   FactoryIcon,
   LogInIcon,
   LogOutIcon,
-  MoreVerticalIcon,
   ShieldCheckIcon,
   UserRoundIcon,
   UsersRoundIcon,
@@ -17,12 +16,6 @@ import {
 } from 'lucide-react'
 import type { ComponentProps } from 'react'
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Sidebar,
   SidebarContent,
@@ -32,7 +25,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -154,28 +146,20 @@ export function AppSidebar({ className, ...props }: ComponentProps<typeof Sideba
                   </span>
                 </Link>
               </SidebarMenuButton>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <SidebarMenuAction aria-label="Открыть меню пользователя">
-                    <MoreVerticalIcon />
-                  </SidebarMenuAction>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align={isMobile ? 'end' : 'start'}
-                  className="min-w-36"
-                  side={isMobile ? 'bottom' : 'right'}
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Выйти">
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMobileSidebar()
+                    void auth.logout()
+                  }}
                 >
-                  <DropdownMenuItem
-                    onSelect={() => {
-                      closeMobileSidebar()
-                      void auth.logout()
-                    }}
-                  >
-                    <LogOutIcon />
-                    <span>Выйти</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  <LogOutIcon />
+                  <span>Выйти</span>
+                </button>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

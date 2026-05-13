@@ -23,7 +23,6 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
 import {
   Empty,
   EmptyDescription,
@@ -31,9 +30,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { Field, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { TableFilters, TableFilterSelect } from '@/components/table-filters'
+import {
+  TableFilterCheckboxGroup,
+  TableFilterInput,
+  TableFilters,
+  TableFilterSelect,
+} from '@/components/table-filters'
 import { NativeSelectOption } from '@/components/ui/native-select'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
@@ -121,90 +123,68 @@ export function CatalogPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <div className="grid gap-3 md:grid-cols-4">
-            <Field>
-              <FieldLabel>Размеры</FieldLabel>
-              <div className="flex flex-wrap gap-3">
-                {bicycleSizes.map((size) => (
-                  <label key={size} className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={sizes.includes(size)}
-                      onCheckedChange={(checked) => {
-                        setPage(1)
-                        setSizes((current) =>
-                          checked === true
-                            ? [...current, size]
-                            : current.filter((nextSize) => nextSize !== size),
-                        )
-                      }}
-                    />
-                    {size}
-                  </label>
-                ))}
-              </div>
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="catalog-city">Город</FieldLabel>
-              <Input
-                id="catalog-city"
-                value={city}
-                onChange={(event) => {
-                  setPage(1)
-                  setCity(event.target.value)
-                }}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="catalog-min-price">Мин. цена, копейки</FieldLabel>
-              <Input
-                id="catalog-min-price"
-                min={0}
-                type="number"
-                value={minPriceKopecks}
-                onChange={(event) => {
-                  setPage(1)
-                  setMinPriceKopecks(event.target.value)
-                }}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="catalog-max-price">Макс. цена, копейки</FieldLabel>
-              <Input
-                id="catalog-max-price"
-                min={0}
-                type="number"
-                value={maxPriceKopecks}
-                onChange={(event) => {
-                  setPage(1)
-                  setMaxPriceKopecks(event.target.value)
-                }}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="catalog-starts-on">Дата начала</FieldLabel>
-              <Input
-                id="catalog-starts-on"
-                type="date"
-                value={startsOn}
-                onChange={(event) => {
-                  setPage(1)
-                  setStartsOn(event.target.value)
-                }}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="catalog-ends-on">Дата окончания</FieldLabel>
-              <Input
-                id="catalog-ends-on"
-                type="date"
-                value={endsOn}
-                onChange={(event) => {
-                  setPage(1)
-                  setEndsOn(event.target.value)
-                }}
-              />
-            </Field>
-          </div>
+          <TableFilters className="sm:items-end">
+            <TableFilterInput
+              id="catalog-city"
+              label="Город"
+              value={city}
+              onChange={(event) => {
+                setPage(1)
+                setCity(event.target.value)
+              }}
+            />
+            <TableFilterInput
+              id="catalog-min-price"
+              label="Мин. цена, копейки"
+              min={0}
+              type="number"
+              value={minPriceKopecks}
+              onChange={(event) => {
+                setPage(1)
+                setMinPriceKopecks(event.target.value)
+              }}
+            />
+            <TableFilterInput
+              id="catalog-max-price"
+              label="Макс. цена, копейки"
+              min={0}
+              type="number"
+              value={maxPriceKopecks}
+              onChange={(event) => {
+                setPage(1)
+                setMaxPriceKopecks(event.target.value)
+              }}
+            />
+            <TableFilterInput
+              id="catalog-starts-on"
+              label="Дата начала"
+              type="date"
+              value={startsOn}
+              onChange={(event) => {
+                setPage(1)
+                setStartsOn(event.target.value)
+              }}
+            />
+            <TableFilterInput
+              id="catalog-ends-on"
+              label="Дата окончания"
+              type="date"
+              value={endsOn}
+              onChange={(event) => {
+                setPage(1)
+                setEndsOn(event.target.value)
+              }}
+            />
+            <TableFilterCheckboxGroup
+              legend="Размеры"
+              options={bicycleSizes.map((size) => ({ label: size, value: size }))}
+              values={sizes}
+              onValuesChange={(nextSizes) => {
+                setPage(1)
+                setSizes(nextSizes)
+              }}
+            />
+          </TableFilters>
 
           {catalogQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">

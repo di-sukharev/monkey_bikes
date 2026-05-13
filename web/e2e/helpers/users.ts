@@ -34,8 +34,7 @@ export async function loginUser(page: Page, email: string) {
 }
 
 export async function logoutUser(page: Page) {
-  await page.getByRole('button', { name: 'Открыть меню пользователя' }).click()
-  await page.getByRole('menuitem', { name: 'Выйти' }).click()
+  await page.getByRole('button', { name: 'Выйти' }).click()
 }
 
 export async function promoteUserToAdmin(email: string) {
