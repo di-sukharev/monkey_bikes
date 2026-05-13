@@ -14,6 +14,10 @@ import {
   OrderRequestPage,
   OrdersPage,
 } from './features/orders/pages'
+import {
+  ManufacturerOrderDetailPage,
+  ManufacturerOrdersPage,
+} from './features/orders/manufacturer-pages'
 import { AdminPaymentsPage } from './features/payments/pages'
 import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
 
@@ -81,6 +85,18 @@ const manufacturerBicyclesRoute = createRoute({
   component: ManufacturerBicyclesPage,
 })
 
+const manufacturerOrdersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manufacturer/orders',
+  component: ManufacturerOrdersPage,
+})
+
+const manufacturerOrderDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/manufacturer/orders/$id',
+  component: ManufacturerOrderDetailPage,
+})
+
 const catalogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/bicycles',
@@ -125,6 +141,8 @@ const routeTree = rootRoute.addChildren([
   adminOrderDetailRoute,
   manufacturerProfileRoute,
   manufacturerBicyclesRoute,
+  manufacturerOrdersRoute,
+  manufacturerOrderDetailRoute,
   catalogRoute,
   bicycleDetailRoute,
   ordersRoute,

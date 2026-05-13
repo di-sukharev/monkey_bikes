@@ -91,6 +91,9 @@ export function RootLayout() {
             {auth.user?.role === 'manufacturer' && (
               <NavLink to="/manufacturer/bicycles">My bicycles</NavLink>
             )}
+            {auth.user?.role === 'manufacturer' && (
+              <NavLink to="/manufacturer/orders">Orders</NavLink>
+            )}
             {auth.user?.role === 'admin' && <NavLink to="/admin/users">Users</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/manufacturers">Manufacturers</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/bicycles">Bicycles</NavLink>}
@@ -414,6 +417,7 @@ function NavLink({
     | '/admin/payments'
     | '/manufacturer/profile'
     | '/manufacturer/bicycles'
+    | '/manufacturer/orders'
     | '/bicycles'
     | '/orders'
   children: ReactNode

@@ -15,6 +15,8 @@ import {
   manufacturerProfileSchema,
   manufacturerProfileSubmitResponseSchema,
   manufacturerProfileUpsertRequestSchema,
+  manufacturerOrderSchema,
+  manufacturerOrdersQuerySchema,
   orderCancelRequestSchema,
   orderCreateRequestSchema,
   ordersQuerySchema,
@@ -731,6 +733,40 @@ describe('contracts', () => {
     })
 
     expect(adminOrder.statusHistory[0]?.toStatus).toBe('confirmed')
+    expect(manufacturerOrdersQuerySchema.parse({ scope: 'current', status: 'issued' })).toMatchObject({
+      scope: 'current',
+      status: 'issued',
+    })
+
+    const manufacturerOrder = manufacturerOrderSchema.parse({
+      id: 'order_1',
+      status: 'issued',
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      rentalDays: 2,
+      fulfillmentType: 'delivery',
+      fulfillmentContact: {
+        contactName: 'Trainer',
+        contactPhone: '+7 999 111-22-33',
+        deliveryAddress: 'Circus arena, gate 4',
+        userComment: 'Keep the bicycles indoors.',
+      },
+      manufacturerRentalAmountKopecks: 500000,
+      manufacturerDepositAmountKopecks: 500000,
+      manufacturerTotalAmountKopecks: 1000000,
+      createdAt: '2026-05-12T10:00:00.000Z',
+      updatedAt: '2026-05-12T11:05:00.000Z',
+      items: adminOrder.items.map(({ liveBicycle: _liveBicycle, ...item }) => item),
+      checklists: adminOrder.checklists.map(({
+        checkedByUser: _checkedByUser,
+        checkedByUserId: _checkedByUserId,
+        ...checklist
+      }) => checklist),
+    })
+    expect('adminComment' in manufacturerOrder).toBe(false)
+    expect('payments' in manufacturerOrder).toBe(false)
+    expect('userId' in manufacturerOrder).toBe(false)
+    expect('checkedBy' in manufacturerOrder.checklists[0]!).toBe(false)
   })
 })
 

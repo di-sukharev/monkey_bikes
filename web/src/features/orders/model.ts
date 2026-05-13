@@ -1,6 +1,7 @@
 import type {
   ApiErrorCode,
   FulfillmentType,
+  ManufacturerOrderDto,
   OrderDto,
   OrderListScope,
   OrderStatus,
@@ -48,7 +49,7 @@ export function formatMoney(kopecks: number) {
   }).format(kopecks / 100)
 }
 
-export function formatOrderDates(order: OrderDto) {
+export function formatOrderDates(order: Pick<OrderDto, 'endsOn' | 'startsOn'>) {
   return order.startsOn === order.endsOn
     ? order.startsOn
     : `${order.startsOn} - ${order.endsOn}`
@@ -80,6 +81,19 @@ export function orderAdminListQueryKey(page: number, status: OrderStatus | 'all'
 
 export function orderAdminDetailQueryKey(id: string) {
   return ['admin', 'orders', id] as const
+}
+
+export function manufacturerOrdersQueryKey(
+  userId: string | null | undefined,
+  page: number,
+  scope: OrderListScope,
+  status: OrderStatus | 'all',
+) {
+  return ['manufacturer', 'orders', userId ?? null, page, scope, status] as const
+}
+
+export function manufacturerOrderDetailQueryKey(userId: string | null | undefined, id: string) {
+  return ['manufacturer', 'orders', userId ?? null, id] as const
 }
 
 export function parseBicycleIds(value: unknown) {
@@ -123,6 +137,23 @@ export function orderNextStep(order: OrderDto) {
       return 'The order is returned. No further action is required.'
     case 'cancelled':
       return 'The order is cancelled. Create a new request from the catalog if you need another rental.'
+  }
+}
+
+export function manufacturerOrderNextStep(order: ManufacturerOrderDto) {
+  switch (order.status) {
+    case 'request':
+      return 'The request is waiting for administrator confirmation. Customer contact is hidden until confirmation.'
+    case 'confirmed':
+      return order.fulfillmentContact
+        ? 'Prepare the selected bicycles and coordinate handoff with the listed customer contact.'
+        : 'Prepare the selected bicycles. Contact details will appear when fulfillment coordination is available.'
+    case 'issued':
+      return 'The selected bicycles are issued. Coordinate return readiness and watch for administrator return checklists.'
+    case 'returned':
+      return 'The order is returned. Review issue and return checklist history for your bicycles.'
+    case 'cancelled':
+      return 'The order is cancelled. No producer action is required.'
   }
 }
 

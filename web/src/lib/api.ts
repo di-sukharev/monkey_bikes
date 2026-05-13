@@ -60,12 +60,18 @@ import {
   type PaymentType,
   manufacturerBicyclesQuerySchema,
   manufacturerBicyclesResponseSchema,
+  manufacturerOrderResponseSchema,
+  manufacturerOrdersQuerySchema,
+  manufacturerOrdersResponseSchema,
   manufacturerProfileGetResponseSchema,
   manufacturerProfileResponseSchema,
   manufacturerProfileSubmitResponseSchema,
   manufacturerProfileUpsertRequestSchema,
   type ManufacturerBicyclesQuery,
   type ManufacturerBicyclesResponse,
+  type ManufacturerOrderResponse,
+  type ManufacturerOrdersQuery,
+  type ManufacturerOrdersResponse,
   type ManufacturerProfileGetResponse,
   type ManufacturerProfileResponse,
   type ManufacturerProfileSubmitResponse,
@@ -345,6 +351,37 @@ export class ApiClient {
       bicycleResponseSchema,
       {
         method: 'POST',
+        auth: true,
+      },
+    )
+  }
+
+  manufacturerOrders(input: Partial<ManufacturerOrdersQuery> = {}): Promise<ManufacturerOrdersResponse> {
+    const query = manufacturerOrdersQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.status) {
+      params.set('status', query.status)
+    }
+
+    if (query.scope !== 'all') {
+      params.set('scope', query.scope)
+    }
+
+    return this.request(
+      `/api/manufacturer/orders?${params.toString()}`,
+      manufacturerOrdersResponseSchema,
+      {
+        auth: true,
+      },
+    )
+  }
+
+  manufacturerOrder(id: string): Promise<ManufacturerOrderResponse> {
+    return this.request(
+      `/api/manufacturer/orders/${encodeURIComponent(id)}`,
+      manufacturerOrderResponseSchema,
+      {
         auth: true,
       },
     )

@@ -277,6 +277,16 @@
 
 Минимальная проверка: backend integration tests на producer scoping и DTO; web smoke кабинета производителя.
 
+Статус выполнения:
+
+- Выполнено: существующие страницы профиля и управления велосипедами производителя сохранены, добавлен отдельный раздел связанных заказов производителя.
+- Выполнено: добавлены contracts, API и backend service для `/api/manufacturer/orders` и `/api/manufacturer/orders/:id` с отдельным `ManufacturerOrderDto`, не переиспользующим admin DTO.
+- Выполнено: producer-scoping заказов построен по snapshot-полю `OrderItem.manufacturerProfileIdSnapshot`; detail несвязанного заказа возвращает `404`.
+- Выполнено: производитель видит только свои позиции заказа, свои суммы и чеклисты по своим велосипедам; `userId`, user email/object, `adminComment`, платежи и actor-данные не раскрываются.
+- Выполнено: контакты и адрес выполнения показываются производителю только для `confirmed`/`issued`, а для `request`/`cancelled`/`returned` скрыты.
+- Выполнено: web-раздел `/manufacturer/orders` и детальная страница `/manufacturer/orders/$id` собраны компонентно на shadcn/UI primitives с loading, empty, error, disabled/filter states и user-scoped query keys.
+- Проверено: backend unit/typecheck/prisma validate, backend integration на `DATABASE_URL_TEST`, web tests/typecheck/lint/build и Playwright E2E прошли; review loop достиг оценки 9.7/10.
+
 ## 10. Админ-панель и быстрые фильтры
 
 Цель: собрать основные административные списки для ежедневной работы платформы.

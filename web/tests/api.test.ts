@@ -644,6 +644,68 @@ test('ApiClient creates and lists rental requests without client money fields', 
   ])
 })
 
+test('ApiClient lists manufacturer order slices', async () => {
+  let accessToken: string | null = 'manufacturer-order-access-token'
+  const calls: Array<{ path: string; search: string; method: string | undefined; body: unknown }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      method: init?.method,
+      body,
+    })
+
+    if (url.pathname === '/api/manufacturer/orders') {
+      return json({
+        items: [manufacturerOrderResponse()],
+        page: 2,
+        pageSize: 20,
+        total: 1,
+      }, 200)
+    }
+
+    if (url.pathname === '/api/manufacturer/orders/order_1') {
+      return json({ order: manufacturerOrderResponse() }, 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const list = await client.manufacturerOrders({
+    page: 2,
+    scope: 'history',
+    status: 'returned',
+  })
+  const detail = await client.manufacturerOrder('order_1')
+
+  expect(list.items[0]?.manufacturerTotalAmountKopecks).toBe(1000000)
+  expect(detail.order.checklists[0]?.type).toBe('issue')
+  expect(calls).toEqual([
+    {
+      path: '/api/manufacturer/orders',
+      search: '?page=2&pageSize=20&status=returned&scope=history',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/manufacturer/orders/order_1',
+      search: '',
+      method: 'GET',
+      body: undefined,
+    },
+  ])
+})
+
 test('ApiClient manages order cancellation and admin status transitions', async () => {
   let accessToken: string | null = 'order-access-token'
   const calls: Array<{ path: string; search: string; method: string | undefined; body: unknown }> = []
@@ -1121,6 +1183,45 @@ function orderResponse() {
           pickupAddress: 'Main storage, door 2',
           manufacturer: manufacturerSummary(),
         },
+      },
+    ],
+  }
+}
+
+function manufacturerOrderResponse() {
+  const order = orderResponse()
+
+  return {
+    id: order.id,
+    status: 'returned',
+    startsOn: order.startsOn,
+    endsOn: order.endsOn,
+    rentalDays: order.rentalDays,
+    fulfillmentType: order.fulfillmentType,
+    fulfillmentContact: null,
+    manufacturerRentalAmountKopecks: 500000,
+    manufacturerDepositAmountKopecks: 500000,
+    manufacturerTotalAmountKopecks: 1000000,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    items: order.items,
+    checklists: [
+      {
+        id: 'checklist_1',
+        orderId: order.id,
+        bicycleId: 'bike_1',
+        type: 'issue',
+        frameCondition: 'ok',
+        wheelsCondition: 'ok',
+        handlebarCondition: 'ok',
+        saddleCondition: 'ok',
+        brakesCondition: 'ok',
+        exteriorCondition: 'worn',
+        safetyAction: 'none',
+        comment: 'Ready for handoff.',
+        checkedAt: '2026-05-12T11:05:00.000Z',
+        createdAt: '2026-05-12T11:05:00.000Z',
+        updatedAt: '2026-05-12T11:05:00.000Z',
       },
     ],
   }

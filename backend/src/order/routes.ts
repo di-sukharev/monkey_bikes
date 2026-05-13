@@ -4,6 +4,9 @@ import {
   adminOrdersResponseSchema,
   adminOrderStatusUpdateRequestSchema,
   apiErrorSchema,
+  manufacturerOrderResponseSchema,
+  manufacturerOrdersQuerySchema,
+  manufacturerOrdersResponseSchema,
   orderCancelRequestSchema,
   orderCreateRequestSchema,
   orderResponseSchema,
@@ -205,6 +208,66 @@ const adminOrdersRoute = createRoute({
   },
 })
 
+const manufacturerOrdersRoute = createRoute({
+  method: 'get',
+  path: '/orders',
+  request: {
+    query: manufacturerOrdersQuerySchema,
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: manufacturerOrdersResponseSchema,
+        },
+      },
+      description: 'Current manufacturer related orders',
+    },
+    400: {
+      content: errorResponseContent,
+      description: 'Invalid query',
+    },
+    401: {
+      content: errorResponseContent,
+      description: 'Authentication required',
+    },
+    403: {
+      content: errorResponseContent,
+      description: 'Manufacturer role required',
+    },
+  },
+})
+
+const manufacturerOrderRoute = createRoute({
+  method: 'get',
+  path: '/orders/{id}',
+  request: {
+    params: orderIdParamsSchema,
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: manufacturerOrderResponseSchema,
+        },
+      },
+      description: 'Current manufacturer related order detail',
+    },
+    401: {
+      content: errorResponseContent,
+      description: 'Authentication required',
+    },
+    403: {
+      content: errorResponseContent,
+      description: 'Manufacturer role required',
+    },
+    404: {
+      content: errorResponseContent,
+      description: 'Order not found',
+    },
+  },
+})
+
 const adminOrderRoute = createRoute({
   method: 'get',
   path: '/orders/{id}',
@@ -316,6 +379,34 @@ export function createOrderRoutes() {
     const orders = c.get('orderService')
     const { id } = c.req.valid('param')
     return c.json(await orders.getCurrentUserOrder(user, id), 200)
+  })
+
+  return routes
+}
+
+export function createManufacturerOrderRoutes() {
+  const routes = new OpenAPIHono<OrderRouteEnv>({
+    defaultHook: (result, c) => {
+      if (!result.success) {
+        return c.json(
+          errorResponse('VALIDATION_ERROR', 'Invalid request payload', result.error.issues),
+          400,
+        )
+      }
+    },
+  })
+
+  routes.openapi(manufacturerOrdersRoute, async (c) => {
+    const user = await requireRole(c, 'manufacturer')
+    const orders = c.get('orderService')
+    return c.json(await orders.listManufacturerOrders(user, c.req.valid('query')), 200)
+  })
+
+  routes.openapi(manufacturerOrderRoute, async (c) => {
+    const user = await requireRole(c, 'manufacturer')
+    const orders = c.get('orderService')
+    const { id } = c.req.valid('param')
+    return c.json(await orders.getManufacturerOrder(user, id), 200)
   })
 
   return routes

@@ -503,6 +503,185 @@ maybeDescribe('order API integration', () => {
     expect(invalidAdminStatusBody.error.code).toBe('VALIDATION_ERROR')
   })
 
+  test('lets manufacturers view only their related order slice', async () => {
+    const admin = await createAdmin('producer-order-admin@example.com')
+    const user = await registerUser('producer-order-renter@example.com', 'Renter')
+    const firstManufacturer = await createApprovedManufacturerBicycle(
+      'producer-order-first@example.com',
+      'Producer Orders First',
+      'First Producer Bike',
+    )
+    const secondManufacturer = await createApprovedManufacturerBicycle(
+      'producer-order-second@example.com',
+      'Producer Orders Second',
+      'Second Producer Bike',
+    )
+    const unrelatedManufacturer = await createApprovedManufacturerBicycle(
+      'producer-order-unrelated@example.com',
+      'Producer Orders Unrelated',
+      'Unrelated Producer Bike',
+    )
+    const request = await createOrder(user.accessToken, [
+      firstManufacturer.bicycle.id,
+      secondManufacturer.bicycle.id,
+    ], {
+      startsOn: '2026-09-01',
+      endsOn: '2026-09-02',
+      fulfillmentType: 'delivery',
+      deliveryAddress: 'Circus arena, gate 4',
+    })
+
+    const firstRequestDetail = await app.request(`/api/manufacturer/orders/${request.order.id}`, {
+      headers: authHeaders(firstManufacturer.accessToken),
+    })
+    const firstRequestDetailBody = await firstRequestDetail.json()
+    expect(firstRequestDetail.status).toBe(200)
+    expect(firstRequestDetailBody.order.status).toBe('request')
+    expect(firstRequestDetailBody.order.fulfillmentContact).toBeNull()
+
+    const confirm = await app.request(`/api/admin/orders/${request.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'confirmed',
+        comment: 'Internal producer order note.',
+      }),
+    })
+    expect(confirm.status).toBe(200)
+
+    const firstList = await app.request('/api/manufacturer/orders?scope=current&pageSize=10', {
+      headers: authHeaders(firstManufacturer.accessToken),
+    })
+    const firstListBody = await firstList.json()
+    expect(firstList.status).toBe(200)
+    expect(firstListBody.total).toBe(1)
+    expect(firstListBody.items[0]).toMatchObject({
+      id: request.order.id,
+      status: 'confirmed',
+      manufacturerRentalAmountKopecks: 500000,
+      manufacturerDepositAmountKopecks: 500000,
+      manufacturerTotalAmountKopecks: 1000000,
+      fulfillmentContact: {
+        contactName: 'Trainer',
+        contactPhone: '+7 999 111-22-33',
+        deliveryAddress: 'Circus arena, gate 4',
+        userComment: 'Keep the bicycles indoors.',
+      },
+    })
+    expect(firstListBody.items[0].items.map((item: { bicycleId: string }) => item.bicycleId)).toEqual([
+      firstManufacturer.bicycle.id,
+    ])
+
+    const firstConfirmedDetail = await app.request(`/api/manufacturer/orders/${request.order.id}`, {
+      headers: authHeaders(firstManufacturer.accessToken),
+    })
+    const firstConfirmedDetailBody = await firstConfirmedDetail.json()
+    expect(firstConfirmedDetail.status).toBe(200)
+    expect(firstConfirmedDetailBody.order.fulfillmentContact).toMatchObject({
+      contactName: 'Trainer',
+      contactPhone: '+7 999 111-22-33',
+      deliveryAddress: 'Circus arena, gate 4',
+    })
+
+    const secondList = await app.request('/api/manufacturer/orders?pageSize=10', {
+      headers: authHeaders(secondManufacturer.accessToken),
+    })
+    const secondListBody = await secondList.json()
+    expect(secondList.status).toBe(200)
+    expect(secondListBody.items[0].items.map((item: { bicycleId: string }) => item.bicycleId)).toEqual([
+      secondManufacturer.bicycle.id,
+    ])
+
+    const unrelatedList = await app.request('/api/manufacturer/orders?pageSize=10', {
+      headers: authHeaders(unrelatedManufacturer.accessToken),
+    })
+    const unrelatedListBody = await unrelatedList.json()
+    expect(unrelatedList.status).toBe(200)
+    expect(unrelatedListBody.total).toBe(0)
+
+    const unrelatedDetail = await app.request(`/api/manufacturer/orders/${request.order.id}`, {
+      headers: authHeaders(unrelatedManufacturer.accessToken),
+    })
+    expect(unrelatedDetail.status).toBe(404)
+
+    const invalidScopedStatus = await app.request('/api/manufacturer/orders?scope=current&status=returned', {
+      headers: authHeaders(firstManufacturer.accessToken),
+    })
+    const invalidScopedStatusBody = await invalidScopedStatus.json()
+    expect(invalidScopedStatus.status).toBe(400)
+    expect(invalidScopedStatusBody.error.code).toBe('VALIDATION_ERROR')
+
+    const invalidStatus = await app.request('/api/manufacturer/orders?status=lost', {
+      headers: authHeaders(firstManufacturer.accessToken),
+    })
+    const invalidStatusBody = await invalidStatus.json()
+    expect(invalidStatus.status).toBe(400)
+    expect(invalidStatusBody.error.code).toBe('VALIDATION_ERROR')
+
+    const rawFirstList = JSON.stringify(firstListBody)
+    expect(rawFirstList).not.toContain('producer-order-renter@example.com')
+    expect(rawFirstList).not.toContain('adminComment')
+    expect(rawFirstList).not.toContain('Internal producer order note.')
+    expect(rawFirstList).not.toContain('payments')
+    expect(rawFirstList).not.toContain(secondManufacturer.bicycle.id)
+    expect(rawFirstList).not.toContain('Second Producer Bike')
+
+    await completeOrderPayments(user.accessToken, request.order.id)
+
+    const issue = await app.request(`/api/admin/orders/${request.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'issued',
+        checklists: [
+          orderChecklist(firstManufacturer.bicycle.id),
+          orderChecklist(secondManufacturer.bicycle.id),
+        ],
+      }),
+    })
+    expect(issue.status).toBe(200)
+
+    const returnOrder = await app.request(`/api/admin/orders/${request.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'returned',
+        checklists: [
+          orderChecklist(firstManufacturer.bicycle.id),
+          orderChecklist(secondManufacturer.bicycle.id, 'maintenance'),
+        ],
+      }),
+    })
+    expect(returnOrder.status).toBe(200)
+
+    const firstDetail = await app.request(`/api/manufacturer/orders/${request.order.id}`, {
+      headers: authHeaders(firstManufacturer.accessToken),
+    })
+    const firstDetailBody = await firstDetail.json()
+    expect(firstDetail.status).toBe(200)
+    expect(firstDetailBody.order.status).toBe('returned')
+    expect(firstDetailBody.order.fulfillmentContact).toBeNull()
+    expect(firstDetailBody.order.items.map((item: { bicycleId: string }) => item.bicycleId)).toEqual([
+      firstManufacturer.bicycle.id,
+    ])
+    expect(firstDetailBody.order.checklists.map((checklist: { bicycleId: string; type: string }) => ({
+      bicycleId: checklist.bicycleId,
+      type: checklist.type,
+    }))).toEqual([
+      { bicycleId: firstManufacturer.bicycle.id, type: 'issue' },
+      { bicycleId: firstManufacturer.bicycle.id, type: 'return' },
+    ])
+
+    const rawFirstDetail = JSON.stringify(firstDetailBody)
+    expect(rawFirstDetail).not.toContain('producer-order-renter@example.com')
+    expect(rawFirstDetail).not.toContain('adminComment')
+    expect(rawFirstDetail).not.toContain('payments')
+    expect(rawFirstDetail).not.toContain('checkedBy')
+    expect(rawFirstDetail).not.toContain('changedBy')
+    expect(rawFirstDetail).not.toContain(secondManufacturer.bicycle.id)
+    expect(rawFirstDetail).not.toContain('Second Producer Bike')
+  })
+
   test('blocks confirmation when live bicycle state changes after request creation', async () => {
     const admin = await createAdmin('live-state-admin@example.com')
     const user = await registerUser('live-state-renter@example.com', 'Renter')
@@ -624,6 +803,62 @@ maybeDescribe('order API integration', () => {
       },
     })
   }
+
+  async function createApprovedManufacturerBicycle(
+    email: string,
+    publicName: string,
+    bicycleTitle: string,
+  ) {
+    const manufacturer = await registerUser(email, {
+      displayName: publicName,
+      role: 'manufacturer',
+    })
+    const profile = await prisma.manufacturerProfile.create({
+      data: {
+        userId: manufacturer.user.id,
+        legalName: `${publicName} LLC`,
+        publicName,
+        region: 'Moscow',
+        city: 'Moscow',
+        phone: '+7 999 000-00-00',
+        email,
+        description: 'Approved manufacturer profile.',
+        status: 'approved',
+        reviewedAt: new Date(),
+      },
+    })
+    const bicycle = await prisma.bicycle.create({
+      data: {
+        ...bicyclePayload(bicycleTitle),
+        manufacturerProfileId: profile.id,
+        status: 'available',
+        reviewedAt: new Date(),
+      },
+    })
+
+    return {
+      ...manufacturer,
+      profile,
+      bicycle,
+    }
+  }
+
+  async function completeOrderPayments(accessToken: string, orderId: string) {
+    for (const type of ['rent', 'deposit'] as const) {
+      const create = await app.request(`/api/orders/${orderId}/payments/${type}`, {
+        method: 'POST',
+        headers: authHeaders(accessToken),
+      })
+      const createBody = await create.json()
+      expect(create.status).toBe(201)
+
+      const complete = await app.request(`/api/payments/${createBody.payment.id}/stub-success`, {
+        method: 'POST',
+        headers: authHeaders(accessToken),
+      })
+      expect(complete.status).toBe(200)
+    }
+  }
 })
 
 function authHeaders(accessToken: string) {
@@ -675,5 +910,22 @@ function bicyclePayload(title: string) {
     wheelDiameterCm: 16,
     recommendedAnimalDimensions: 'Small trained animals up to 70 cm height',
     safetyNotes: 'Use only with trained handlers and indoor safety mats.',
+  }
+}
+
+function orderChecklist(
+  bicycleId: string,
+  safetyAction: 'hidden' | 'maintenance' | 'none' = 'none',
+) {
+  return {
+    bicycleId,
+    frameCondition: 'ok',
+    wheelsCondition: 'ok',
+    handlebarCondition: 'ok',
+    saddleCondition: 'ok',
+    brakesCondition: 'ok',
+    exteriorCondition: safetyAction === 'none' ? 'worn' : 'unsafe',
+    safetyAction,
+    comment: safetyAction === 'none' ? 'Ready for normal operation.' : 'Needs follow-up service.',
   }
 }

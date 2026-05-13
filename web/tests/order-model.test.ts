@@ -1,7 +1,9 @@
 import { describe, expect, test } from 'bun:test'
+import type { ManufacturerOrderDto } from '@web-app-demo/contracts'
 
 import { ApiRequestError } from '../src/lib/api'
 import {
+  manufacturerOrderNextStep,
   orderNextStep,
   orderStatusesForListScope,
   requestErrorNextStep,
@@ -27,6 +29,14 @@ describe('customer order UI rules', () => {
     expect(orderNextStep(orderFixture('issued'))).toContain('Coordinate return')
     expect(orderNextStep(orderFixture('returned'))).toContain('No further action')
     expect(orderNextStep(orderFixture('cancelled'))).toContain('Create a new request')
+  })
+
+  test('returns manufacturer next steps without requiring customer-only fields', () => {
+    expect(manufacturerOrderNextStep(manufacturerOrderFixture('request'))).toContain('waiting')
+    expect(manufacturerOrderNextStep(manufacturerOrderFixture('confirmed'))).toContain('Prepare')
+    expect(manufacturerOrderNextStep(manufacturerOrderFixture('issued'))).toContain('Coordinate return')
+    expect(manufacturerOrderNextStep(manufacturerOrderFixture('returned'))).toContain('checklist history')
+    expect(manufacturerOrderNextStep(manufacturerOrderFixture('cancelled'))).toContain('No producer action')
   })
 
   test('maps domain errors to customer next steps', () => {
@@ -91,5 +101,33 @@ function orderFixture(
         },
       },
     ],
+  }
+}
+
+function manufacturerOrderFixture(
+  status: 'cancelled' | 'confirmed' | 'issued' | 'request' | 'returned',
+): ManufacturerOrderDto {
+  return {
+    id: 'order_1',
+    status,
+    startsOn: '2026-05-12',
+    endsOn: '2026-05-13',
+    rentalDays: 2,
+    fulfillmentType: 'pickup',
+    fulfillmentContact: status === 'confirmed' || status === 'issued'
+      ? {
+          contactName: 'Trainer',
+          contactPhone: '+7 999 111-22-33',
+          deliveryAddress: null,
+          userComment: null,
+        }
+      : null,
+    manufacturerRentalAmountKopecks: 500000,
+    manufacturerDepositAmountKopecks: 500000,
+    manufacturerTotalAmountKopecks: 1000000,
+    createdAt: '2026-05-12T10:00:00.000Z',
+    updatedAt: '2026-05-12T10:00:00.000Z',
+    items: orderFixture(status).items,
+    checklists: [],
   }
 }

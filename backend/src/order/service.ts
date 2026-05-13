@@ -4,6 +4,8 @@ import type {
   AdminOrdersQuery,
   AdminOrderStatusUpdateRequest,
   AdminOrderWarningDto,
+  ManufacturerOrderDto,
+  ManufacturerOrdersQuery,
   OrderChecklistDto,
   OrderCancelRequest,
   OrderCreateRequest,
@@ -147,6 +149,15 @@ type AdminOrderRecord = Omit<OrderRecord, 'items'> & {
   checklists: OrderChecklistRecord[]
 }
 
+type ManufacturerOrderItemRecord = OrderItemRecord
+
+type ManufacturerOrderChecklistRecord = Omit<OrderChecklistRecord, 'checkedByUser'>
+
+type ManufacturerOrderRecord = Omit<OrderRecord, 'items' | 'payments'> & {
+  items: ManufacturerOrderItemRecord[]
+  checklists: ManufacturerOrderChecklistRecord[]
+}
+
 type AvailabilityConflict = {
   bicycleId: string
   bicycleTitle: string
@@ -204,6 +215,20 @@ const adminOrderInclude = {
   payments: {
     orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
   },
+}
+
+function manufacturerOrderInclude(manufacturerProfileId: string) {
+  return {
+    items: {
+      where: {
+        manufacturerProfileIdSnapshot: manufacturerProfileId,
+      },
+      orderBy: { createdAt: 'asc' as const },
+    },
+    checklists: {
+      orderBy: [{ checkedAt: 'asc' as const }, { id: 'asc' as const }],
+    },
+  }
 }
 
 export class OrderService {
@@ -412,6 +437,67 @@ export class OrderService {
 
     return {
       order: toOrderDto(order),
+    }
+  }
+
+  async listManufacturerOrders(user: AuthenticatedUser, query: ManufacturerOrdersQuery) {
+    const profile = await this.db.manufacturerProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    })
+
+    if (!profile) {
+      return {
+        items: [],
+        page: query.page,
+        pageSize: query.pageSize,
+        total: 0,
+      }
+    }
+
+    const where = manufacturerOrderWhere(profile.id, query)
+    const skip = (query.page - 1) * query.pageSize
+
+    const [items, total] = await this.db.$transaction([
+      this.db.order.findMany({
+        where,
+        include: manufacturerOrderInclude(profile.id),
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take: query.pageSize,
+      }),
+      this.db.order.count({ where }),
+    ])
+
+    return {
+      items: items.map((order) => toManufacturerOrderDto(order, profile.id)),
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+    }
+  }
+
+  async getManufacturerOrder(user: AuthenticatedUser, id: string) {
+    const profile = await this.db.manufacturerProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    })
+
+    if (!profile) {
+      throw new AppError(404, 'NOT_FOUND', 'Order not found')
+    }
+
+    const order = await this.db.order.findFirst({
+      where: manufacturerOrderWhere(profile.id, { id }),
+      include: manufacturerOrderInclude(profile.id),
+    })
+
+    if (!order) {
+      throw new AppError(404, 'NOT_FOUND', 'Order not found')
+    }
+
+    return {
+      order: toManufacturerOrderDto(order, profile.id),
     }
   }
 
@@ -903,18 +989,32 @@ function assertOrderMoneyFits(label: string, amountKopecks: number) {
   }
 }
 
-function orderStatusWhere(query: OrdersQuery | AdminOrdersQuery) {
+function orderStatusWhere(query: { scope?: OrdersQuery['scope']; status?: OrderStatus }) {
   if (query.status) {
     return { status: query.status }
   }
 
-  if (!('scope' in query) || query.scope === 'all') {
+  if (!query.scope || query.scope === 'all') {
     return {}
   }
 
   return {
     status: {
       in: orderStatusesForScope(query.scope),
+    },
+  }
+}
+
+function manufacturerOrderWhere(
+  manufacturerProfileId: string,
+  query: Pick<ManufacturerOrdersQuery, 'scope' | 'status'> | { id: string },
+) {
+  return {
+    ...('id' in query ? { id: query.id } : orderStatusWhere(query)),
+    items: {
+      some: {
+        manufacturerProfileIdSnapshot: manufacturerProfileId,
+      },
     },
   }
 }
@@ -1271,6 +1371,81 @@ function toOrderDto(order: OrderRecord): OrderDto {
     items: order.items.map(toOrderItemDto),
     payments: order.payments.map(toPaymentDto),
     paymentRequirementsMet: paymentRequirementsMet(order.payments),
+  }
+}
+
+function toManufacturerOrderDto(
+  order: ManufacturerOrderRecord,
+  manufacturerProfileId: string,
+): ManufacturerOrderDto {
+  const ownItems = order.items.filter(
+    (item) => item.manufacturerProfileIdSnapshot === manufacturerProfileId,
+  )
+  const ownBicycleIds = new Set(ownItems.map((item) => item.bicycleId))
+  const rentalAmountKopecks = ownItems.reduce(
+    (total, item) => total + item.pricePerDaySnapshotKopecks * order.rentalDays,
+    0,
+  )
+  const depositAmountKopecks = ownItems.reduce(
+    (total, item) => total + item.depositSnapshotKopecks,
+    0,
+  )
+
+  return {
+    id: order.id,
+    status: order.status,
+    startsOn: order.startsOn,
+    endsOn: order.endsOn,
+    rentalDays: order.rentalDays,
+    fulfillmentType: order.fulfillmentType,
+    fulfillmentContact: manufacturerFulfillmentContact(order),
+    manufacturerRentalAmountKopecks: rentalAmountKopecks,
+    manufacturerDepositAmountKopecks: depositAmountKopecks,
+    manufacturerTotalAmountKopecks: rentalAmountKopecks + depositAmountKopecks,
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+    items: ownItems.map(toOrderItemDto),
+    checklists: order.checklists
+      .filter((checklist) => ownBicycleIds.has(checklist.bicycleId))
+      .map(toManufacturerOrderChecklistDto),
+  }
+}
+
+function manufacturerFulfillmentContact(
+  order: Pick<
+    ManufacturerOrderRecord,
+    'contactName' | 'contactPhone' | 'deliveryAddress' | 'fulfillmentType' | 'status' | 'userComment'
+  >,
+) {
+  if (order.status !== 'confirmed' && order.status !== 'issued') {
+    return null
+  }
+
+  return {
+    contactName: order.contactName,
+    contactPhone: order.contactPhone,
+    deliveryAddress: order.fulfillmentType === 'delivery' ? order.deliveryAddress : null,
+    userComment: order.userComment,
+  }
+}
+
+function toManufacturerOrderChecklistDto(checklist: ManufacturerOrderChecklistRecord) {
+  return {
+    id: checklist.id,
+    orderId: checklist.orderId,
+    bicycleId: checklist.bicycleId,
+    type: checklist.type,
+    frameCondition: checklist.frameCondition,
+    wheelsCondition: checklist.wheelsCondition,
+    handlebarCondition: checklist.handlebarCondition,
+    saddleCondition: checklist.saddleCondition,
+    brakesCondition: checklist.brakesCondition,
+    exteriorCondition: checklist.exteriorCondition,
+    safetyAction: checklist.safetyAction,
+    comment: checklist.comment,
+    checkedAt: checklist.checkedAt.toISOString(),
+    createdAt: checklist.createdAt.toISOString(),
+    updatedAt: checklist.updatedAt.toISOString(),
   }
 }
 

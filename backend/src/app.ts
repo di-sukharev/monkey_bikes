@@ -17,7 +17,11 @@ import { BicycleService } from './bicycle/service'
 import { errorResponse, handleError } from './http/errors'
 import { createManufacturerRoutes } from './manufacturer/routes'
 import { ManufacturerProfileService } from './manufacturer/service'
-import { createAdminOrderRoutes, createOrderRoutes } from './order/routes'
+import {
+  createAdminOrderRoutes,
+  createManufacturerOrderRoutes,
+  createOrderRoutes,
+} from './order/routes'
 import { OrderService } from './order/service'
 import { createAdminPaymentRoutes, createPaymentRoutes } from './payment/routes'
 import { PaymentService } from './payment/service'
@@ -99,6 +103,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/bicycles', createPublicBicycleRoutes())
   app.route('/api/manufacturer', createManufacturerRoutes())
   app.route('/api/manufacturer', createManufacturerBicycleRoutes())
+  app.route('/api/manufacturer', createManufacturerOrderRoutes())
   app.route('/api', createPaymentRoutes())
   app.route('/api/orders', createOrderRoutes())
   app.route('/api/admin', createAdminRoutes())
