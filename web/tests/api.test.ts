@@ -736,6 +736,18 @@ test('ApiClient manages order cancellation and admin status transitions', async 
       )
     }
 
+    if (url.pathname === '/api/admin/checklists') {
+      return json(
+        {
+          items: [adminChecklistResponse()],
+          page: 1,
+          pageSize: 20,
+          total: 1,
+        },
+        200,
+      )
+    }
+
     if (url.pathname === '/api/admin/orders/order_1' && init?.method !== 'PATCH') {
       return json({ order: adminOrderResponse() }, 200)
     }
@@ -762,7 +774,16 @@ test('ApiClient manages order cancellation and admin status transitions', async 
 
   const cancelled = await client.cancelOrder('order_1', { comment: ' Customer changed dates. ' })
   const list = await client.adminOrders({ status: 'request' })
+  const quickList = await client.adminOrders({
+    quickFilter: 'orders_today',
+    date: '2026-05-13',
+  })
   const detail = await client.adminOrder('order_1')
+  const checklists = await client.adminChecklists({
+    type: 'return',
+    orderId: 'order_1',
+    bicycleId: 'bike_1',
+  })
   const confirmed = await client.updateAdminOrderStatus('order_1', {
     status: 'confirmed',
     comment: '',
@@ -785,7 +806,9 @@ test('ApiClient manages order cancellation and admin status transitions', async 
 
   expect(cancelled.order.status).toBe('cancelled')
   expect(list.total).toBe(1)
+  expect(quickList.items[0]?.id).toBe('order_1')
   expect(detail.order.availabilityWarnings[0]?.type).toBe('technical_limits')
+  expect(checklists.items[0]?.bicycle.title).toBe('Tiny Performer S')
   expect(confirmed.order.status).toBe('confirmed')
   expect(issued.order.status).toBe('issued')
   expect(calls).toEqual([
@@ -802,8 +825,20 @@ test('ApiClient manages order cancellation and admin status transitions', async 
       body: undefined,
     },
     {
+      path: '/api/admin/orders',
+      search: '?page=1&pageSize=20&quickFilter=orders_today&date=2026-05-13',
+      method: 'GET',
+      body: undefined,
+    },
+    {
       path: '/api/admin/orders/order_1',
       search: '',
+      method: 'GET',
+      body: undefined,
+    },
+    {
+      path: '/api/admin/checklists',
+      search: '?page=1&pageSize=20&type=return&orderId=order_1&bicycleId=bike_1',
       method: 'GET',
       body: undefined,
     },
@@ -1305,5 +1340,49 @@ function adminOrderResponse(
         safetyNotes: 'Use only with trained handlers and indoor safety mats.',
       },
     })),
+  }
+}
+
+function adminChecklistResponse() {
+  return {
+    id: 'checklist_1',
+    orderId: 'order_1',
+    bicycleId: 'bike_1',
+    type: 'return',
+    frameCondition: 'ok',
+    wheelsCondition: 'ok',
+    handlebarCondition: 'ok',
+    saddleCondition: 'ok',
+    brakesCondition: 'ok',
+    exteriorCondition: 'worn',
+    safetyAction: 'maintenance',
+    comment: 'Needs service.',
+    checkedByUserId: 'admin_1',
+    checkedByUser: {
+      id: 'admin_1',
+      email: 'admin@example.com',
+      displayName: 'Admin',
+      status: 'active',
+    },
+    checkedAt: '2026-05-12T11:05:00.000Z',
+    createdAt: '2026-05-12T11:05:00.000Z',
+    updatedAt: '2026-05-12T11:05:00.000Z',
+    order: {
+      id: 'order_1',
+      status: 'returned',
+      startsOn: '2026-05-12',
+      endsOn: '2026-05-13',
+      user: {
+        id: 'user_1',
+        email: 'renter@example.com',
+        displayName: 'Renter',
+        status: 'active',
+      },
+    },
+    bicycle: {
+      id: 'bike_1',
+      title: 'Tiny Performer S',
+      status: 'maintenance',
+    },
   }
 }

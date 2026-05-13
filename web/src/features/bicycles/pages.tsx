@@ -1,4 +1,4 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { BicycleDto, BicycleSize, BicycleStatus } from '@web-app-demo/contracts'
 import {
@@ -62,6 +62,7 @@ import {
   formatMoney,
   manufacturerBicyclesQueryKey,
   manufacturerBicyclesRootQueryKey,
+  parseAdminBicycleStatusFilter,
 } from './model'
 import { BicycleSizeBadge, BicycleStatusBadge } from './status-badge'
 
@@ -677,8 +678,10 @@ export function ManufacturerBicyclesPage() {
 export function AdminBicyclesPage() {
   const auth = useAuth()
   const queryClient = useQueryClient()
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<BicycleStatus | 'all'>('moderation')
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as { page?: number; status?: string }
+  const page = search.page ?? 1
+  const status = parseAdminBicycleStatusFilter(search.status)
   const [notice, setNotice] = useState<string | null>(null)
   const queryKey = adminBicyclesQueryKey(page, status)
 
@@ -767,8 +770,10 @@ export function AdminBicyclesPage() {
             className="w-full max-w-56"
             value={status}
             onChange={(event) => {
-              setPage(1)
-              setStatus(event.target.value as BicycleStatus | 'all')
+              void navigate({
+                to: '/admin/bicycles',
+                search: adminBicyclesSearch(event.target.value as BicycleStatus | 'all'),
+              })
             }}
           >
             <NativeSelectOption value="all">All statuses</NativeSelectOption>
@@ -865,7 +870,12 @@ export function AdminBicyclesPage() {
               variant="outline"
               size="sm"
               disabled={page <= 1 || bicyclesQuery.isFetching}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              onClick={() => {
+                void navigate({
+                  to: '/admin/bicycles',
+                  search: adminBicyclesSearch(status, Math.max(1, page - 1)),
+                })
+              }}
             >
               <ChevronLeftIcon data-icon="inline-start" />
               Previous
@@ -877,7 +887,12 @@ export function AdminBicyclesPage() {
               variant="outline"
               size="sm"
               disabled={page >= totalPages || bicyclesQuery.isFetching}
-              onClick={() => setPage((current) => current + 1)}
+              onClick={() => {
+                void navigate({
+                  to: '/admin/bicycles',
+                  search: adminBicyclesSearch(status, page + 1),
+                })
+              }}
             >
               Next
               <ChevronRightIcon data-icon="inline-end" />
@@ -887,6 +902,13 @@ export function AdminBicyclesPage() {
       </Pagination>
     </section>
   )
+}
+
+function adminBicyclesSearch(status: BicycleStatus | 'all', page?: number) {
+  return {
+    ...(page && page > 1 ? { page } : {}),
+    status,
+  }
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

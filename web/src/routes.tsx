@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router'
 
+import { AdminChecklistsPage, AdminDashboardPage } from './features/admin/pages'
 import {
   AdminBicyclesPage,
   BicycleDetailPage,
@@ -37,6 +38,12 @@ const appRoute = createRoute({
   component: AppPage,
 })
 
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminDashboardPage,
+})
+
 const adminUsersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/users',
@@ -52,12 +59,22 @@ const adminManufacturersRoute = createRoute({
 const adminBicyclesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/bicycles',
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...positivePageSearch(search.page),
+    ...(typeof search.status === 'string' ? { status: search.status } : {}),
+  }),
   component: AdminBicyclesPage,
 })
 
 const adminOrdersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/orders',
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...positivePageSearch(search.page),
+    ...(typeof search.date === 'string' ? { date: search.date } : {}),
+    ...(typeof search.quickFilter === 'string' ? { quickFilter: search.quickFilter } : {}),
+    ...(typeof search.status === 'string' ? { status: search.status } : {}),
+  }),
   component: AdminOrdersPage,
 })
 
@@ -65,6 +82,18 @@ const adminPaymentsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/payments',
   component: AdminPaymentsPage,
+})
+
+const adminChecklistsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/checklists',
+  validateSearch: (search: Record<string, unknown>) => ({
+    ...positivePageSearch(search.page),
+    ...(typeof search.bicycleId === 'string' ? { bicycleId: search.bicycleId } : {}),
+    ...(typeof search.orderId === 'string' ? { orderId: search.orderId } : {}),
+    ...(typeof search.type === 'string' ? { type: search.type } : {}),
+  }),
+  component: AdminChecklistsPage,
 })
 
 const adminOrderDetailRoute = createRoute({
@@ -133,11 +162,13 @@ const orderDetailRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   appRoute,
+  adminRoute,
   adminUsersRoute,
   adminManufacturersRoute,
   adminBicyclesRoute,
   adminOrdersRoute,
   adminPaymentsRoute,
+  adminChecklistsRoute,
   adminOrderDetailRoute,
   manufacturerProfileRoute,
   manufacturerBicyclesRoute,
@@ -156,4 +187,9 @@ declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router
   }
+}
+
+function positivePageSearch(value: unknown) {
+  const page = Number(value)
+  return Number.isInteger(page) && page > 0 ? { page } : {}
 }

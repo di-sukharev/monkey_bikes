@@ -1,4 +1,6 @@
 import {
+  adminChecklistsQuerySchema,
+  adminChecklistsResponseSchema,
   adminOrderResponseSchema,
   adminOrdersQuerySchema,
   adminOrdersResponseSchema,
@@ -48,6 +50,8 @@ import {
   type AdminOrdersQuery,
   type AdminOrdersResponse,
   type AdminOrderStatusUpdateInput,
+  type AdminChecklistsQuery,
+  type AdminChecklistsResponse,
   type AdminPaymentsQuery,
   type AdminPaymentsResponse,
   type OrderCreateInput,
@@ -457,6 +461,14 @@ export class ApiClient {
       params.set('status', query.status)
     }
 
+    if (query.quickFilter) {
+      params.set('quickFilter', query.quickFilter)
+    }
+
+    if (query.date) {
+      params.set('date', query.date)
+    }
+
     return this.request(`/api/admin/orders?${params.toString()}`, adminOrdersResponseSchema, {
       auth: true,
     })
@@ -501,6 +513,27 @@ export class ApiClient {
     }
 
     return this.request(`/api/admin/payments?${params.toString()}`, adminPaymentsResponseSchema, {
+      auth: true,
+    })
+  }
+
+  adminChecklists(input: Partial<AdminChecklistsQuery> = {}): Promise<AdminChecklistsResponse> {
+    const query = adminChecklistsQuerySchema.parse(input)
+    const params = paginatedParams(query.page, query.pageSize)
+
+    if (query.type) {
+      params.set('type', query.type)
+    }
+
+    if (query.orderId) {
+      params.set('orderId', query.orderId)
+    }
+
+    if (query.bicycleId) {
+      params.set('bicycleId', query.bicycleId)
+    }
+
+    return this.request(`/api/admin/checklists?${params.toString()}`, adminChecklistsResponseSchema, {
       auth: true,
     })
   }

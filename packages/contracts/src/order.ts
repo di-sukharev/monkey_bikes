@@ -106,11 +106,32 @@ export const ordersQuerySchema = z.object({
   },
 )
 
+export const adminOrderQuickFilterSchema = z.enum([
+  'cancelled_orders',
+  'orders_today',
+  'unconfirmed_requests',
+  'unpaid_deposit',
+])
+
 export const adminOrdersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   status: orderStatusSchema.optional(),
+  quickFilter: adminOrderQuickFilterSchema.optional(),
+  date: dateOnlyStringSchema.optional(),
 }).strict()
+  .refine((value) => value.quickFilter === undefined || value.status === undefined, {
+    message: 'Status filter cannot be combined with a quick filter',
+    path: ['status'],
+  })
+  .refine((value) => value.quickFilter !== 'orders_today' || value.date !== undefined, {
+    message: 'Date filter is required for orders today',
+    path: ['date'],
+  })
+  .refine((value) => value.date === undefined || value.quickFilter === 'orders_today', {
+    message: 'Date filter is only supported for orders today',
+    path: ['date'],
+  })
 
 export const orderCancelRequestSchema = z
   .object({
@@ -342,6 +363,33 @@ export const manufacturerOrderSchema = z.object({
   checklists: z.array(manufacturerOrderChecklistSchema),
 })
 
+export const adminChecklistOrderSummarySchema = z.object({
+  id: z.string(),
+  status: orderStatusSchema,
+  startsOn: dateOnlyStringSchema,
+  endsOn: dateOnlyStringSchema,
+  user: orderUserSummarySchema,
+})
+
+export const adminChecklistBicycleSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: bicycleStatusSchema,
+})
+
+export const adminChecklistSchema = orderChecklistSchema.extend({
+  order: adminChecklistOrderSummarySchema,
+  bicycle: adminChecklistBicycleSummarySchema,
+})
+
+export const adminChecklistsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  type: orderChecklistTypeSchema.optional(),
+  orderId: z.string().trim().min(1).optional(),
+  bicycleId: z.string().trim().min(1).optional(),
+}).strict()
+
 export const orderResponseSchema = z.object({
   order: orderSchema,
 })
@@ -377,14 +425,23 @@ export const manufacturerOrdersResponseSchema = z.object({
   total: z.number().int().min(0),
 })
 
+export const adminChecklistsResponseSchema = z.object({
+  items: z.array(adminChecklistSchema),
+  page: z.number().int().min(1),
+  pageSize: z.number().int().min(1).max(100),
+  total: z.number().int().min(0),
+})
+
 export type OrderStatus = z.infer<typeof orderStatusSchema>
 export type OrderListScope = z.infer<typeof orderListScopeSchema>
 export type FulfillmentType = z.infer<typeof fulfillmentTypeSchema>
 export type OrderCreateRequest = z.output<typeof orderCreateRequestSchema>
 export type OrderCreateInput = z.input<typeof orderCreateRequestSchema>
 export type OrdersQuery = z.infer<typeof ordersQuerySchema>
+export type AdminOrderQuickFilter = z.infer<typeof adminOrderQuickFilterSchema>
 export type AdminOrdersQuery = z.infer<typeof adminOrdersQuerySchema>
 export type ManufacturerOrdersQuery = z.infer<typeof manufacturerOrdersQuerySchema>
+export type AdminChecklistsQuery = z.infer<typeof adminChecklistsQuerySchema>
 export type OrderCancelRequest = z.output<typeof orderCancelRequestSchema>
 export type OrderCancelInput = z.input<typeof orderCancelRequestSchema>
 export type AdminOrderStatusUpdateRequest = z.output<
@@ -405,12 +462,14 @@ export type ManufacturerOrderChecklistDto = z.infer<typeof manufacturerOrderChec
 export type AdminOrderWarningDto = z.infer<typeof adminOrderWarningSchema>
 export type AdminOrderDto = z.infer<typeof adminOrderSchema>
 export type ManufacturerOrderDto = z.infer<typeof manufacturerOrderSchema>
+export type AdminChecklistDto = z.infer<typeof adminChecklistSchema>
 export type OrderResponse = z.infer<typeof orderResponseSchema>
 export type OrdersResponse = z.infer<typeof ordersResponseSchema>
 export type AdminOrderResponse = z.infer<typeof adminOrderResponseSchema>
 export type AdminOrdersResponse = z.infer<typeof adminOrdersResponseSchema>
 export type ManufacturerOrderResponse = z.infer<typeof manufacturerOrderResponseSchema>
 export type ManufacturerOrdersResponse = z.infer<typeof manufacturerOrdersResponseSchema>
+export type AdminChecklistsResponse = z.infer<typeof adminChecklistsResponseSchema>
 
 export function orderStatusesForScope(scope: OrderListScope): OrderStatus[] {
   if (scope === 'current') return [...currentOrderStatuses]

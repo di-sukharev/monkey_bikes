@@ -1,9 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 import {
+  adminChecklistSchema,
+  adminChecklistsQuerySchema,
   adminBicycleModerationRequestSchema,
   adminBicycleSchema,
   adminOrderChecklistInputSchema,
   adminManufacturerStatusUpdateRequestSchema,
+  adminOrderQuickFilterSchema,
   adminOrdersQuerySchema,
   adminOrderSchema,
   adminOrderStatusUpdateRequestSchema,
@@ -474,6 +477,42 @@ describe('contracts', () => {
         scope: 'current',
       }),
     ).toThrow()
+    expect(adminOrderQuickFilterSchema.parse('orders_today')).toBe('orders_today')
+    expect(adminOrdersQuerySchema.parse({
+      quickFilter: 'orders_today',
+      date: '2026-05-13',
+      pageSize: '10',
+    })).toEqual({
+      page: 1,
+      pageSize: 10,
+      quickFilter: 'orders_today',
+      date: '2026-05-13',
+    })
+    expect(() =>
+      adminOrdersQuerySchema.parse({
+        quickFilter: 'orders_today',
+        status: 'request',
+      }),
+    ).toThrow()
+    expect(() =>
+      adminOrdersQuerySchema.parse({
+        quickFilter: 'orders_today',
+      }),
+    ).toThrow()
+    expect(() =>
+      adminOrdersQuerySchema.parse({
+        date: '2026-05-13',
+      }),
+    ).toThrow()
+    expect(adminChecklistsQuerySchema.parse({
+      type: 'return',
+      page: '2',
+      pageSize: '10',
+    })).toEqual({
+      page: 2,
+      pageSize: 10,
+      type: 'return',
+    })
 
     expect(orderCancelRequestSchema.parse({ comment: ' Customer schedule changed. ' })).toEqual({
       comment: 'Customer schedule changed.',
@@ -733,6 +772,24 @@ describe('contracts', () => {
     })
 
     expect(adminOrder.statusHistory[0]?.toStatus).toBe('confirmed')
+    const adminChecklist = adminChecklistSchema.parse({
+      ...adminOrder.checklists[0],
+      order: {
+        id: adminOrder.id,
+        status: adminOrder.status,
+        startsOn: adminOrder.startsOn,
+        endsOn: adminOrder.endsOn,
+        user: adminOrder.user,
+      },
+      bicycle: {
+        id: 'bike_1',
+        title: 'Tiny Performer S',
+        status: 'maintenance',
+      },
+    })
+    expect(adminChecklist.order.user.email).toBe('renter@example.com')
+    expect(adminChecklist.bicycle.status).toBe('maintenance')
+
     expect(manufacturerOrdersQuerySchema.parse({ scope: 'current', status: 'issued' })).toMatchObject({
       scope: 'current',
       status: 'issued',

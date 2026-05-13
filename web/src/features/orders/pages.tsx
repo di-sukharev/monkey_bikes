@@ -1,4 +1,4 @@
-import { Link, useParams, useSearch } from '@tanstack/react-router'
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   AdminOrderDto,
@@ -43,6 +43,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
+import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
@@ -72,6 +73,8 @@ import {
 } from '../payments/order-payments-panel'
 import { formatPaymentType, type StubPaymentAction } from '../payments/model'
 import {
+  adminOrderQuickFilterLabel,
+  adminOrderQuickFilters,
   emptyOrderForm,
   formatMoney,
   formatOrderDates,
@@ -80,9 +83,13 @@ import {
   orderDetailQueryKey,
   orderStatuses,
   ordersQueryKey,
+  parseAdminOrderQuickFilter,
+  parseAdminOrderStatusFilter,
+  parseDateOnlySearch,
   parseBicycleIds,
   requestErrorNextStep,
   selectedBicyclesTotal,
+  type AdminOrderQuickFilterOption,
 } from './model'
 import { OrderStatusBadge } from './status-badge'
 import {
@@ -597,9 +604,19 @@ export function OrderDetailPage() {
 
 export function AdminOrdersPage() {
   const auth = useAuth()
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState<OrderStatus | 'all'>('request')
-  const queryKey = orderAdminListQueryKey(page, status)
+  const navigate = useNavigate()
+  const search = useSearch({ strict: false }) as {
+    date?: string
+    page?: number
+    quickFilter?: string
+    status?: string
+  }
+  const page = search.page ?? 1
+  const quickFilter = parseAdminOrderQuickFilter(search.quickFilter)
+  const status = quickFilter === 'none' ? parseAdminOrderStatusFilter(search.status) : 'all'
+  const date = parseDateOnlySearch(search.date)
+
+  const queryKey = orderAdminListQueryKey(page, status, quickFilter, date)
   const ordersQuery = useQuery({
     queryKey,
     enabled: auth.user?.role === 'admin',
@@ -607,7 +624,14 @@ export function AdminOrdersPage() {
       auth.api.adminOrders({
         page,
         pageSize: adminOrdersPageSize,
-        ...(status === 'all' ? {} : { status }),
+        ...(quickFilter === 'none'
+          ? status === 'all'
+            ? {}
+            : { status }
+          : {
+              quickFilter,
+              ...(quickFilter === 'orders_today' && date ? { date } : {}),
+            }),
       }),
   })
 
@@ -659,22 +683,57 @@ export function AdminOrdersPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <NativeSelect
-            aria-label="Admin order status filter"
-            className="w-full max-w-56"
-            value={status}
-            onChange={(event) => {
-              setPage(1)
-              setStatus(event.target.value as OrderStatus | 'all')
-            }}
-          >
-            <NativeSelectOption value="all">All statuses</NativeSelectOption>
-            {orderStatuses.map((nextStatus) => (
-              <NativeSelectOption key={nextStatus} value={nextStatus}>
-                {nextStatus}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <div className="grid gap-3 md:grid-cols-3">
+            <NativeSelect
+              aria-label="Admin order quick filter"
+              disabled={ordersQuery.isFetching}
+              value={quickFilter}
+              onChange={(event) => {
+                const nextFilter = event.target.value as AdminOrderQuickFilterOption
+                void navigate({
+                  to: '/admin/orders',
+                  search: adminOrdersSearch(nextFilter, 'request', date),
+                })
+              }}
+            >
+              <NativeSelectOption value="none">Manual status</NativeSelectOption>
+              {adminOrderQuickFilters.map((nextFilter) => (
+                <NativeSelectOption key={nextFilter} value={nextFilter}>
+                  {adminOrderQuickFilterLabel(nextFilter)}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <NativeSelect
+              aria-label="Admin order status filter"
+              disabled={ordersQuery.isFetching || quickFilter !== 'none'}
+              value={status}
+              onChange={(event) => {
+                void navigate({
+                  to: '/admin/orders',
+                  search: adminOrdersSearch('none', event.target.value as OrderStatus | 'all', date),
+                })
+              }}
+            >
+              <NativeSelectOption value="all">All statuses</NativeSelectOption>
+              {orderStatuses.map((nextStatus) => (
+                <NativeSelectOption key={nextStatus} value={nextStatus}>
+                  {nextStatus}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            <Input
+              aria-label="Admin orders date filter"
+              disabled={ordersQuery.isFetching || quickFilter !== 'orders_today'}
+              type="date"
+              value={date}
+              onChange={(event) => {
+                void navigate({
+                  to: '/admin/orders',
+                  search: adminOrdersSearch(quickFilter, status, event.target.value),
+                })
+              }}
+            />
+          </div>
 
           {ordersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
@@ -698,7 +757,7 @@ export function AdminOrdersPage() {
                   <ClipboardListIcon />
                 </EmptyMedia>
                 <EmptyTitle>No orders found.</EmptyTitle>
-                <EmptyDescription>The current status filter did not return any orders.</EmptyDescription>
+                <EmptyDescription>The current quick filter did not return any orders.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -758,7 +817,12 @@ export function AdminOrdersPage() {
               variant="outline"
               size="sm"
               disabled={page <= 1 || ordersQuery.isFetching}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              onClick={() => {
+                void navigate({
+                  to: '/admin/orders',
+                  search: adminOrdersSearch(quickFilter, status, date, Math.max(1, page - 1)),
+                })
+              }}
             >
               <ChevronLeftIcon data-icon="inline-start" />
               Previous
@@ -770,7 +834,12 @@ export function AdminOrdersPage() {
               variant="outline"
               size="sm"
               disabled={page >= totalPages || ordersQuery.isFetching}
-              onClick={() => setPage((current) => current + 1)}
+              onClick={() => {
+                void navigate({
+                  to: '/admin/orders',
+                  search: adminOrdersSearch(quickFilter, status, date, page + 1),
+                })
+              }}
             >
               Next
               <ChevronRightIcon data-icon="inline-end" />
@@ -780,6 +849,23 @@ export function AdminOrdersPage() {
       </Pagination>
     </section>
   )
+}
+
+function adminOrdersSearch(
+  quickFilter: AdminOrderQuickFilterOption,
+  status: OrderStatus | 'all',
+  date: string,
+  page?: number,
+) {
+  return {
+    ...(page && page > 1 ? { page } : {}),
+    ...(quickFilter === 'none'
+      ? { status }
+      : {
+          quickFilter,
+          ...(quickFilter === 'orders_today' ? { date: parseDateOnlySearch(date) } : {}),
+        }),
+  }
 }
 
 export function AdminOrderDetailPage() {
@@ -801,11 +887,13 @@ export function AdminOrderDetailPage() {
       setComment('')
       queryClient.setQueryData(orderAdminDetailQueryKey(id), response)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'checklists'] })
       await queryClient.invalidateQueries({ queryKey: ['orders', response.order.userId] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'payments'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['manufacturer', 'bicycles'] })
+      await queryClient.invalidateQueries({ queryKey: ['manufacturer', 'orders'] })
     },
   })
 

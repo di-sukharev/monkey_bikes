@@ -83,6 +83,16 @@ test('admin manages users list roles and statuses', async ({ page }) => {
   await statusSelect.selectOption('blocked')
   await expect(page.getByText(`${managedEmail} updated`)).toBeVisible()
   await expect(statusSelect).toHaveValue('blocked')
+
+  await page.goto('/admin/orders?quickFilter=orders_today&date=2026-05-13')
+  await expect(page.getByRole('heading', { name: 'Orders' })).toBeVisible()
+  await expect(page.getByLabel('Admin order quick filter')).toHaveValue('orders_today')
+  await expect(page.getByLabel('Admin orders date filter')).toHaveValue('2026-05-13')
+  await page.getByLabel('Admin order quick filter').selectOption('unpaid_deposit')
+  await expect(page).toHaveURL(/quickFilter=unpaid_deposit/)
+  await page.goBack()
+  await expect(page.getByLabel('Admin order quick filter')).toHaveValue('orders_today')
+  await expect(page.getByLabel('Admin orders date filter')).toHaveValue('2026-05-13')
 })
 
 test('manufacturer submits a profile and admin approves it', async ({ page }) => {

@@ -1,4 +1,7 @@
 import type {
+  AdminChecklistDto,
+  AdminChecklistsQuery,
+  AdminChecklistsResponse,
   AdminOrderChecklistInput,
   AdminOrderDto,
   AdminOrdersQuery,
@@ -158,6 +161,21 @@ type ManufacturerOrderRecord = Omit<OrderRecord, 'items' | 'payments'> & {
   checklists: ManufacturerOrderChecklistRecord[]
 }
 
+type AdminChecklistRecord = OrderChecklistRecord & {
+  order: {
+    id: string
+    status: OrderStatus
+    startsOn: string
+    endsOn: string
+    user: OrderUserSummaryRecord
+  }
+  bicycle: {
+    id: string
+    title: string
+    status: 'archived' | 'available' | 'draft' | 'hidden' | 'maintenance' | 'moderation' | 'rejected' | 'rented' | 'reserved'
+  }
+}
+
 type AvailabilityConflict = {
   bicycleId: string
   bicycleTitle: string
@@ -216,6 +234,29 @@ const adminOrderInclude = {
     orderBy: [{ createdAt: 'asc' as const }, { id: 'asc' as const }],
   },
 }
+const adminChecklistInclude = {
+  checkedByUser: {
+    select: orderUserSummarySelect,
+  },
+  order: {
+    select: {
+      id: true,
+      status: true,
+      startsOn: true,
+      endsOn: true,
+      user: {
+        select: orderUserSummarySelect,
+      },
+    },
+  },
+  bicycle: {
+    select: {
+      id: true,
+      title: true,
+      status: true,
+    },
+  },
+} as const
 
 function manufacturerOrderInclude(manufacturerProfileId: string) {
   return {
@@ -502,9 +543,7 @@ export class OrderService {
   }
 
   async listAdminOrders(query: AdminOrdersQuery) {
-    const where = {
-      ...orderStatusWhere(query),
-    }
+    const where = adminOrderWhere(query)
     const skip = (query.page - 1) * query.pageSize
 
     const [items, total] = await this.db.$transaction([
@@ -525,6 +564,33 @@ export class OrderService {
 
     return {
       items: orderDtos,
+      page: query.page,
+      pageSize: query.pageSize,
+      total,
+    }
+  }
+
+  async listAdminChecklists(query: AdminChecklistsQuery): Promise<AdminChecklistsResponse> {
+    const where = {
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.orderId ? { orderId: query.orderId } : {}),
+      ...(query.bicycleId ? { bicycleId: query.bicycleId } : {}),
+    }
+    const skip = (query.page - 1) * query.pageSize
+
+    const [items, total] = await this.db.$transaction([
+      this.db.orderChecklist.findMany({
+        where,
+        include: adminChecklistInclude,
+        orderBy: [{ checkedAt: 'desc' }, { id: 'desc' }],
+        skip,
+        take: query.pageSize,
+      }),
+      this.db.orderChecklist.count({ where }),
+    ])
+
+    return {
+      items: items.map(toAdminChecklistDto),
       page: query.page,
       pageSize: query.pageSize,
       total,
@@ -1005,6 +1071,39 @@ function orderStatusWhere(query: { scope?: OrdersQuery['scope']; status?: OrderS
   }
 }
 
+function adminOrderWhere(query: AdminOrdersQuery): Prisma.OrderWhereInput {
+  if (!query.quickFilter) {
+    return orderStatusWhere(query)
+  }
+
+  switch (query.quickFilter) {
+    case 'cancelled_orders':
+      return { status: 'cancelled' }
+    case 'orders_today': {
+      return {
+        startsOn: { lte: query.date },
+        endsOn: { gte: query.date },
+        status: {
+          in: orderStatusesForScope('current'),
+        },
+      }
+    }
+    case 'unconfirmed_requests':
+      return { status: 'request' }
+    case 'unpaid_deposit':
+      return {
+        status: 'confirmed',
+        depositAmountKopecks: { gt: 0 },
+        payments: {
+          none: {
+            type: 'deposit',
+            status: 'succeeded',
+          },
+        },
+      }
+  }
+}
+
 function manufacturerOrderWhere(
   manufacturerProfileId: string,
   query: Pick<ManufacturerOrdersQuery, 'scope' | 'status'> | { id: string },
@@ -1232,6 +1331,24 @@ function toOrderChecklistDto(checklist: OrderChecklistRecord): OrderChecklistDto
     checkedAt: checklist.checkedAt.toISOString(),
     createdAt: checklist.createdAt.toISOString(),
     updatedAt: checklist.updatedAt.toISOString(),
+  }
+}
+
+function toAdminChecklistDto(checklist: AdminChecklistRecord): AdminChecklistDto {
+  return {
+    ...toOrderChecklistDto(checklist),
+    order: {
+      id: checklist.order.id,
+      status: checklist.order.status,
+      startsOn: checklist.order.startsOn,
+      endsOn: checklist.order.endsOn,
+      user: checklist.order.user,
+    },
+    bicycle: {
+      id: checklist.bicycle.id,
+      title: checklist.bicycle.title,
+      status: checklist.bicycle.status,
+    },
   }
 }
 

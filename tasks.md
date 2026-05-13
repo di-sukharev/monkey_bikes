@@ -309,6 +309,17 @@
 
 Минимальная проверка: backend tests на фильтры и пагинацию; web smoke основных админских списков.
 
+Статус выполнения:
+
+- Выполнено: существующие административные списки пользователей, производителей, велосипедов, заказов и платежей сохранены и связаны через центральный раздел `/admin`.
+- Выполнено: добавлены backend quick filters для заказов `unconfirmed_requests`, `orders_today`, `unpaid_deposit`, `cancelled_orders`; фильтры считаются на backend и не расширяют пользовательские или producer query.
+- Выполнено: дата для `orders_today` стала явным date-only параметром, чтобы админский фильтр не зависел от timezone сервера или клиента.
+- Выполнено: добавлен постраничный admin API `/api/admin/checklists` с фильтрами по типу, заказу и велосипеду; DTO содержит только нужные summary-данные заказа, велосипеда и автора проверки.
+- Выполнено: web admin workspace и checklist-list собраны компонентно на shadcn/UI primitives; quick-filter URLs, back/forward и повторное открытие ссылок работают через route search как источник состояния.
+- Выполнено: административные status actions продолжают использовать существующие backend guards; после issue/return invalidates admin checklists, orders, payments, bicycles, catalog и manufacturer-related caches.
+- Проверено: backend unit/typecheck/prisma validate, backend integration на `DATABASE_URL_TEST`, web tests/typecheck/lint/build и Playwright E2E прошли; review loop достиг оценки 9.6/10.
+- Не входит в задачу 10: агрегированные отчеты и статистика остаются задачей 11.
+
 ## 11. Базовые отчеты
 
 Цель: добавить простую статистику MVP для администратора без экспорта файлов.

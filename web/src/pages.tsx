@@ -94,11 +94,13 @@ export function RootLayout() {
             {auth.user?.role === 'manufacturer' && (
               <NavLink to="/manufacturer/orders">Orders</NavLink>
             )}
+            {auth.user?.role === 'admin' && <NavLink to="/admin">Admin</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/users">Users</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/manufacturers">Manufacturers</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/bicycles">Bicycles</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/orders">Orders</NavLink>}
             {auth.user?.role === 'admin' && <NavLink to="/admin/payments">Payments</NavLink>}
+            {auth.user?.role === 'admin' && <NavLink to="/admin/checklists">Checklists</NavLink>}
           </nav>
 
           {auth.isAuthenticated && (
@@ -410,11 +412,13 @@ function NavLink({
   to:
     | '/'
     | '/app'
+    | '/admin'
     | '/admin/users'
     | '/admin/manufacturers'
     | '/admin/bicycles'
     | '/admin/orders'
     | '/admin/payments'
+    | '/admin/checklists'
     | '/manufacturer/profile'
     | '/manufacturer/bicycles'
     | '/manufacturer/orders'

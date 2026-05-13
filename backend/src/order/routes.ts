@@ -1,4 +1,6 @@
 import {
+  adminChecklistsQuerySchema,
+  adminChecklistsResponseSchema,
   adminOrderResponseSchema,
   adminOrdersQuerySchema,
   adminOrdersResponseSchema,
@@ -192,6 +194,36 @@ const adminOrdersRoute = createRoute({
         },
       },
       description: 'Paginated admin order list',
+    },
+    400: {
+      content: errorResponseContent,
+      description: 'Invalid query',
+    },
+    401: {
+      content: errorResponseContent,
+      description: 'Authentication required',
+    },
+    403: {
+      content: errorResponseContent,
+      description: 'Admin role required',
+    },
+  },
+})
+
+const adminChecklistsRoute = createRoute({
+  method: 'get',
+  path: '/checklists',
+  request: {
+    query: adminChecklistsQuerySchema,
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: adminChecklistsResponseSchema,
+        },
+      },
+      description: 'Paginated admin checklist list',
     },
     400: {
       content: errorResponseContent,
@@ -428,6 +460,12 @@ export function createAdminOrderRoutes() {
     await requireRole(c, 'admin')
     const orders = c.get('orderService')
     return c.json(await orders.listAdminOrders(c.req.valid('query')), 200)
+  })
+
+  routes.openapi(adminChecklistsRoute, async (c) => {
+    await requireRole(c, 'admin')
+    const orders = c.get('orderService')
+    return c.json(await orders.listAdminChecklists(c.req.valid('query')), 200)
   })
 
   routes.openapi(adminOrderRoute, async (c) => {

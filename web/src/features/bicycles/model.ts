@@ -132,3 +132,8 @@ export function manufacturerBicyclesRootQueryKey(userId: string | null | undefin
 export function adminBicyclesQueryKey(page: number, status: BicycleStatus | 'all') {
   return ['admin', 'bicycles', page, status] as const
 }
+
+export function parseAdminBicycleStatusFilter(value: unknown): BicycleStatus | 'all' {
+  if (value === 'all') return 'all'
+  return bicycleStatuses.includes(value as BicycleStatus) ? value as BicycleStatus : 'moderation'
+}

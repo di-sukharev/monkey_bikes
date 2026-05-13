@@ -1,4 +1,5 @@
 import type {
+  AdminOrderQuickFilter,
   ApiErrorCode,
   FulfillmentType,
   ManufacturerOrderDto,
@@ -12,9 +13,16 @@ import { orderListScopeSchema, orderStatusesForScope } from '@web-app-demo/contr
 import { ApiRequestError } from '@/lib/api'
 
 export const orderStatuses: OrderStatus[] = orderStatusesForScope('all')
+export const adminOrderQuickFilters: AdminOrderQuickFilter[] = [
+  'unconfirmed_requests',
+  'orders_today',
+  'unpaid_deposit',
+  'cancelled_orders',
+]
 
 export const fulfillmentTypes: FulfillmentType[] = ['pickup', 'delivery']
 export const orderListScopes: OrderListScope[] = orderListScopeSchema.options
+export type AdminOrderQuickFilterOption = AdminOrderQuickFilter | 'none'
 
 export type OrderFormValues = {
   bicycleIds: string[]
@@ -75,8 +83,13 @@ export function orderDetailQueryKey(userId: string | null | undefined, id: strin
   return ['orders', userId ?? null, id] as const
 }
 
-export function orderAdminListQueryKey(page: number, status: OrderStatus | 'all') {
-  return ['admin', 'orders', page, status] as const
+export function orderAdminListQueryKey(
+  page: number,
+  status: OrderStatus | 'all',
+  quickFilter: AdminOrderQuickFilterOption,
+  date: string,
+) {
+  return ['admin', 'orders', page, status, quickFilter, date] as const
 }
 
 export function orderAdminDetailQueryKey(id: string) {
@@ -121,6 +134,45 @@ export function orderListScopeLabel(scope: OrderListScope) {
     case 'history':
       return 'History'
   }
+}
+
+export function adminOrderQuickFilterLabel(filter: AdminOrderQuickFilterOption) {
+  switch (filter) {
+    case 'none':
+      return 'Manual status'
+    case 'unconfirmed_requests':
+      return 'Unconfirmed requests'
+    case 'orders_today':
+      return 'Orders today'
+    case 'unpaid_deposit':
+      return 'Unpaid deposit'
+    case 'cancelled_orders':
+      return 'Cancelled orders'
+  }
+}
+
+export function parseAdminOrderStatusFilter(value: unknown): OrderStatus | 'all' {
+  if (value === 'all') return 'all'
+  return orderStatuses.includes(value as OrderStatus) ? value as OrderStatus : 'request'
+}
+
+export function parseAdminOrderQuickFilter(value: unknown): AdminOrderQuickFilterOption {
+  return adminOrderQuickFilters.includes(value as AdminOrderQuickFilter)
+    ? value as AdminOrderQuickFilter
+    : 'none'
+}
+
+export function parseDateOnlySearch(value: unknown, fallback = todayDateOnly()) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? value
+    : fallback
+}
+
+export function todayDateOnly(now = new Date()) {
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function orderNextStep(order: OrderDto) {

@@ -682,6 +682,162 @@ maybeDescribe('order API integration', () => {
     expect(rawFirstDetail).not.toContain('Second Producer Bike')
   })
 
+  test('lists admin quick filters and checklists without client-side fetch-all', async () => {
+    const admin = await createAdmin('quick-admin@example.com')
+    const user = await registerUser('quick-renter@example.com', 'Renter')
+    const requestBicycle = await createAvailableBicycle('Quick Request Maker', {
+      title: 'Quick Request Bike',
+    })
+    const unpaidBicycle = await createAvailableBicycle('Quick Unpaid Maker', {
+      title: 'Quick Unpaid Bike',
+    })
+    const cancelledBicycle = await createAvailableBicycle('Quick Cancelled Maker', {
+      title: 'Quick Cancelled Bike',
+    })
+    const checklistBicycle = await createAvailableBicycle('Quick Checklist Maker', {
+      title: 'Quick Checklist Bike',
+    })
+
+    const requestOrder = await createOrder(user.accessToken, [requestBicycle.id], {
+      startsOn: '2026-05-13',
+      endsOn: '2026-05-14',
+    })
+    const unpaidOrder = await createOrder(user.accessToken, [unpaidBicycle.id], {
+      startsOn: '2026-05-13',
+      endsOn: '2026-05-13',
+    })
+    const confirmUnpaid = await confirmOrder(admin.accessToken, unpaidOrder.order.id)
+    expect(confirmUnpaid.status).toBe(200)
+
+    const cancelledOrder = await createOrder(user.accessToken, [cancelledBicycle.id], {
+      startsOn: '2026-05-10',
+      endsOn: '2026-05-10',
+    })
+    const cancel = await app.request(`/api/admin/orders/${cancelledOrder.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'cancelled',
+        comment: 'Customer changed schedule.',
+      }),
+    })
+    expect(cancel.status).toBe(200)
+
+    const checklistOrder = await createOrder(user.accessToken, [checklistBicycle.id], {
+      startsOn: '2026-05-11',
+      endsOn: '2026-05-11',
+    })
+    const confirmChecklist = await confirmOrder(admin.accessToken, checklistOrder.order.id)
+    expect(confirmChecklist.status).toBe(200)
+    await completeOrderPayments(user.accessToken, checklistOrder.order.id)
+
+    const issue = await app.request(`/api/admin/orders/${checklistOrder.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'issued',
+        checklists: [orderChecklist(checklistBicycle.id)],
+      }),
+    })
+    expect(issue.status).toBe(200)
+
+    const returned = await app.request(`/api/admin/orders/${checklistOrder.order.id}/status`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(admin.accessToken),
+      body: JSON.stringify({
+        status: 'returned',
+        checklists: [orderChecklist(checklistBicycle.id, 'maintenance')],
+      }),
+    })
+    expect(returned.status).toBe(200)
+
+    const unconfirmed = await app.request('/api/admin/orders?quickFilter=unconfirmed_requests&pageSize=10', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const unconfirmedBody = await unconfirmed.json()
+    expect(unconfirmed.status).toBe(200)
+    expect(unconfirmedBody.items.map((order: { id: string }) => order.id)).toEqual([
+      requestOrder.order.id,
+    ])
+
+    const today = await app.request('/api/admin/orders?quickFilter=orders_today&date=2026-05-13&pageSize=10', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const todayBody = await today.json()
+    const todayIds = todayBody.items.map((order: { id: string }) => order.id)
+    expect(today.status).toBe(200)
+    expect(todayIds).toContain(requestOrder.order.id)
+    expect(todayIds).toContain(unpaidOrder.order.id)
+    expect(todayIds).not.toContain(cancelledOrder.order.id)
+    expect(todayIds).not.toContain(checklistOrder.order.id)
+
+    const unpaidDeposit = await app.request('/api/admin/orders?quickFilter=unpaid_deposit&pageSize=10', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const unpaidDepositBody = await unpaidDeposit.json()
+    expect(unpaidDeposit.status).toBe(200)
+    expect(unpaidDepositBody.items.map((order: { id: string }) => order.id)).toEqual([
+      unpaidOrder.order.id,
+    ])
+
+    const cancelled = await app.request('/api/admin/orders?quickFilter=cancelled_orders&pageSize=10', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const cancelledBody = await cancelled.json()
+    expect(cancelled.status).toBe(200)
+    expect(cancelledBody.items.map((order: { id: string }) => order.id)).toEqual([
+      cancelledOrder.order.id,
+    ])
+
+    const invalidQuickFilter = await app.request('/api/admin/orders?quickFilter=orders_today&status=request', {
+      headers: authHeaders(admin.accessToken),
+    })
+    expect(invalidQuickFilter.status).toBe(400)
+
+    const invalidDate = await app.request('/api/admin/orders?date=2026-05-13', {
+      headers: authHeaders(admin.accessToken),
+    })
+    expect(invalidDate.status).toBe(400)
+
+    const returnChecklists = await app.request('/api/admin/checklists?type=return&pageSize=10', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const returnChecklistsBody = await returnChecklists.json()
+    expect(returnChecklists.status).toBe(200)
+    expect(returnChecklistsBody.items).toHaveLength(1)
+    expect(returnChecklistsBody.items[0]).toMatchObject({
+      orderId: checklistOrder.order.id,
+      bicycleId: checklistBicycle.id,
+      type: 'return',
+      safetyAction: 'maintenance',
+      order: {
+        id: checklistOrder.order.id,
+        user: {
+          email: 'quick-renter@example.com',
+        },
+      },
+      bicycle: {
+        id: checklistBicycle.id,
+        title: 'Quick Checklist Bike',
+        status: 'maintenance',
+      },
+    })
+    expect(returnChecklistsBody.items[0].checkedByUser.email).toBe('quick-admin@example.com')
+
+    const pagedChecklists = await app.request('/api/admin/checklists?pageSize=1', {
+      headers: authHeaders(admin.accessToken),
+    })
+    const pagedChecklistsBody = await pagedChecklists.json()
+    expect(pagedChecklists.status).toBe(200)
+    expect(pagedChecklistsBody.items).toHaveLength(1)
+    expect(pagedChecklistsBody.total).toBe(2)
+
+    const nonAdminChecklists = await app.request('/api/admin/checklists?pageSize=10', {
+      headers: authHeaders(user.accessToken),
+    })
+    expect(nonAdminChecklists.status).toBe(403)
+  })
+
   test('blocks confirmation when live bicycle state changes after request creation', async () => {
     const admin = await createAdmin('live-state-admin@example.com')
     const user = await registerUser('live-state-renter@example.com', 'Renter')
