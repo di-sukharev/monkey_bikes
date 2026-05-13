@@ -13,6 +13,20 @@ import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
 
+const russianCalendarLabels = {
+  labelDayButton: (date, modifiers) => formatCalendarDayLabel(date, modifiers),
+  labelGrid: (date) => formatCalendarMonthLabel(date),
+  labelGridcell: (date, modifiers) => formatCalendarDayLabel(date, modifiers),
+  labelMonthDropdown: () => "Выберите месяц",
+  labelNav: () => "Панель навигации календаря",
+  labelNext: () => "Перейти к следующему месяцу",
+  labelPrevious: () => "Перейти к предыдущему месяцу",
+  labelWeekday: (date) => date.toLocaleDateString("ru-RU", { weekday: "long" }),
+  labelWeekNumber: (weekNumber) => `Неделя ${weekNumber}`,
+  labelWeekNumberHeader: () => "Номер недели",
+  labelYearDropdown: () => "Выберите год",
+} satisfies NonNullable<React.ComponentProps<typeof DayPicker>["labels"]>
+
 function Calendar({
   className,
   classNames,
@@ -20,6 +34,7 @@ function Calendar({
   captionLayout = "label",
   buttonVariant = "ghost",
   locale = ru,
+  labels,
   formatters,
   components,
   ...props
@@ -39,6 +54,10 @@ function Calendar({
       )}
       captionLayout={captionLayout}
       locale={locale}
+      labels={{
+        ...russianCalendarLabels,
+        ...labels,
+      }}
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString(locale?.code, { month: "short" }),
@@ -185,7 +204,7 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
-  locale,
+  locale = ru,
   ...props
 }: React.ComponentProps<typeof DayButton> & { locale?: Partial<Locale> }) {
   const defaultClassNames = getDefaultClassNames()
@@ -221,3 +240,27 @@ function CalendarDayButton({
 }
 
 export { Calendar, CalendarDayButton }
+
+function formatCalendarMonthLabel(date: Date) {
+  return date.toLocaleDateString("ru-RU", { month: "long", year: "numeric" })
+}
+
+function formatCalendarDayLabel(
+  date: Date,
+  modifiers?: {
+    selected?: boolean
+    today?: boolean
+  },
+) {
+  let label = date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    weekday: "long",
+    year: "numeric",
+  })
+
+  if (modifiers?.today) label = `Сегодня, ${label}`
+  if (modifiers?.selected) label = `${label}, выбрано`
+
+  return label
+}
