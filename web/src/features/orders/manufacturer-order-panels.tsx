@@ -28,9 +28,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   formatMoney,
   formatOrderDates,
+  fulfillmentTypeLabel,
   manufacturerOrderNextStep,
   orderListScopeLabel,
   orderListScopes,
+  orderStatusLabel,
   orderStatusesForListScope,
 } from './model'
 import { OrderStatusBadge } from './status-badge'
@@ -49,13 +51,13 @@ export function ManufacturerOrderFilters({
   onStatusChange: (status: OrderStatus | 'all') => void
 }) {
   const statusFilterLabel = scope === 'all'
-    ? 'All statuses'
-    : `All ${orderListScopeLabel(scope).toLowerCase()} statuses`
+    ? 'Все статусы'
+    : `Все статусы: ${orderListScopeLabel(scope).toLowerCase()}`
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Tabs value={scope} onValueChange={(value) => onScopeChange(value as OrderListScope)}>
-        <TabsList aria-label="Manufacturer order list scope">
+        <TabsList aria-label="Раздел списка заказов производителя">
           {orderListScopes.map((nextScope) => (
             <TabsTrigger key={nextScope} value={nextScope} disabled={disabled}>
               {orderListScopeLabel(nextScope)}
@@ -64,7 +66,7 @@ export function ManufacturerOrderFilters({
         </TabsList>
       </Tabs>
       <NativeSelect
-        aria-label="Manufacturer order status filter"
+        aria-label="Фильтр статуса заказов производителя"
         className="w-full max-w-56"
         disabled={disabled}
         value={status}
@@ -73,7 +75,7 @@ export function ManufacturerOrderFilters({
         <NativeSelectOption value="all">{statusFilterLabel}</NativeSelectOption>
         {orderStatusesForListScope(scope).map((nextStatus) => (
           <NativeSelectOption key={nextStatus} value={nextStatus}>
-            {nextStatus}
+            {orderStatusLabel(nextStatus)}
           </NativeSelectOption>
         ))}
       </NativeSelect>
@@ -87,12 +89,12 @@ export function ManufacturerOrdersTable({ orders }: { orders: ManufacturerOrderD
       <Table className="min-w-[980px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Order</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Your bicycles</TableHead>
-            <TableHead>Dates</TableHead>
-            <TableHead>Your subtotal</TableHead>
-            <TableHead className="w-[140px]">Details</TableHead>
+            <TableHead>Заказ</TableHead>
+            <TableHead>Статус</TableHead>
+            <TableHead>Ваши велосипеды</TableHead>
+            <TableHead>Даты</TableHead>
+            <TableHead>Ваша сумма</TableHead>
+            <TableHead className="w-[140px]">Детали</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -101,7 +103,7 @@ export function ManufacturerOrdersTable({ orders }: { orders: ManufacturerOrderD
               <TableCell>
                 <div className="grid gap-1">
                   <span className="font-medium">{order.id}</span>
-                  <span className="text-sm text-muted-foreground">{order.fulfillmentType}</span>
+                  <span className="text-sm text-muted-foreground">{fulfillmentTypeLabel(order.fulfillmentType)}</span>
                 </div>
               </TableCell>
               <TableCell><OrderStatusBadge status={order.status} /></TableCell>
@@ -110,7 +112,7 @@ export function ManufacturerOrdersTable({ orders }: { orders: ManufacturerOrderD
               <TableCell>{formatMoney(order.manufacturerTotalAmountKopecks)}</TableCell>
               <TableCell>
                 <Button type="button" variant="outline" size="sm" asChild>
-                  <Link to="/manufacturer/orders/$id" params={{ id: order.id }}>Open</Link>
+                  <Link to="/manufacturer/orders/$id" params={{ id: order.id }}>Открыть</Link>
                 </Button>
               </TableCell>
             </TableRow>
@@ -125,7 +127,7 @@ export function ManufacturerOrderNextStep({ order }: { order: ManufacturerOrderD
   return (
     <Alert>
       <CircleCheckIcon />
-      <AlertTitle>Next step</AlertTitle>
+      <AlertTitle>Следующий шаг</AlertTitle>
       <AlertDescription>{manufacturerOrderNextStep(order)}</AlertDescription>
     </Alert>
   )
@@ -136,9 +138,9 @@ export function ManufacturerOrderFulfillmentPanel({ order }: { order: Manufactur
     return (
       <Alert>
         <PhoneIcon />
-        <AlertTitle>Customer contact hidden</AlertTitle>
+        <AlertTitle>Контакты клиента скрыты</AlertTitle>
         <AlertDescription>
-          Contact details are shared only while the order is confirmed or issued.
+          Контакты передаются только когда заказ подтвержден или выдан.
         </AlertDescription>
       </Alert>
     )
@@ -148,7 +150,7 @@ export function ManufacturerOrderFulfillmentPanel({ order }: { order: Manufactur
     <section className="grid gap-3 md:grid-cols-2">
       <Alert>
         <PhoneIcon />
-        <AlertTitle>Customer contact</AlertTitle>
+        <AlertTitle>Контакт клиента</AlertTitle>
         <AlertDescription>
           {order.fulfillmentContact.contactName}, {order.fulfillmentContact.contactPhone}
           {order.fulfillmentContact.userComment && (
@@ -158,7 +160,7 @@ export function ManufacturerOrderFulfillmentPanel({ order }: { order: Manufactur
       </Alert>
       <Alert>
         <MapPinIcon />
-        <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}</AlertTitle>
+        <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Доставка' : 'Самовывоз'}</AlertTitle>
         <AlertDescription>
           {order.fulfillmentContact.deliveryAddress ??
             order.items.map((item) => item.bicycle.pickupAddress).join('; ')}
@@ -171,9 +173,9 @@ export function ManufacturerOrderFulfillmentPanel({ order }: { order: Manufactur
 export function ManufacturerOrderTotals({ order }: { order: ManufacturerOrderDto }) {
   return (
     <div className="grid gap-3 md:grid-cols-3">
-      <Fact label="Your rental" value={formatMoney(order.manufacturerRentalAmountKopecks)} />
-      <Fact label="Your deposits" value={formatMoney(order.manufacturerDepositAmountKopecks)} />
-      <Fact label="Your subtotal" value={formatMoney(order.manufacturerTotalAmountKopecks)} />
+      <Fact label="Ваша аренда" value={formatMoney(order.manufacturerRentalAmountKopecks)} />
+      <Fact label="Ваши залоги" value={formatMoney(order.manufacturerDepositAmountKopecks)} />
+      <Fact label="Ваша сумма" value={formatMoney(order.manufacturerTotalAmountKopecks)} />
     </div>
   )
 }
@@ -184,11 +186,11 @@ export function ManufacturerOrderItemsTable({ order }: { order: ManufacturerOrde
       <Table className="min-w-[760px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>Size</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>Rental/day</TableHead>
-            <TableHead>Deposit</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Размер</TableHead>
+            <TableHead>Город</TableHead>
+            <TableHead>Аренда/день</TableHead>
+            <TableHead>Залог</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -217,8 +219,8 @@ export function ManufacturerOrderChecklists({ checklists }: { checklists: Manufa
     return (
       <Alert>
         <ClipboardCheckIcon />
-        <AlertTitle>No issue or return checklists yet</AlertTitle>
-        <AlertDescription>Administrator checklist history will appear after handoff operations.</AlertDescription>
+        <AlertTitle>Чеклистов выдачи или возврата пока нет</AlertTitle>
+        <AlertDescription>История чеклистов администратора появится после операций передачи.</AlertDescription>
       </Alert>
     )
   }
@@ -228,28 +230,28 @@ export function ManufacturerOrderChecklists({ checklists }: { checklists: Manufa
       <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Operation</TableHead>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>Condition</TableHead>
-            <TableHead>Safety action</TableHead>
-            <TableHead>Checked</TableHead>
+            <TableHead>Операция</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Состояние</TableHead>
+            <TableHead>Действие безопасности</TableHead>
+            <TableHead>Проверено</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {checklists.map((checklist) => (
             <TableRow key={checklist.id}>
-              <TableCell><Badge variant="outline">{checklist.type}</Badge></TableCell>
+              <TableCell><Badge variant="outline">{checklist.type === 'issue' ? 'Выдача' : 'Возврат'}</Badge></TableCell>
               <TableCell>{checklist.bicycleId}</TableCell>
               <TableCell>
                 <div className="grid gap-1 text-sm">
-                  <span>Frame: {checklist.frameCondition}</span>
-                  <span>Wheels: {checklist.wheelsCondition}</span>
-                  <span>Brakes: {checklist.brakesCondition}</span>
-                  <span>Exterior: {checklist.exteriorCondition}</span>
+                  <span>Рама: {formatChecklistCondition(checklist.frameCondition)}</span>
+                  <span>Колеса: {formatChecklistCondition(checklist.wheelsCondition)}</span>
+                  <span>Тормоза: {formatChecklistCondition(checklist.brakesCondition)}</span>
+                  <span>Внешний вид: {formatChecklistCondition(checklist.exteriorCondition)}</span>
                   {checklist.comment && <span className="text-muted-foreground">{checklist.comment}</span>}
                 </div>
               </TableCell>
-              <TableCell>{checklist.safetyAction}</TableCell>
+              <TableCell>{formatSafetyAction(checklist.safetyAction)}</TableCell>
               <TableCell>{new Date(checklist.checkedAt).toLocaleString('ru-RU')}</TableCell>
             </TableRow>
           ))}
@@ -266,4 +268,30 @@ function Fact({ label, value }: { label: string; value: string }) {
       <div className="text-sm font-medium">{value}</div>
     </div>
   )
+}
+
+function formatChecklistCondition(condition: ManufacturerOrderChecklistDto['frameCondition']) {
+  switch (condition) {
+    case 'damaged':
+      return 'Повреждено'
+    case 'not_applicable':
+      return 'Не применимо'
+    case 'ok':
+      return 'В порядке'
+    case 'unsafe':
+      return 'Небезопасно'
+    case 'worn':
+      return 'Изношено'
+  }
+}
+
+function formatSafetyAction(action: ManufacturerOrderChecklistDto['safetyAction']) {
+  switch (action) {
+    case 'hidden':
+      return 'Скрыть'
+    case 'maintenance':
+      return 'На обслуживание'
+    case 'none':
+      return 'Без изменений'
+  }
 }

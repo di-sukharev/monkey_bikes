@@ -36,12 +36,12 @@ export function PublicBicycleCard({
                 checked={selected}
                 onCheckedChange={(checked) => onSelectedChange(checked === true)}
               />
-              Select for request
+              Выбрать для заявки
             </label>
           )}
           <div className="flex flex-wrap items-center gap-2">
             <BicycleSizeBadge size={bicycle.size} />
-            <Badge variant="secondary">{formatMoney(bicycle.pricePerDayKopecks)} / day</Badge>
+            <Badge variant="secondary">{formatMoney(bicycle.pricePerDayKopecks)} / день</Badge>
           </div>
           <h2 className="text-lg font-semibold leading-tight">{bicycle.title}</h2>
           <CardDescription>{bicycle.manufacturer.publicName}</CardDescription>
@@ -51,9 +51,9 @@ export function PublicBicycleCard({
             <Link
               to="/bicycles/$id"
               params={{ id: bicycle.id }}
-              aria-label={`Details for ${bicycle.title}`}
+              aria-label={`Детали велосипеда ${bicycle.title}`}
             >
-              Details
+              Детали
             </Link>
           </Button>
         </CardAction>
@@ -73,7 +73,7 @@ export function PublicBicycleCard({
           {bicycle.deliveryAvailable && (
             <span className="inline-flex items-center gap-1">
               <TruckIcon className="size-4" />
-              Delivery
+              Доставка
             </span>
           )}
         </div>

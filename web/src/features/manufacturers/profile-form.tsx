@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { formatFormError } from '@/lib/form-errors'
 
 export function ManufacturerProfileForm({
   disabled,
@@ -46,7 +47,7 @@ export function ManufacturerProfileForm({
               <ProfileInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Legal name"
+                label="Юридическое название"
                 name={field.name}
                 value={field.state.value}
                 onChange={field.handleChange}
@@ -60,7 +61,7 @@ export function ManufacturerProfileForm({
               <ProfileInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Public name"
+                label="Публичное название"
                 name={field.name}
                 value={field.state.value}
                 onChange={field.handleChange}
@@ -74,7 +75,7 @@ export function ManufacturerProfileForm({
               <ProfileInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Contact email"
+                label="Контактная почта"
                 name={field.name}
                 type="email"
                 value={field.state.value}
@@ -89,7 +90,7 @@ export function ManufacturerProfileForm({
               <ProfileInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Phone"
+                label="Телефон"
                 name={field.name}
                 value={field.state.value}
                 onChange={field.handleChange}
@@ -103,7 +104,7 @@ export function ManufacturerProfileForm({
               <ProfileInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Region"
+                label="Регион"
                 name={field.name}
                 value={field.state.value ?? ''}
                 onChange={field.handleChange}
@@ -117,7 +118,7 @@ export function ManufacturerProfileForm({
               <ProfileInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="City"
+                label="Город"
                 name={field.name}
                 value={field.state.value}
                 onChange={field.handleChange}
@@ -133,7 +134,7 @@ export function ManufacturerProfileForm({
             const errorId = fieldErrorId(field.name, field.state.meta.errors)
             return (
               <Field data-invalid={field.state.meta.errors.length > 0}>
-                <FieldLabel htmlFor={field.name}>Description</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Описание</FieldLabel>
                 <Textarea
                   className="min-h-32"
                   disabled={disabled}
@@ -156,7 +157,7 @@ export function ManufacturerProfileForm({
             selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={disabled || !canSubmit || isSubmitting}>
-                Save draft
+                Сохранить черновик
               </Button>
             )}
           />
@@ -210,17 +211,9 @@ function ProfileInput({
 function FieldErrors({ errors, id }: { errors: unknown[]; id: string | undefined }) {
   if (!errors.length) return null
 
-  return <FieldError id={id}>{errors.map(formatError).join(', ')}</FieldError>
+  return <FieldError id={id}>{errors.map(formatFormError).join(', ')}</FieldError>
 }
 
 function fieldErrorId(fieldName: string, errors: unknown[]) {
   return errors.length > 0 ? `${fieldName}-error` : undefined
-}
-
-function formatError(error: unknown) {
-  if (typeof error === 'string') return error
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message)
-  }
-  return 'Invalid value'
 }

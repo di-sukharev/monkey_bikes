@@ -1,12 +1,114 @@
 import { afterEach, expect, test } from 'bun:test'
 
-import { ApiClient } from '../src/lib/api'
+import { ApiClient, ApiRequestError } from '../src/lib/api'
 import { bootstrapAuthSession } from '../src/lib/bootstrap-auth'
+import { formatRequestError } from '../src/lib/request-error'
 
 const originalFetch = globalThis.fetch
 
 afterEach(() => {
   globalThis.fetch = originalFetch
+})
+
+test('formatRequestError preserves specific admin user conflicts', () => {
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'Admin cannot remove their own admin access'),
+    ),
+  ).toBe('Администратор не может снять собственные права администратора.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'At least one active admin is required'),
+    ),
+  ).toBe('Нужен хотя бы один активный администратор.')
+})
+
+test('formatRequestError translates common auth failures', () => {
+  expect(
+    formatRequestError(
+      new ApiRequestError(401, 'UNAUTHORIZED', 'Invalid email or password'),
+    ),
+  ).toBe('Адрес электронной почты или пароль неверные.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'User with this email already exists'),
+    ),
+  ).toBe('Пользователь с такой электронной почтой уже существует.')
+})
+
+test('formatRequestError translates backend bicycle conflicts', () => {
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'Only bicycles waiting for moderation can be reviewed'),
+    ),
+  ).toBe('Рассматривать можно только велосипеды, ожидающие модерации.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'Bicycle state does not allow manufacturer changes'),
+    ),
+  ).toBe('Текущий статус велосипеда не позволяет производителю менять карточку.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'Archived bicycle cannot change status'),
+    ),
+  ).toBe('Архивному велосипеду нельзя изменить статус.')
+})
+
+test('formatRequestError translates backend manufacturer and order conflicts', () => {
+  expect(
+    formatRequestError(
+      new ApiRequestError(
+        409,
+        'CONFLICT',
+        'Only profiles waiting for moderation can be approved or rejected',
+      ),
+    ),
+  ).toBe('Одобрить или отклонить можно только профили, ожидающие модерации.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(
+        409,
+        'ORDER_STATUS_TRANSITION_NOT_ALLOWED',
+        'Only confirmed orders can be issued',
+      ),
+    ),
+  ).toBe('Выдать можно только подтвержденную заявку.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(
+        409,
+        'PAYMENT_NOT_COMPLETABLE',
+        'Failed or cancelled payments require a new attempt',
+      ),
+    ),
+  ).toBe('Для неуспешного или отмененного платежа нужна новая попытка.')
+})
+
+test('formatRequestError translates bounded dynamic backend messages and hides unsafe fallbacks', () => {
+  expect(
+    formatRequestError(
+      new ApiRequestError(400, 'VALIDATION_ERROR', 'Rental period must be 30 days or less'),
+    ),
+  ).toBe('Срок аренды должен быть не больше 30 дней.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(
+        400,
+        'VALIDATION_ERROR',
+        'Deposit amount exceeds the maximum supported amount',
+      ),
+    ),
+  ).toBe('Сумма залога превышает поддерживаемый максимум.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(409, 'CONFLICT', 'Backend detail without a mapped user message'),
+    ),
+  ).toBe('Действие конфликтует с текущим состоянием данных.')
+  expect(
+    formatRequestError(
+      new ApiRequestError(500, 'INTERNAL_ERROR', 'Unexpected server error'),
+    ),
+  ).toBe('Внутренняя ошибка сервера.')
 })
 
 test('ApiClient refreshes and retries authenticated requests with the new access token', async () => {

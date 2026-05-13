@@ -6,7 +6,7 @@ export const paymentStatuses: PaymentStatus[] = ['pending', 'succeeded', 'failed
 export type StubPaymentAction = 'stub-cancel' | 'stub-fail' | 'stub-success'
 
 export function formatPaymentType(type: PaymentType) {
-  return type === 'rent' ? 'Rent' : 'Deposit'
+  return type === 'rent' ? 'Аренда' : 'Залог'
 }
 
 export function paymentAmountFor(order: OrderDto, type: PaymentType) {
@@ -35,13 +35,13 @@ export function canCreatePayment(order: OrderDto, type: PaymentType) {
 export function paymentStatusLabel(status: PaymentStatus) {
   switch (status) {
     case 'cancelled':
-      return 'cancelled'
+      return 'Отменен'
     case 'failed':
-      return 'failed'
+      return 'Ошибка'
     case 'pending':
-      return 'pending'
+      return 'Ожидает'
     case 'succeeded':
-      return 'succeeded'
+      return 'Успешен'
   }
 }
 

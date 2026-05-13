@@ -1,6 +1,7 @@
 import type { PaymentStatus } from '@web-app-demo/contracts'
 
 import { Badge } from '@/components/ui/badge'
+import { paymentStatusLabel } from './model'
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   const variant =
@@ -10,5 +11,5 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
         ? 'destructive'
         : 'outline'
 
-  return <Badge variant={variant}>{status}</Badge>
+  return <Badge variant={variant}>{paymentStatusLabel(status)}</Badge>
 }

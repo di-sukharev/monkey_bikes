@@ -64,24 +64,26 @@ export function AdminReportsPeriodControls({
       <CardHeader className="border-b">
         <div className="grid gap-2">
           <Badge variant="outline" className="w-fit">
-            Period
+            Период
           </Badge>
-          <CardTitle>Report period</CardTitle>
-          <CardDescription>Inclusive rental dates for utilization and UTC completion dates for payments.</CardDescription>
+          <CardTitle>Период отчета</CardTitle>
+          <CardDescription>
+            Даты аренды включительно для загрузки и даты завершения платежей по всемирному координированному времени.
+          </CardDescription>
         </div>
         <CardAction>
           <Button type="button" variant="outline" size="sm" disabled={disabled} onClick={onReset}>
             <RotateCcwIcon data-icon="inline-start" />
-            Reset
+            Сбросить
           </Button>
         </CardAction>
       </CardHeader>
       <CardContent className="grid gap-3 py-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
         <div className="grid gap-1">
-          <label className="text-sm font-medium" htmlFor="reports-starts-on">Starts on</label>
+          <label className="text-sm font-medium" htmlFor="reports-starts-on">Дата начала</label>
           <Input
             id="reports-starts-on"
-            aria-label="Report starts on"
+            aria-label="Дата начала отчета"
             disabled={disabled}
             type="date"
             value={startsOn}
@@ -93,10 +95,10 @@ export function AdminReportsPeriodControls({
           />
         </div>
         <div className="grid gap-1">
-          <label className="text-sm font-medium" htmlFor="reports-ends-on">Ends on</label>
+          <label className="text-sm font-medium" htmlFor="reports-ends-on">Дата окончания</label>
           <Input
             id="reports-ends-on"
-            aria-label="Report ends on"
+            aria-label="Дата окончания отчета"
             disabled={disabled}
             type="date"
             value={endsOn}
@@ -120,27 +122,27 @@ export function ReportsSummaryCards({ summary }: { summary: AdminReportSummaryRe
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <ReportMetricCard
         icon={<CalendarDaysIcon />}
-        title="Active rentals"
+        title="Активные аренды"
         value={summary.orders.activeRentalOrderCount}
-        description={`${summary.orders.activeRentalItemCount} bicycle items over ${summary.period.days} days`}
+        description={`Позиций велосипедов: ${summary.orders.activeRentalItemCount} за ${summary.period.days} дн.`}
       />
       <ReportMetricCard
         icon={<CreditCardIcon />}
-        title="Succeeded rent"
+        title="Успешная аренда"
         value={formatMoney(summary.successfulPayments.rent.amountKopecks)}
-        description={`${summary.successfulPayments.rent.count} succeeded rent payments`}
+        description={`Успешных платежей аренды: ${summary.successfulPayments.rent.count}`}
       />
       <ReportMetricCard
         icon={<CreditCardIcon />}
-        title="Succeeded deposit"
+        title="Успешный залог"
         value={formatMoney(summary.successfulPayments.deposit.amountKopecks)}
-        description={`${summary.successfulPayments.deposit.count} succeeded deposit payments`}
+        description={`Успешных платежей залога: ${summary.successfulPayments.deposit.count}`}
       />
       <ReportMetricCard
         icon={<XCircleIcon />}
-        title="Cancelled orders"
+        title="Отмененные заказы"
         value={summary.orders.cancelledOrderCount}
-        description="Orders cancelled during the selected period"
+        description="Заказы, отмененные за выбранный период"
       />
     </div>
   )
@@ -152,27 +154,27 @@ export function MostRentedSizesPanel({ summary }: { summary: AdminReportSummaryR
       <CardHeader className="border-b">
         <div className="grid gap-2">
           <Badge variant="outline" className="w-fit">
-            Sizes
+            Размеры
           </Badge>
-          <CardTitle>Most rented sizes</CardTitle>
-          <CardDescription>Size ranking based on clipped rental days inside the period.</CardDescription>
+          <CardTitle>Самые арендуемые размеры</CardTitle>
+          <CardDescription>Рейтинг размеров по учтенным дням аренды внутри периода.</CardDescription>
         </div>
       </CardHeader>
       <CardContent className="py-4">
         {summary.mostRentedSizes.length === 0 ? (
           <ReportEmpty
             icon={<RulerIcon />}
-            title="No rented sizes in this period."
-            description="Confirmed, issued, or returned orders did not overlap the selected dates."
+            title="В этом периоде нет арендованных размеров."
+            description="Подтвержденные, выданные или возвращенные заказы не пересекались с выбранными датами."
           />
         ) : (
           <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Size</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Rented days</TableHead>
+                  <TableHead>Размер</TableHead>
+                  <TableHead>Позиции</TableHead>
+                  <TableHead>Дни аренды</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,8 +207,8 @@ export function BicycleUtilizationTable({
     return (
       <ReportEmpty
         icon={<BikeIcon />}
-        title="No bicycle utilization in this period."
-        description="No confirmed, issued, or returned orders overlap the selected dates."
+        title="В этом периоде нет загрузки велосипедов."
+        description="Подтвержденные, выданные или возвращенные заказы не пересекаются с выбранными датами."
       />
     )
   }
@@ -216,11 +218,11 @@ export function BicycleUtilizationTable({
       <Table className="min-w-[980px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>Manufacturer</TableHead>
-            <TableHead>Days</TableHead>
-            <TableHead>Utilization</TableHead>
-            <TableHead>Rental amount</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Производитель</TableHead>
+            <TableHead>Дни</TableHead>
+            <TableHead>Загрузка</TableHead>
+            <TableHead>Сумма аренды</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -229,7 +231,7 @@ export function BicycleUtilizationTable({
               <TableCell>
                 <div className="grid gap-1">
                   <span className="font-medium">{item.title}</span>
-                  <span className="text-sm text-muted-foreground">Size {item.size}</span>
+                  <span className="text-sm text-muted-foreground">Размер {item.size}</span>
                 </div>
               </TableCell>
               <TableCell>
@@ -238,12 +240,12 @@ export function BicycleUtilizationTable({
                   <span className="text-sm text-muted-foreground">{item.manufacturer.city}</span>
                 </div>
               </TableCell>
-              <TableCell>{item.rentedDays} of {periodDays}</TableCell>
+              <TableCell>{item.rentedDays} из {periodDays}</TableCell>
               <TableCell>
                 <div className="grid min-w-36 gap-2">
                   <div className="flex items-center justify-between gap-2">
                     <span>{formatUtilizationRate(item.utilizationRate)}</span>
-                    <span className="text-sm text-muted-foreground">{item.rentalItemCount} item</span>
+                    <span className="text-sm text-muted-foreground">Позиций: {item.rentalItemCount}</span>
                   </div>
                   <Progress value={Math.min(100, Math.round(item.utilizationRate * 100))} />
                 </div>
@@ -262,8 +264,8 @@ export function ManufacturerReportTable({ items }: { items: AdminManufacturerRep
     return (
       <ReportEmpty
         icon={<StoreIcon />}
-        title="No manufacturer stats in this period."
-        description="No rental activity or cancellations were found for manufacturers."
+        title="В этом периоде нет статистики производителей."
+        description="По производителям не найдены арендная активность или отмены."
       />
     )
   }
@@ -273,13 +275,13 @@ export function ManufacturerReportTable({ items }: { items: AdminManufacturerRep
       <Table className="min-w-[1040px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Manufacturer</TableHead>
-            <TableHead>Active orders</TableHead>
-            <TableHead>Bicycles</TableHead>
-            <TableHead>Rented days</TableHead>
-            <TableHead>Rental amount</TableHead>
-            <TableHead>Deposit exposure</TableHead>
-            <TableHead>Cancelled</TableHead>
+            <TableHead>Производитель</TableHead>
+            <TableHead>Активные заказы</TableHead>
+            <TableHead>Велосипеды</TableHead>
+            <TableHead>Дни аренды</TableHead>
+            <TableHead>Сумма аренды</TableHead>
+            <TableHead>Сумма залогов</TableHead>
+            <TableHead>Отменено</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

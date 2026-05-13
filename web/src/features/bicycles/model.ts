@@ -87,6 +87,31 @@ export function formatMoney(kopecks: number) {
   }).format(kopecks / 100)
 }
 
+export function bicycleStatusLabel(status: BicycleStatus | 'all') {
+  switch (status) {
+    case 'all':
+      return 'Все статусы'
+    case 'archived':
+      return 'Архив'
+    case 'available':
+      return 'Доступен'
+    case 'draft':
+      return 'Черновик'
+    case 'hidden':
+      return 'Скрыт'
+    case 'maintenance':
+      return 'На обслуживании'
+    case 'moderation':
+      return 'На модерации'
+    case 'rejected':
+      return 'Отклонен'
+    case 'rented':
+      return 'Выдан'
+    case 'reserved':
+      return 'Зарезервирован'
+  }
+}
+
 export function canManufacturerEditBicycle(status: BicycleStatus) {
   return producerEditableStatuses.includes(status)
 }

@@ -71,16 +71,23 @@ import {
   PaymentStatusSummary,
   type PendingPaymentAction,
 } from '../payments/order-payments-panel'
-import { formatPaymentType, type StubPaymentAction } from '../payments/model'
+import { formatPaymentType, paymentStatusLabel, type StubPaymentAction } from '../payments/model'
+import { bicycleStatusLabel } from '../bicycles/model'
+import { manufacturerStatusLabel } from '../manufacturers/model'
 import {
   adminOrderQuickFilterLabel,
   adminOrderQuickFilters,
   emptyOrderForm,
+  formatAdminOrderWarning,
+  formatConflict,
+  formatWarning,
+  fulfillmentTypeLabel,
   formatMoney,
   formatOrderDates,
   orderAdminDetailQueryKey,
   orderAdminListQueryKey,
   orderDetailQueryKey,
+  orderStatusLabel,
   orderStatuses,
   ordersQueryKey,
   parseAdminOrderQuickFilter,
@@ -129,16 +136,16 @@ export function OrderRequestPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Rental request"
-        title="Login required"
-        description="Sign in as a customer to create a rental request."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заявка на аренду"
+        title="Нужен вход"
+        description="Войдите как клиент, чтобы создать заявку на аренду."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -146,9 +153,9 @@ export function OrderRequestPage() {
   if (auth.user.role !== 'user') {
     return (
       <GateCard
-        eyebrow="Rental request"
-        title="Customer account required"
-        description="Rental requests can be created from a customer account."
+        eyebrow="Заявка на аренду"
+        title="Нужен аккаунт клиента"
+        description="Заявки на аренду можно создавать из аккаунта клиента."
       />
     )
   }
@@ -156,10 +163,10 @@ export function OrderRequestPage() {
   if (bicycleIds.length === 0) {
     return (
       <GateCard
-        eyebrow="Rental request"
-        title="No bicycles selected"
-        description="Select one or more bicycles from the catalog before creating a request."
-        action={<Button asChild><Link to="/bicycles">Open catalog</Link></Button>}
+        eyebrow="Заявка на аренду"
+        title="Велосипеды не выбраны"
+        description="Выберите один или несколько велосипедов в каталоге перед созданием заявки."
+        action={<Button asChild><Link to="/bicycles">Открыть каталог</Link></Button>}
       />
     )
   }
@@ -173,14 +180,14 @@ export function OrderRequestPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Rental request
+              Заявка на аренду
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Create request</h1>
-            <CardDescription>Selected bicycles, dates, fulfillment, contacts, and safety agreement.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Создать заявку</h1>
+            <CardDescription>Выбранные велосипеды, даты, получение, контакты и согласие с безопасностью.</CardDescription>
           </div>
           <CardAction>
             <Button type="button" variant="outline" asChild>
-              <Link to="/bicycles">Back to catalog</Link>
+              <Link to="/bicycles">Назад в каталог</Link>
             </Button>
           </CardAction>
         </CardHeader>
@@ -188,14 +195,14 @@ export function OrderRequestPage() {
           {selectedBicyclesQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading selected bicycles...
+              Загружаем выбранные велосипеды...
             </div>
           )}
 
           {selectedBicyclesQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load selected bicycles</AlertTitle>
+              <AlertTitle>Не удалось загрузить выбранные велосипеды</AlertTitle>
               <AlertDescription>{formatRequestError(selectedBicyclesQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -207,10 +214,10 @@ export function OrderRequestPage() {
           {selectedBicycles.length > 0 && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>Backend-calculated request</AlertTitle>
+              <AlertTitle>Расчет заявки на сервере</AlertTitle>
               <AlertDescription>
-                Selected daily total {formatMoney(totals.daily)} and deposit {formatMoney(totals.deposit)}. Final
-                rental days and totals are calculated by the backend when the request is created.
+                Выбранная дневная сумма {formatMoney(totals.daily)} и залог {formatMoney(totals.deposit)}.
+                Итоговые дни аренды и суммы рассчитываются сервером при создании заявки.
               </AlertDescription>
             </Alert>
           )}
@@ -218,9 +225,9 @@ export function OrderRequestPage() {
           {createdOrderId && (
             <Alert>
               <ClipboardListIcon />
-              <AlertTitle>Request created</AlertTitle>
+              <AlertTitle>Заявка создана</AlertTitle>
               <AlertDescription>
-                Rental request is saved and visible in your orders.
+                Заявка на аренду сохранена и видна в ваших заказах.
               </AlertDescription>
             </Alert>
           )}
@@ -228,7 +235,7 @@ export function OrderRequestPage() {
           {createOrder.error && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not create request</AlertTitle>
+              <AlertTitle>Не удалось создать заявку</AlertTitle>
               <AlertDescription>{formatRequestError(createOrder.error)}</AlertDescription>
             </Alert>
           )}
@@ -246,10 +253,10 @@ export function OrderRequestPage() {
           {createdOrderId && (
             <div className="flex flex-wrap gap-2">
               <Button asChild>
-                <Link to="/orders/$id" params={{ id: createdOrderId }}>Open request</Link>
+                <Link to="/orders/$id" params={{ id: createdOrderId }}>Открыть заявку</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/orders">My orders</Link>
+                <Link to="/orders">Мои заказы</Link>
               </Button>
             </div>
           )}
@@ -279,16 +286,16 @@ export function OrdersPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Orders"
-        title="Login required"
-        description="Sign in as a customer to view rental requests."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заказы"
+        title="Нужен вход"
+        description="Войдите как клиент, чтобы смотреть заявки на аренду."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -296,9 +303,9 @@ export function OrdersPage() {
   if (auth.user.role !== 'user') {
     return (
       <GateCard
-        eyebrow="Orders"
-        title="Customer account required"
-        description="Rental requests are available for customer accounts."
+        eyebrow="Заказы"
+        title="Нужен аккаунт клиента"
+        description="Заявки на аренду доступны для аккаунтов клиентов."
       />
     )
   }
@@ -312,15 +319,15 @@ export function OrdersPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Orders
+              Заказы
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">My orders</h1>
-            <CardDescription>Current and historical rental requests, payment state, and handoff details.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Мои заказы</h1>
+            <CardDescription>Текущие и архивные заявки, состояние платежей и детали передачи.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -344,14 +351,14 @@ export function OrdersPage() {
           {ordersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading orders...
+              Загружаем заказы...
             </div>
           )}
 
           {ordersQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load orders</AlertTitle>
+              <AlertTitle>Не удалось загрузить заказы</AlertTitle>
               <AlertDescription>{formatRequestError(ordersQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -362,11 +369,11 @@ export function OrdersPage() {
                 <EmptyMedia variant="icon">
                   <ClipboardListIcon />
                 </EmptyMedia>
-                <EmptyTitle>No orders found.</EmptyTitle>
+                <EmptyTitle>Заказы не найдены.</EmptyTitle>
                 <EmptyDescription>
                   {scope === 'history'
-                    ? 'Returned and cancelled orders will appear here.'
-                    : 'Create a request from the public catalog.'}
+                    ? 'Здесь появятся возвращенные и отмененные заказы.'
+                    : 'Создайте заявку из публичного каталога.'}
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
@@ -387,7 +394,7 @@ export function OrdersPage() {
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -398,7 +405,7 @@ export function OrdersPage() {
               disabled={page >= totalPages || ordersQuery.isFetching}
               onClick={() => setPage((current) => current + 1)}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>
@@ -428,7 +435,7 @@ export function OrderDetailPage() {
         comment: cancelComment,
       }),
     onSuccess: async (response) => {
-      setNotice('Request cancelled')
+      setNotice('Заявка отменена')
       setCancelComment('')
       await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
       queryClient.setQueryData(orderDetailQueryKey(auth.user?.id, id), response)
@@ -445,7 +452,7 @@ export function OrderDetailPage() {
     },
     onSuccess: async (response) => {
       setPaymentActionError(null)
-      setPaymentNotice(`${formatPaymentType(response.payment.type)} payment ${response.payment.status}`)
+      setPaymentNotice(`${formatPaymentType(response.payment.type)}: ${paymentStatusLabel(response.payment.status)}`)
       await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
       await queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(auth.user?.id, id) })
     },
@@ -467,7 +474,7 @@ export function OrderDetailPage() {
     },
     onSuccess: async (response) => {
       setPaymentActionError(null)
-      setPaymentNotice(`${formatPaymentType(response.payment.type)} payment ${response.payment.status}`)
+      setPaymentNotice(`${formatPaymentType(response.payment.type)}: ${paymentStatusLabel(response.payment.status)}`)
       await queryClient.invalidateQueries({ queryKey: ['orders', auth.user?.id ?? null] })
       await queryClient.invalidateQueries({ queryKey: orderDetailQueryKey(auth.user?.id, id) })
     },
@@ -480,16 +487,16 @@ export function OrderDetailPage() {
   })
 
   if (auth.isBootstrapping || orderQuery.isLoading) {
-    return <LoadingState message="Loading order..." />
+    return <LoadingState message="Загружаем заказ..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Order"
-        title="Login required"
-        description="Sign in as a customer to view this order."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заказ"
+        title="Нужен вход"
+        description="Войдите как клиент, чтобы посмотреть этот заказ."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -497,9 +504,9 @@ export function OrderDetailPage() {
   if (auth.user.role !== 'user') {
     return (
       <GateCard
-        eyebrow="Order"
-        title="Customer account required"
-        description="Rental requests are available for customer accounts."
+        eyebrow="Заказ"
+        title="Нужен аккаунт клиента"
+        description="Заявки на аренду доступны для аккаунтов клиентов."
       />
     )
   }
@@ -507,14 +514,14 @@ export function OrderDetailPage() {
   if (orderQuery.isError) {
     return (
       <GateCard
-        eyebrow="Order"
-        title="Order unavailable"
+        eyebrow="Заказ"
+        title="Заказ недоступен"
         description={orderDetailErrorDescription(orderQuery.error)}
         action={
           <div className="grid gap-3">
             <p className="text-sm text-muted-foreground">{requestErrorNextStep(orderQuery.error)}</p>
             <Button className="w-fit" asChild>
-              <Link to="/orders">Back to orders</Link>
+              <Link to="/orders">Назад к заказам</Link>
             </Button>
           </div>
         }
@@ -525,7 +532,7 @@ export function OrderDetailPage() {
   const order = orderQuery.data?.order
 
   if (!order) {
-    return <LoadingState message="Loading order..." />
+    return <LoadingState message="Загружаем заказ..." />
   }
 
   return (
@@ -538,12 +545,12 @@ export function OrderDetailPage() {
               <Badge variant="outline">{formatOrderDates(order)}</Badge>
               <Badge variant="secondary">{formatMoney(order.totalAmountKopecks)}</Badge>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight">Rental request</h1>
-            <CardDescription>{order.rentalDays} rental day(s), {order.fulfillmentType}</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Заявка на аренду</h1>
+            <CardDescription>{order.rentalDays} дн. аренды, {fulfillmentTypeLabel(order.fulfillmentType)}</CardDescription>
           </div>
           <CardAction>
             <Button type="button" variant="outline" asChild>
-              <Link to="/orders">Back to orders</Link>
+              <Link to="/orders">Назад к заказам</Link>
             </Button>
           </CardAction>
         </CardHeader>
@@ -557,14 +564,14 @@ export function OrderDetailPage() {
 
           <Alert>
             <CircleCheckIcon />
-            <AlertTitle>Contact</AlertTitle>
+            <AlertTitle>Контакт</AlertTitle>
             <AlertDescription>{order.contactName}, {order.contactPhone}</AlertDescription>
           </Alert>
 
           {order.userComment && (
             <Alert>
               <ClipboardListIcon />
-              <AlertTitle>Comment</AlertTitle>
+              <AlertTitle>Комментарий</AlertTitle>
               <AlertDescription>{order.userComment}</AlertDescription>
             </Alert>
           )}
@@ -583,7 +590,7 @@ export function OrderDetailPage() {
             <Alert>
               <CircleCheckIcon />
               <AlertTitle>{notice}</AlertTitle>
-              <AlertDescription>The request status has been updated.</AlertDescription>
+              <AlertDescription>Статус заявки обновлен.</AlertDescription>
             </Alert>
           )}
 
@@ -636,16 +643,16 @@ export function AdminOrdersPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin orders"
-        title="Login required"
-        description="Sign in with an administrator account to review rental requests."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заказы"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы просматривать заявки на аренду."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -653,9 +660,9 @@ export function AdminOrdersPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin orders"
-        title="Access denied"
-        description="Your account does not have permission to review rental requests."
+        eyebrow="Заказы"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на просмотр заявок на аренду."
       />
     )
   }
@@ -669,15 +676,15 @@ export function AdminOrdersPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Admin orders
+              Заказы администратора
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Orders</h1>
-            <CardDescription>Review rental requests, availability, and status history.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Заказы</h1>
+            <CardDescription>Просматривайте заявки, доступность и историю статусов.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -685,7 +692,7 @@ export function AdminOrdersPage() {
         <CardContent className="grid gap-4 py-4">
           <div className="grid gap-3 md:grid-cols-3">
             <NativeSelect
-              aria-label="Admin order quick filter"
+              aria-label="Быстрый фильтр заказов администратора"
               disabled={ordersQuery.isFetching}
               value={quickFilter}
               onChange={(event) => {
@@ -696,7 +703,7 @@ export function AdminOrdersPage() {
                 })
               }}
             >
-              <NativeSelectOption value="none">Manual status</NativeSelectOption>
+              <NativeSelectOption value="none">Ручной статус</NativeSelectOption>
               {adminOrderQuickFilters.map((nextFilter) => (
                 <NativeSelectOption key={nextFilter} value={nextFilter}>
                   {adminOrderQuickFilterLabel(nextFilter)}
@@ -704,7 +711,7 @@ export function AdminOrdersPage() {
               ))}
             </NativeSelect>
             <NativeSelect
-              aria-label="Admin order status filter"
+              aria-label="Фильтр статуса заказов администратора"
               disabled={ordersQuery.isFetching || quickFilter !== 'none'}
               value={status}
               onChange={(event) => {
@@ -714,15 +721,15 @@ export function AdminOrdersPage() {
                 })
               }}
             >
-              <NativeSelectOption value="all">All statuses</NativeSelectOption>
+              <NativeSelectOption value="all">Все статусы</NativeSelectOption>
               {orderStatuses.map((nextStatus) => (
                 <NativeSelectOption key={nextStatus} value={nextStatus}>
-                  {nextStatus}
+                  {orderStatusLabel(nextStatus)}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
             <Input
-              aria-label="Admin orders date filter"
+              aria-label="Фильтр заказов администратора по дате"
               disabled={ordersQuery.isFetching || quickFilter !== 'orders_today'}
               type="date"
               value={date}
@@ -738,14 +745,14 @@ export function AdminOrdersPage() {
           {ordersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading orders...
+              Загружаем заказы...
             </div>
           )}
 
           {ordersQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load orders</AlertTitle>
+              <AlertTitle>Не удалось загрузить заказы</AlertTitle>
               <AlertDescription>{formatRequestError(ordersQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -756,8 +763,8 @@ export function AdminOrdersPage() {
                 <EmptyMedia variant="icon">
                   <ClipboardListIcon />
                 </EmptyMedia>
-                <EmptyTitle>No orders found.</EmptyTitle>
-                <EmptyDescription>The current quick filter did not return any orders.</EmptyDescription>
+                <EmptyTitle>Заказы не найдены.</EmptyTitle>
+                <EmptyDescription>Текущий быстрый фильтр не вернул заказы.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -767,13 +774,13 @@ export function AdminOrdersPage() {
               <Table className="min-w-[1120px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Request</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Payments</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="w-[140px]">Details</TableHead>
+                    <TableHead>Заявка</TableHead>
+                    <TableHead>Клиент</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Платежи</TableHead>
+                    <TableHead>Даты</TableHead>
+                    <TableHead>Итого</TableHead>
+                    <TableHead className="w-[140px]">Детали</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -782,7 +789,7 @@ export function AdminOrdersPage() {
                       <TableCell>
                         <div className="grid gap-1">
                           <span className="font-medium">{order.items.map((item) => item.bicycle.title).join(', ')}</span>
-                          <span className="text-sm text-muted-foreground">{order.fulfillmentType}</span>
+                          <span className="text-sm text-muted-foreground">{fulfillmentTypeLabel(order.fulfillmentType)}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -797,7 +804,7 @@ export function AdminOrdersPage() {
                       <TableCell>{formatMoney(order.totalAmountKopecks)}</TableCell>
                       <TableCell>
                         <Button type="button" variant="outline" size="sm" asChild>
-                          <Link to="/admin/orders/$id" params={{ id: order.id }}>Open</Link>
+                          <Link to="/admin/orders/$id" params={{ id: order.id }}>Открыть</Link>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -825,7 +832,7 @@ export function AdminOrdersPage() {
               }}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -841,7 +848,7 @@ export function AdminOrdersPage() {
                 })
               }}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>
@@ -883,7 +890,7 @@ export function AdminOrderDetailPage() {
     mutationFn: (input: AdminOrderStatusUpdateInput) =>
       auth.api.updateAdminOrderStatus(id, input),
     onSuccess: async (response) => {
-      setNotice(`Order ${response.order.status}`)
+      setNotice(`Заказ: ${orderStatusLabel(response.order.status)}`)
       setComment('')
       queryClient.setQueryData(orderAdminDetailQueryKey(id), response)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] })
@@ -898,16 +905,16 @@ export function AdminOrderDetailPage() {
   })
 
   if (auth.isBootstrapping || orderQuery.isLoading) {
-    return <LoadingState message="Loading order..." />
+    return <LoadingState message="Загружаем заказ..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin order"
-        title="Login required"
-        description="Sign in with an administrator account to review this rental request."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заказ администратора"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы просмотреть заявку на аренду."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -915,9 +922,9 @@ export function AdminOrderDetailPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin order"
-        title="Access denied"
-        description="Your account does not have permission to review rental requests."
+        eyebrow="Заказ администратора"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на просмотр заявок на аренду."
       />
     )
   }
@@ -925,17 +932,17 @@ export function AdminOrderDetailPage() {
   if (orderQuery.isError) {
     return (
       <GateCard
-        eyebrow="Admin order"
-        title="Order unavailable"
+        eyebrow="Заказ администратора"
+        title="Заказ недоступен"
         description={formatRequestError(orderQuery.error)}
-        action={<Button asChild><Link to="/admin/orders">Back to orders</Link></Button>}
+        action={<Button asChild><Link to="/admin/orders">Назад к заказам</Link></Button>}
       />
     )
   }
 
   const order = orderQuery.data?.order
   if (!order) {
-    return <LoadingState message="Loading order..." />
+    return <LoadingState message="Загружаем заказ..." />
   }
 
   const requestPending = order.status === 'request'
@@ -955,12 +962,12 @@ export function AdminOrderDetailPage() {
               <Badge variant="outline">{formatOrderDates(order)}</Badge>
               <Badge variant="secondary">{formatMoney(order.totalAmountKopecks)}</Badge>
             </div>
-            <h1 className="text-3xl font-semibold tracking-tight">Admin order</h1>
-            <CardDescription>{order.rentalDays} rental day(s), {order.fulfillmentType}</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Заказ администратора</h1>
+            <CardDescription>{order.rentalDays} дн. аренды, {fulfillmentTypeLabel(order.fulfillmentType)}</CardDescription>
           </div>
           <CardAction>
             <Button type="button" variant="outline" asChild>
-              <Link to="/admin/orders">Back to orders</Link>
+              <Link to="/admin/orders">Назад к заказам</Link>
             </Button>
           </CardAction>
         </CardHeader>
@@ -969,14 +976,14 @@ export function AdminOrderDetailPage() {
             <Alert>
               <CircleCheckIcon />
               <AlertTitle>{notice}</AlertTitle>
-              <AlertDescription>Status history has been updated.</AlertDescription>
+              <AlertDescription>История статусов обновлена.</AlertDescription>
             </Alert>
           )}
 
           {updateStatus.error && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not update order</AlertTitle>
+              <AlertTitle>Не удалось обновить заказ</AlertTitle>
               <AlertDescription>
                 {formatRequestError(updateStatus.error)}
                 <RequestErrorDetails error={updateStatus.error} />
@@ -987,16 +994,16 @@ export function AdminOrderDetailPage() {
           {requestPending && errorWarnings.length > 0 && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Confirmation is blocked</AlertTitle>
-              <AlertDescription>Resolve availability or catalog state conflicts before confirming.</AlertDescription>
+              <AlertTitle>Подтверждение заблокировано</AlertTitle>
+              <AlertDescription>Устраните конфликты доступности или состояния каталога перед подтверждением.</AlertDescription>
             </Alert>
           )}
 
           {issueBlockedByWarnings && order.paymentRequirementsMet && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Issuance is blocked</AlertTitle>
-              <AlertDescription>Resolve live bicycle or manufacturer state conflicts before issuing.</AlertDescription>
+              <AlertTitle>Выдача заблокирована</AlertTitle>
+              <AlertDescription>Устраните конфликты статуса велосипеда или производителя перед выдачей.</AlertDescription>
             </Alert>
           )}
 
@@ -1004,23 +1011,23 @@ export function AdminOrderDetailPage() {
           <SelectedAdminOrderItemsTable order={order} />
 
           <div className="grid gap-3 md:grid-cols-4">
-            <Fact label="Rental" value={formatMoney(order.rentalAmountKopecks)} />
-            <Fact label="Deposit" value={formatMoney(order.depositAmountKopecks)} />
-            <Fact label="Delivery" value={formatMoney(order.deliveryAmountKopecks)} />
-            <Fact label="Total" value={formatMoney(order.totalAmountKopecks)} />
+            <Fact label="Аренда" value={formatMoney(order.rentalAmountKopecks)} />
+            <Fact label="Залог" value={formatMoney(order.depositAmountKopecks)} />
+            <Fact label="Доставка" value={formatMoney(order.deliveryAmountKopecks)} />
+            <Fact label="Итого" value={formatMoney(order.totalAmountKopecks)} />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
             <Alert>
               <UserRoundIcon />
-              <AlertTitle>Customer</AlertTitle>
+              <AlertTitle>Клиент</AlertTitle>
               <AlertDescription>
                 {order.user.displayName ?? order.user.email}, {order.contactName}, {order.contactPhone}
               </AlertDescription>
             </Alert>
             <Alert>
               <MapPinIcon />
-              <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}</AlertTitle>
+              <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Доставка' : 'Самовывоз'}</AlertTitle>
               <AlertDescription>
                 {order.fulfillmentType === 'delivery'
                   ? order.deliveryAddress
@@ -1058,19 +1065,19 @@ export function AdminOrderDetailPage() {
           {cancellationAvailable && (
             <section className="grid gap-3 border-t pt-4">
               <div className="grid gap-1">
-                <h2 className="text-base font-semibold">Decision</h2>
+                <h2 className="text-base font-semibold">Решение</h2>
                 <p className="text-sm text-muted-foreground">
                   {requestPending
-                    ? 'Confirm only when availability, logistics, contacts, and safety limits are acceptable.'
-                    : 'Confirmed orders can still be cancelled before issue when handoff is no longer possible.'}
+                    ? 'Подтверждайте только когда доступность, логистика, контакты и лимиты безопасности проверены.'
+                    : 'Подтвержденные заказы можно отменить до выдачи, если передача больше невозможна.'}
                 </p>
               </div>
               <Textarea
                 className="min-h-24"
                 disabled={updateStatus.isPending}
-                placeholder="Comment for status history"
+                placeholder="Комментарий для истории статусов"
                 value={comment}
-                aria-label="Admin order comment"
+                aria-label="Комментарий администратора к заказу"
                 onChange={(event) => setComment(event.target.value)}
               />
               <div className="flex flex-wrap justify-end gap-2">
@@ -1081,7 +1088,7 @@ export function AdminOrderDetailPage() {
                   onClick={() => updateStatus.mutate({ status: 'cancelled', comment })}
                 >
                   <XCircleIcon data-icon="inline-start" />
-                  Cancel
+                  Отменить
                 </Button>
                 {requestPending && (
                   <Button
@@ -1090,7 +1097,7 @@ export function AdminOrderDetailPage() {
                     onClick={() => updateStatus.mutate({ status: 'confirmed', comment })}
                   >
                     <ShieldCheckIcon data-icon="inline-start" />
-                    Confirm
+                    Подтвердить
                   </Button>
                 )}
               </div>
@@ -1108,11 +1115,11 @@ function SelectedBicyclesTable({ bicycles }: { bicycles: PublicBicycleDto[] }) {
       <Table className="min-w-[760px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>City</TableHead>
-            <TableHead>Daily</TableHead>
-            <TableHead>Deposit</TableHead>
-            <TableHead>Delivery</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Город</TableHead>
+            <TableHead>За день</TableHead>
+            <TableHead>Залог</TableHead>
+            <TableHead>Доставка</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1127,7 +1134,7 @@ function SelectedBicyclesTable({ bicycles }: { bicycles: PublicBicycleDto[] }) {
               <TableCell>{bicycle.city}</TableCell>
               <TableCell>{formatMoney(bicycle.pricePerDayKopecks)}</TableCell>
               <TableCell>{formatMoney(bicycle.depositKopecks)}</TableCell>
-              <TableCell>{bicycle.deliveryAvailable ? 'Available' : 'Pickup only'}</TableCell>
+              <TableCell>{bicycle.deliveryAvailable ? 'Доступна' : 'Только самовывоз'}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -1142,10 +1149,10 @@ function SelectedOrderItemsTable({ order }: { order: OrderDto }) {
       <Table className="min-w-[760px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>Daily snapshot</TableHead>
-            <TableHead>Deposit snapshot</TableHead>
-            <TableHead>Pickup</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Цена за день</TableHead>
+            <TableHead>Залог</TableHead>
+            <TableHead>Самовывоз</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1174,11 +1181,11 @@ function SelectedAdminOrderItemsTable({ order }: { order: AdminOrderDto }) {
       <Table className="min-w-[980px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>Snapshot</TableHead>
-            <TableHead>Live status</TableHead>
-            <TableHead>Safety limits</TableHead>
-            <TableHead>Pickup</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Снимок цены</TableHead>
+            <TableHead>Текущий статус</TableHead>
+            <TableHead>Ограничения безопасности</TableHead>
+            <TableHead>Самовывоз</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1192,28 +1199,28 @@ function SelectedAdminOrderItemsTable({ order }: { order: AdminOrderDto }) {
               </TableCell>
               <TableCell>
                 <div className="grid gap-1">
-                  <span>{formatMoney(item.pricePerDaySnapshotKopecks)} / day</span>
-                  <span className="text-sm text-muted-foreground">Deposit {formatMoney(item.depositSnapshotKopecks)}</span>
+                  <span>{formatMoney(item.pricePerDaySnapshotKopecks)} / день</span>
+                  <span className="text-sm text-muted-foreground">Залог {formatMoney(item.depositSnapshotKopecks)}</span>
                 </div>
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant={liveBicycleStatusVariant(order.status, item.liveBicycle.status)}>
-                    {item.liveBicycle.status}
+                    {bicycleStatusLabel(item.liveBicycle.status)}
                   </Badge>
                   <Badge variant={item.liveBicycle.manufacturerStatus === 'approved' ? 'secondary' : 'destructive'}>
-                    maker {item.liveBicycle.manufacturerStatus}
+                    производитель {manufacturerStatusLabel(item.liveBicycle.manufacturerStatus)}
                   </Badge>
                   <Badge variant={item.liveBicycle.deliveryAvailable ? 'secondary' : 'outline'}>
-                    {item.liveBicycle.deliveryAvailable ? 'delivery' : 'pickup only'}
+                    {item.liveBicycle.deliveryAvailable ? 'доставка' : 'только самовывоз'}
                   </Badge>
                 </div>
               </TableCell>
               <TableCell>
                 <div className="grid gap-1 text-sm">
-                  <span>Max load {item.liveBicycle.maxLoadKg} kg</span>
+                  <span>Макс. нагрузка {item.liveBicycle.maxLoadKg} кг</span>
                   <span className="text-muted-foreground">
-                    Seat {item.liveBicycle.seatHeightCm} cm, frame {item.liveBicycle.frameLengthCm} cm, wheel {item.liveBicycle.wheelDiameterCm} cm
+                    Сиденье {item.liveBicycle.seatHeightCm} см, рама {item.liveBicycle.frameLengthCm} см, колесо {item.liveBicycle.wheelDiameterCm} см
                   </span>
                 </div>
               </TableCell>
@@ -1241,8 +1248,8 @@ function AdminWarnings({ warnings }: { warnings: AdminOrderWarningDto[] }) {
     return (
       <Alert>
         <CircleCheckIcon />
-        <AlertTitle>No blocking availability warnings</AlertTitle>
-        <AlertDescription>Review contacts, logistics, and safety notes before confirming.</AlertDescription>
+        <AlertTitle>Блокирующих предупреждений нет</AlertTitle>
+        <AlertDescription>Проверьте контакты, логистику и примечания по безопасности перед подтверждением.</AlertDescription>
       </Alert>
     )
   }
@@ -1255,8 +1262,8 @@ function AdminWarnings({ warnings }: { warnings: AdminOrderWarningDto[] }) {
           variant={warning.severity === 'error' ? 'destructive' : 'default'}
         >
           {warning.severity === 'error' ? <CircleAlertIcon /> : <AlertTriangleIcon />}
-          <AlertTitle>{warning.bicycleTitle ?? 'Order warning'}</AlertTitle>
-          <AlertDescription>{warning.message}</AlertDescription>
+          <AlertTitle>{warning.bicycleTitle ?? 'Предупреждение по заказу'}</AlertTitle>
+          <AlertDescription>{formatAdminOrderWarning(warning)}</AlertDescription>
         </Alert>
       ))}
     </div>
@@ -1268,8 +1275,8 @@ function StatusHistoryTable({ order }: { order: AdminOrderDto }) {
     return (
       <Alert>
         <ClipboardListIcon />
-        <AlertTitle>No status history yet</AlertTitle>
-        <AlertDescription>The first administrator or customer transition will be recorded here.</AlertDescription>
+        <AlertTitle>Истории статусов пока нет</AlertTitle>
+        <AlertDescription>Первый переход администратора или клиента будет записан здесь.</AlertDescription>
       </Alert>
     )
   }
@@ -1279,10 +1286,10 @@ function StatusHistoryTable({ order }: { order: AdminOrderDto }) {
       <Table className="min-w-[760px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Transition</TableHead>
-            <TableHead>Actor</TableHead>
-            <TableHead>Comment</TableHead>
-            <TableHead>Created</TableHead>
+            <TableHead>Переход</TableHead>
+            <TableHead>Автор</TableHead>
+            <TableHead>Комментарий</TableHead>
+            <TableHead>Создан</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -1296,7 +1303,7 @@ function StatusHistoryTable({ order }: { order: AdminOrderDto }) {
               </TableCell>
               <TableCell>{history.changedByUser.displayName ?? history.changedByUser.email}</TableCell>
               <TableCell>{history.comment ?? '-'}</TableCell>
-              <TableCell>{new Date(history.createdAt).toLocaleString()}</TableCell>
+              <TableCell>{new Date(history.createdAt).toLocaleString('ru-RU')}</TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -1336,31 +1343,10 @@ function RequestErrorDetails({ error }: { error: unknown }) {
 
 function orderDetailErrorDescription(error: unknown) {
   if (error instanceof ApiRequestError && error.code === 'NOT_FOUND') {
-    return 'This order is not available for the current customer session.'
+    return 'Этот заказ недоступен для текущей клиентской сессии.'
   }
 
   return formatRequestError(error)
-}
-
-function formatConflict(value: unknown) {
-  if (!value || typeof value !== 'object') return 'Availability conflict'
-  const conflict = value as {
-    bicycleTitle?: unknown
-    conflictingOrderId?: unknown
-    startsOn?: unknown
-    endsOn?: unknown
-  }
-  const title = typeof conflict.bicycleTitle === 'string' ? conflict.bicycleTitle : 'Bicycle'
-  const orderId = typeof conflict.conflictingOrderId === 'string' ? conflict.conflictingOrderId : 'another order'
-  const startsOn = typeof conflict.startsOn === 'string' ? conflict.startsOn : '?'
-  const endsOn = typeof conflict.endsOn === 'string' ? conflict.endsOn : '?'
-  return `${title} conflicts with ${orderId} (${startsOn} - ${endsOn}).`
-}
-
-function formatWarning(value: unknown) {
-  if (!value || typeof value !== 'object') return 'Availability warning'
-  const warning = value as { message?: unknown }
-  return typeof warning.message === 'string' ? warning.message : 'Availability warning'
 }
 
 function Fact({ label, value }: { label: string; value: string }) {

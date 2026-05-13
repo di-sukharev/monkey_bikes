@@ -91,16 +91,16 @@ export function AdminReportsPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin reports"
-        title="Login required"
-        description="Sign in with an administrator account to open reports."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Отчеты"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы открыть отчеты."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -108,9 +108,9 @@ export function AdminReportsPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin reports"
-        title="Access denied"
-        description="Your account does not have permission to review reports."
+        eyebrow="Отчеты"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на просмотр отчетов."
       />
     )
   }
@@ -137,11 +137,11 @@ export function AdminReportsPage() {
     <section className={cn(pageShellClass, 'grid gap-4')}>
       <div className="grid gap-2">
         <Badge variant="outline" className="w-fit">
-          Admin reports
+          Отчеты администратора
         </Badge>
-        <h1 className="text-3xl font-semibold tracking-tight">Reports</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Отчеты</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          MVP statistics for payments, rental activity, bicycle utilization, and manufacturers.
+          Начальная статистика по платежам, арендной активности, загрузке велосипедов и производителям.
         </p>
       </div>
 
@@ -156,9 +156,9 @@ export function AdminReportsPage() {
         }}
       />
 
-      {summaryQuery.isLoading && <ReportLoading message="Loading summary..." />}
+      {summaryQuery.isLoading && <ReportLoading message="Загружаем сводку..." />}
       {summaryQuery.isError && (
-        <ReportError title="Could not load report summary" error={summaryQuery.error} />
+        <ReportError title="Не удалось загрузить сводку отчета" error={summaryQuery.error} />
       )}
       {summaryQuery.data && (
         <>
@@ -172,23 +172,23 @@ export function AdminReportsPage() {
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
               <BikeIcon data-icon="inline-start" />
-              Bicycles
+              Велосипеды
             </Badge>
-            <CardTitle>Bicycle utilization</CardTitle>
-            <CardDescription>Rented days and clipped rental amount by bicycle.</CardDescription>
+            <CardTitle>Загрузка велосипедов</CardTitle>
+            <CardDescription>Дни аренды и учтенная сумма аренды по велосипедам.</CardDescription>
           </div>
           {utilization && (
             <CardAction>
               <Badge variant="secondary">
-                {utilization.total} total, page {utilization.page} of {utilizationTotalPages}
+                Всего: {utilization.total}, страница {utilization.page} из {utilizationTotalPages}
               </Badge>
             </CardAction>
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          {utilizationQuery.isLoading && <ReportLoading message="Loading bicycle utilization..." />}
+          {utilizationQuery.isLoading && <ReportLoading message="Загружаем загрузку велосипедов..." />}
           {utilizationQuery.isError && (
-            <ReportError title="Could not load bicycle utilization" error={utilizationQuery.error} />
+            <ReportError title="Не удалось загрузить загрузку велосипедов" error={utilizationQuery.error} />
           )}
           {utilization && (
             <BicycleUtilizationTable
@@ -211,23 +211,23 @@ export function AdminReportsPage() {
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
               <StoreIcon data-icon="inline-start" />
-              Manufacturers
+              Производители
             </Badge>
-            <CardTitle>Manufacturer stats</CardTitle>
-            <CardDescription>Activity, deposit exposure, and cancellation counts by manufacturer.</CardDescription>
+            <CardTitle>Статистика производителей</CardTitle>
+            <CardDescription>Активность, сумма залогов и количество отмен по производителям.</CardDescription>
           </div>
           {manufacturers && (
             <CardAction>
               <Badge variant="secondary">
-                {manufacturers.total} total, page {manufacturers.page} of {manufacturerTotalPages}
+                Всего: {manufacturers.total}, страница {manufacturers.page} из {manufacturerTotalPages}
               </Badge>
             </CardAction>
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          {manufacturerQuery.isLoading && <ReportLoading message="Loading manufacturer stats..." />}
+          {manufacturerQuery.isLoading && <ReportLoading message="Загружаем статистику производителей..." />}
           {manufacturerQuery.isError && (
-            <ReportError title="Could not load manufacturer stats" error={manufacturerQuery.error} />
+            <ReportError title="Не удалось загрузить статистику производителей" error={manufacturerQuery.error} />
           )}
           {manufacturers && <ManufacturerReportTable items={manufacturers.items} />}
         </CardContent>
@@ -285,7 +285,7 @@ function ReportPagination({
             onClick={() => onPageChange(Math.max(1, page - 1))}
           >
             <ChevronLeftIcon data-icon="inline-start" />
-            Previous
+            Назад
           </Button>
         </PaginationItem>
         <PaginationItem>
@@ -296,7 +296,7 @@ function ReportPagination({
             disabled={page >= totalPages || disabled}
             onClick={() => onPageChange(page + 1)}
           >
-            Next
+            Далее
             <ChevronRightIcon data-icon="inline-end" />
           </Button>
         </PaginationItem>

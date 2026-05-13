@@ -7,6 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
+import { formatFormError } from '@/lib/form-errors'
 import { bicycleSizes, type BicycleFormValues } from './model'
 
 export function BicycleForm({
@@ -48,7 +49,7 @@ export function BicycleForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Title"
+                label="Название"
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -60,7 +61,7 @@ export function BicycleForm({
             name="size"
             children={(field) => (
               <Field data-invalid={field.state.meta.errors.length > 0}>
-                <FieldLabel htmlFor={field.name}>Size</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Размер</FieldLabel>
                 <NativeSelect
                   disabled={disabled}
                   id={field.name}
@@ -87,7 +88,7 @@ export function BicycleForm({
               <NumberInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Daily price, kopecks"
+                label="Цена за день, копейки"
                 min={100}
                 name={field.name}
                 value={field.state.value}
@@ -102,7 +103,7 @@ export function BicycleForm({
               <NumberInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Deposit, kopecks"
+                label="Залог, копейки"
                 min={0}
                 name={field.name}
                 value={field.state.value}
@@ -117,7 +118,7 @@ export function BicycleForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="City"
+                label="Город"
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -131,7 +132,7 @@ export function BicycleForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Region"
+                label="Регион"
                 name={field.name}
                 value={field.state.value ?? ''}
                 onBlur={field.handleBlur}
@@ -145,7 +146,7 @@ export function BicycleForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Pickup address"
+                label="Адрес самовывоза"
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -159,7 +160,7 @@ export function BicycleForm({
               <NumberInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Max load, kg"
+                label="Максимальная нагрузка, кг"
                 min={1}
                 name={field.name}
                 value={field.state.value}
@@ -174,7 +175,7 @@ export function BicycleForm({
               <NumberInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Seat height, cm"
+                label="Высота сиденья, см"
                 min={1}
                 name={field.name}
                 value={field.state.value}
@@ -189,7 +190,7 @@ export function BicycleForm({
               <NumberInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Frame length, cm"
+                label="Длина рамы, см"
                 min={1}
                 name={field.name}
                 value={field.state.value}
@@ -204,7 +205,7 @@ export function BicycleForm({
               <NumberInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Wheel diameter, cm"
+                label="Диаметр колеса, см"
                 min={1}
                 name={field.name}
                 value={field.state.value}
@@ -223,7 +224,7 @@ export function BicycleForm({
                   disabled={disabled}
                   onCheckedChange={(checked) => field.handleChange(checked === true)}
                 />
-                <FieldLabel htmlFor={field.name}>Delivery available</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Доставка доступна</FieldLabel>
               </Field>
             )}
           />
@@ -235,7 +236,7 @@ export function BicycleForm({
             <TextareaInput
               disabled={disabled}
               errors={field.state.meta.errors}
-              label="Photo URLs"
+              label="Ссылки на фотографии"
               name={field.name}
               value={field.state.value.join('\n')}
               onBlur={field.handleBlur}
@@ -251,7 +252,7 @@ export function BicycleForm({
             <TextareaInput
               disabled={disabled}
               errors={field.state.meta.errors}
-              label="Description"
+              label="Описание"
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
@@ -265,7 +266,7 @@ export function BicycleForm({
             <TextareaInput
               disabled={disabled}
               errors={field.state.meta.errors}
-              label="Recommended animal dimensions"
+              label="Рекомендуемые габариты животного"
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
@@ -279,7 +280,7 @@ export function BicycleForm({
             <TextareaInput
               disabled={disabled}
               errors={field.state.meta.errors}
-              label="Safety notes"
+              label="Примечания по безопасности"
               name={field.name}
               value={field.state.value}
               onBlur={field.handleBlur}
@@ -293,7 +294,7 @@ export function BicycleForm({
             selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={disabled || !canSubmit || isSubmitting}>
-                {mode === 'create' ? 'Create draft' : 'Save draft'}
+                {mode === 'create' ? 'Создать черновик' : 'Сохранить черновик'}
               </Button>
             )}
           />
@@ -424,17 +425,9 @@ function TextareaInput({
 function FieldErrors({ errors, id }: { errors: unknown[]; id: string | undefined }) {
   if (!errors.length) return null
 
-  return <FieldError id={id}>{errors.map(formatError).join(', ')}</FieldError>
+  return <FieldError id={id}>{errors.map(formatFormError).join(', ')}</FieldError>
 }
 
 function fieldErrorId(fieldName: string, errors: unknown[]) {
   return errors.length > 0 ? `${fieldName}-error` : undefined
-}
-
-function formatError(error: unknown) {
-  if (typeof error === 'string') return error
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message)
-  }
-  return 'Invalid value'
 }

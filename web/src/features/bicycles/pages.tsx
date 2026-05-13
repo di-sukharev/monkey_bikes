@@ -53,6 +53,7 @@ import { BicycleForm } from './bicycle-form'
 import { PublicBicycleCard } from './bicycle-card'
 import {
   adminBicyclesQueryKey,
+  bicycleStatusLabel,
   bicycleSizes,
   bicycleStatuses,
   bicycleToForm,
@@ -104,15 +105,15 @@ export function CatalogPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Catalog
+              Каталог
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Bicycles</h1>
-            <CardDescription>Available moderated bicycles ready for rental requests.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Велосипеды</h1>
+            <CardDescription>Доступные промодерированные велосипеды для заявок на аренду.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -120,7 +121,7 @@ export function CatalogPage() {
         <CardContent className="grid gap-4 py-4">
           <div className="grid gap-3 md:grid-cols-4">
             <Field>
-              <FieldLabel>Sizes</FieldLabel>
+              <FieldLabel>Размеры</FieldLabel>
               <div className="flex flex-wrap gap-3">
                 {bicycleSizes.map((size) => (
                   <label key={size} className="flex items-center gap-2 text-sm">
@@ -141,7 +142,7 @@ export function CatalogPage() {
               </div>
             </Field>
             <Field>
-              <FieldLabel htmlFor="catalog-city">City</FieldLabel>
+              <FieldLabel htmlFor="catalog-city">Город</FieldLabel>
               <Input
                 id="catalog-city"
                 value={city}
@@ -152,7 +153,7 @@ export function CatalogPage() {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="catalog-min-price">Min price, kopecks</FieldLabel>
+              <FieldLabel htmlFor="catalog-min-price">Мин. цена, копейки</FieldLabel>
               <Input
                 id="catalog-min-price"
                 min={0}
@@ -165,7 +166,7 @@ export function CatalogPage() {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="catalog-max-price">Max price, kopecks</FieldLabel>
+              <FieldLabel htmlFor="catalog-max-price">Макс. цена, копейки</FieldLabel>
               <Input
                 id="catalog-max-price"
                 min={0}
@@ -178,7 +179,7 @@ export function CatalogPage() {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="catalog-starts-on">Starts on</FieldLabel>
+              <FieldLabel htmlFor="catalog-starts-on">Дата начала</FieldLabel>
               <Input
                 id="catalog-starts-on"
                 type="date"
@@ -190,7 +191,7 @@ export function CatalogPage() {
               />
             </Field>
             <Field>
-              <FieldLabel htmlFor="catalog-ends-on">Ends on</FieldLabel>
+              <FieldLabel htmlFor="catalog-ends-on">Дата окончания</FieldLabel>
               <Input
                 id="catalog-ends-on"
                 type="date"
@@ -206,14 +207,14 @@ export function CatalogPage() {
           {catalogQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading bicycles...
+              Загружаем велосипеды...
             </div>
           )}
 
           {catalogQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load catalog</AlertTitle>
+              <AlertTitle>Не удалось загрузить каталог</AlertTitle>
               <AlertDescription>{formatRequestError(catalogQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -221,11 +222,11 @@ export function CatalogPage() {
           {selectedIds.length > 0 && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>{selectedIds.length} bicycle(s) selected</AlertTitle>
+              <AlertTitle>Выбрано велосипедов: {selectedIds.length}</AlertTitle>
               <AlertDescription className="flex flex-wrap gap-2">
                 <Button size="sm" asChild>
                   <Link to="/orders/new" search={selectedSearch}>
-                    Create rental request
+                    Создать заявку на аренду
                   </Link>
                 </Button>
                 <Button
@@ -234,7 +235,7 @@ export function CatalogPage() {
                   variant="outline"
                   onClick={() => setSelectedIds([])}
                 >
-                  Clear selection
+                  Очистить выбор
                 </Button>
               </AlertDescription>
             </Alert>
@@ -246,8 +247,8 @@ export function CatalogPage() {
                 <EmptyMedia variant="icon">
                   <BikeIcon />
                 </EmptyMedia>
-                <EmptyTitle>No bicycles found.</EmptyTitle>
-                <EmptyDescription>The current filters did not return available bicycles.</EmptyDescription>
+                <EmptyTitle>Велосипеды не найдены.</EmptyTitle>
+                <EmptyDescription>Текущие фильтры не вернули доступные велосипеды.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -284,7 +285,7 @@ export function CatalogPage() {
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -295,7 +296,7 @@ export function CatalogPage() {
               disabled={page >= totalPages || catalogQuery.isFetching}
               onClick={() => setPage((current) => current + 1)}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>
@@ -314,18 +315,18 @@ export function BicycleDetailPage() {
   })
 
   if (bicycleQuery.isLoading) {
-    return <LoadingState message="Loading bicycle..." />
+    return <LoadingState message="Загружаем велосипед..." />
   }
 
   if (bicycleQuery.isError) {
     return (
       <GateCard
-        eyebrow="Bicycle"
-        title="Bicycle unavailable"
+        eyebrow="Велосипед"
+        title="Велосипед недоступен"
         description={formatRequestError(bicycleQuery.error)}
         action={
           <Button asChild>
-            <Link to="/bicycles">Back to catalog</Link>
+            <Link to="/bicycles">Назад в каталог</Link>
           </Button>
         }
       />
@@ -335,7 +336,7 @@ export function BicycleDetailPage() {
   const bicycle = bicycleQuery.data?.bicycle
 
   if (!bicycle) {
-    return <LoadingState message="Loading bicycle..." />
+    return <LoadingState message="Загружаем велосипед..." />
   }
 
   return (
@@ -345,8 +346,8 @@ export function BicycleDetailPage() {
           <div className="grid gap-2">
             <div className="flex flex-wrap gap-2">
               <BicycleSizeBadge size={bicycle.size} />
-              <Badge variant="secondary">{formatMoney(bicycle.pricePerDayKopecks)} / day</Badge>
-              <Badge variant="outline">Deposit {formatMoney(bicycle.depositKopecks)}</Badge>
+              <Badge variant="secondary">{formatMoney(bicycle.pricePerDayKopecks)} / день</Badge>
+              <Badge variant="outline">Залог {formatMoney(bicycle.depositKopecks)}</Badge>
             </div>
             <h1 className="text-3xl font-semibold tracking-tight">{bicycle.title}</h1>
             <CardDescription>{bicycle.manufacturer.publicName}</CardDescription>
@@ -354,7 +355,7 @@ export function BicycleDetailPage() {
           <CardAction>
             <Button asChild>
               <Link to="/orders/new" search={{ bicycleIds: bicycle.id }}>
-                Request rental
+                Запросить аренду
               </Link>
             </Button>
           </CardAction>
@@ -371,33 +372,33 @@ export function BicycleDetailPage() {
           )}
           <p className="text-sm leading-6 text-muted-foreground">{bicycle.description}</p>
           <div className="grid gap-3 md:grid-cols-3">
-            <Fact label="City" value={bicycle.city} />
-            <Fact label="Max load" value={`${bicycle.maxLoadKg} kg`} />
-            <Fact label="Seat height" value={`${bicycle.seatHeightCm} cm`} />
-            <Fact label="Frame length" value={`${bicycle.frameLengthCm} cm`} />
-            <Fact label="Wheel diameter" value={`${bicycle.wheelDiameterCm} cm`} />
-            <Fact label="Delivery" value={bicycle.deliveryAvailable ? 'Available' : 'Pickup only'} />
+            <Fact label="Город" value={bicycle.city} />
+            <Fact label="Макс. нагрузка" value={`${bicycle.maxLoadKg} кг`} />
+            <Fact label="Высота сиденья" value={`${bicycle.seatHeightCm} см`} />
+            <Fact label="Длина рамы" value={`${bicycle.frameLengthCm} см`} />
+            <Fact label="Диаметр колеса" value={`${bicycle.wheelDiameterCm} см`} />
+            <Fact label="Доставка" value={bicycle.deliveryAvailable ? 'Доступна' : 'Только самовывоз'} />
           </div>
           <Alert>
             <MapPinIcon />
-            <AlertTitle>Pickup</AlertTitle>
+            <AlertTitle>Самовывоз</AlertTitle>
             <AlertDescription>{bicycle.pickupAddress}</AlertDescription>
           </Alert>
           {bicycle.deliveryAvailable && (
             <Alert>
               <TruckIcon />
-              <AlertTitle>Delivery</AlertTitle>
-              <AlertDescription>Delivery can be requested during order creation.</AlertDescription>
+              <AlertTitle>Доставка</AlertTitle>
+              <AlertDescription>Доставку можно запросить при создании заказа.</AlertDescription>
             </Alert>
           )}
           <Alert>
             <CircleAlertIcon />
-            <AlertTitle>Safety notes</AlertTitle>
+            <AlertTitle>Примечания по безопасности</AlertTitle>
             <AlertDescription>{bicycle.safetyNotes}</AlertDescription>
           </Alert>
           <Alert>
             <CircleCheckIcon />
-            <AlertTitle>Recommended dimensions</AlertTitle>
+            <AlertTitle>Рекомендуемые габариты</AlertTitle>
             <AlertDescription>{bicycle.recommendedAnimalDimensions}</AlertDescription>
           </Alert>
         </CardContent>
@@ -433,7 +434,7 @@ export function ManufacturerBicyclesPage() {
         ? auth.api.updateManufacturerBicycle(input.bicycle.id, input.values)
         : auth.api.createManufacturerBicycle(input.values),
     onSuccess: async (response, variables) => {
-      setNotice(`${response.bicycle.title} saved as draft`)
+      setNotice(`${response.bicycle.title}: черновик сохранен`)
       setEditingBicycle(null)
       if (!variables.bicycle) {
         setPage(1)
@@ -446,23 +447,23 @@ export function ManufacturerBicyclesPage() {
   const submitBicycle = useMutation({
     mutationFn: (id: string) => auth.api.submitManufacturerBicycle(id),
     onSuccess: async (response) => {
-      setNotice(`${response.bicycle.title} submitted for moderation`)
+      setNotice(`${response.bicycle.title}: отправлен на модерацию`)
       await queryClient.invalidateQueries({ queryKey: rootQueryKey })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
     },
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Manufacturer bicycles"
-        title="Login required"
-        description="Sign in with a manufacturer account to manage bicycles."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Велосипеды производителя"
+        title="Нужен вход"
+        description="Войдите под производителем, чтобы управлять велосипедами."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -470,9 +471,9 @@ export function ManufacturerBicyclesPage() {
   if (auth.user.role !== 'manufacturer') {
     return (
       <GateCard
-        eyebrow="Manufacturer bicycles"
-        title="Access denied"
-        description="Your account is not registered as a manufacturer."
+        eyebrow="Велосипеды производителя"
+        title="Доступ запрещен"
+        description="Ваш аккаунт не зарегистрирован как производитель."
       />
     )
   }
@@ -489,14 +490,14 @@ export function ManufacturerBicyclesPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Manufacturer bicycles
+              Велосипеды производителя
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Bicycles</h1>
-            <CardDescription>Create drafts and submit approved-profile bicycles for moderation.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Велосипеды</h1>
+            <CardDescription>Создавайте черновики и отправляйте велосипеды на модерацию.</CardDescription>
           </div>
           <CardAction>
             <Button type="button" variant="outline" onClick={() => setEditingBicycle(null)}>
-              New bicycle
+              Новый велосипед
             </Button>
           </CardAction>
         </CardHeader>
@@ -504,15 +505,15 @@ export function ManufacturerBicyclesPage() {
           {!canManageBicycles && (
             <Alert>
               <CircleAlertIcon />
-              <AlertTitle>Approved manufacturer profile required</AlertTitle>
-              <AlertDescription>Complete manufacturer moderation before creating bicycles.</AlertDescription>
+              <AlertTitle>Нужен одобренный профиль производителя</AlertTitle>
+              <AlertDescription>Пройдите модерацию производителя перед созданием велосипедов.</AlertDescription>
             </Alert>
           )}
 
           {notice && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>Bicycle updated</AlertTitle>
+              <AlertTitle>Велосипед обновлен</AlertTitle>
               <AlertDescription>{notice}</AlertDescription>
             </Alert>
           )}
@@ -520,7 +521,7 @@ export function ManufacturerBicyclesPage() {
           {mutationError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not update bicycle</AlertTitle>
+              <AlertTitle>Не удалось обновить велосипед</AlertTitle>
               <AlertDescription>{formatRequestError(mutationError)}</AlertDescription>
             </Alert>
           )}
@@ -540,20 +541,20 @@ export function ManufacturerBicyclesPage() {
 
       <Card>
         <CardHeader className="border-b">
-          <h2 className="text-xl font-semibold">Your bicycles</h2>
+          <h2 className="text-xl font-semibold">Ваши велосипеды</h2>
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
           {bicyclesQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading bicycles...
+              Загружаем велосипеды...
             </div>
           )}
 
           {bicyclesQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load bicycles</AlertTitle>
+              <AlertTitle>Не удалось загрузить велосипеды</AlertTitle>
               <AlertDescription>{formatRequestError(bicyclesQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -564,8 +565,8 @@ export function ManufacturerBicyclesPage() {
                 <EmptyMedia variant="icon">
                   <BikeIcon />
                 </EmptyMedia>
-                <EmptyTitle>No bicycles yet.</EmptyTitle>
-                <EmptyDescription>Create the first draft to start catalog moderation.</EmptyDescription>
+                <EmptyTitle>Велосипедов пока нет.</EmptyTitle>
+                <EmptyDescription>Создайте первый черновик, чтобы начать модерацию каталога.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -576,11 +577,11 @@ export function ManufacturerBicyclesPage() {
                 <Table className="min-w-[860px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Bicycle</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead className="w-[220px]">Actions</TableHead>
+                      <TableHead>Велосипед</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead>Цена</TableHead>
+                      <TableHead>Город</TableHead>
+                      <TableHead className="w-[220px]">Действия</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -615,7 +616,7 @@ export function ManufacturerBicyclesPage() {
                               }
                               onClick={() => setEditingBicycle(bicycle)}
                             >
-                              Edit
+                              Редактировать
                             </Button>
                             <Button
                               type="button"
@@ -630,7 +631,7 @@ export function ManufacturerBicyclesPage() {
                                 submitBicycle.mutate(bicycle.id)
                               }}
                             >
-                              Submit
+                              Отправить
                             </Button>
                           </div>
                         </TableCell>
@@ -650,7 +651,7 @@ export function ManufacturerBicyclesPage() {
                       onClick={() => setPage((current) => Math.max(1, current - 1))}
                     >
                       <ChevronLeftIcon data-icon="inline-start" />
-                      Previous
+                      Назад
                     </Button>
                   </PaginationItem>
                   <PaginationItem>
@@ -661,7 +662,7 @@ export function ManufacturerBicyclesPage() {
                       disabled={page >= totalPages || bicyclesQuery.isFetching}
                       onClick={() => setPage((current) => current + 1)}
                     >
-                      Next
+                      Далее
                       <ChevronRightIcon data-icon="inline-end" />
                     </Button>
                   </PaginationItem>
@@ -700,7 +701,7 @@ export function AdminBicyclesPage() {
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof auth.api.moderateAdminBicycle>[1] }) =>
       auth.api.moderateAdminBicycle(id, input),
     onSuccess: async (response) => {
-      setNotice(`${response.bicycle.title} updated`)
+      setNotice(`${response.bicycle.title}: велосипед обновлен`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
     },
@@ -710,23 +711,23 @@ export function AdminBicyclesPage() {
     mutationFn: ({ id, input }: { id: string; input: Parameters<typeof auth.api.updateAdminBicycleStatus>[1] }) =>
       auth.api.updateAdminBicycleStatus(id, input),
     onSuccess: async (response) => {
-      setNotice(`${response.bicycle.title} updated`)
+      setNotice(`${response.bicycle.title}: велосипед обновлен`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
     },
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin bicycles"
-        title="Login required"
-        description="Sign in with an administrator account to moderate bicycles."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Велосипеды"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы модерировать велосипеды."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -734,9 +735,9 @@ export function AdminBicyclesPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin bicycles"
-        title="Access denied"
-        description="Your account does not have permission to moderate bicycles."
+        eyebrow="Велосипеды"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на модерацию велосипедов."
       />
     )
   }
@@ -751,22 +752,22 @@ export function AdminBicyclesPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Admin bicycles
+              Велосипеды администратора
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Bicycles</h1>
-            <CardDescription>Review submitted bicycle cards and control catalog availability.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Велосипеды</h1>
+            <CardDescription>Проверяйте отправленные карточки и управляйте доступностью каталога.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
           <NativeSelect
-            aria-label="Bicycle status filter"
+            aria-label="Фильтр статуса велосипеда"
             className="w-full max-w-56"
             value={status}
             onChange={(event) => {
@@ -776,10 +777,10 @@ export function AdminBicyclesPage() {
               })
             }}
           >
-            <NativeSelectOption value="all">All statuses</NativeSelectOption>
+            <NativeSelectOption value="all">Все статусы</NativeSelectOption>
             {bicycleStatuses.map((nextStatus) => (
               <NativeSelectOption key={nextStatus} value={nextStatus}>
-                {nextStatus}
+                {bicycleStatusLabel(nextStatus)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -787,14 +788,14 @@ export function AdminBicyclesPage() {
           {bicyclesQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading bicycles...
+              Загружаем велосипеды...
             </div>
           )}
 
           {bicyclesQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load bicycles</AlertTitle>
+              <AlertTitle>Не удалось загрузить велосипеды</AlertTitle>
               <AlertDescription>{formatRequestError(bicyclesQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -802,7 +803,7 @@ export function AdminBicyclesPage() {
           {notice && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>Bicycle updated</AlertTitle>
+              <AlertTitle>Велосипед обновлен</AlertTitle>
               <AlertDescription>{notice}</AlertDescription>
             </Alert>
           )}
@@ -810,7 +811,7 @@ export function AdminBicyclesPage() {
           {mutationError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not update bicycle</AlertTitle>
+              <AlertTitle>Не удалось обновить велосипед</AlertTitle>
               <AlertDescription>{formatRequestError(mutationError)}</AlertDescription>
             </Alert>
           )}
@@ -821,8 +822,8 @@ export function AdminBicyclesPage() {
                 <EmptyMedia variant="icon">
                   <BikeIcon />
                 </EmptyMedia>
-                <EmptyTitle>No bicycles found.</EmptyTitle>
-                <EmptyDescription>The current status filter did not return any bicycles.</EmptyDescription>
+                <EmptyTitle>Велосипеды не найдены.</EmptyTitle>
+                <EmptyDescription>Текущий фильтр статуса не вернул велосипеды.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -832,11 +833,11 @@ export function AdminBicyclesPage() {
               <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[28%]">Bicycle</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>City</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead className="w-[32%]">Decision</TableHead>
+                    <TableHead className="w-[28%]">Велосипед</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Город</TableHead>
+                    <TableHead>Отправлен</TableHead>
+                    <TableHead className="w-[32%]">Решение</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -878,7 +879,7 @@ export function AdminBicyclesPage() {
               }}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -894,7 +895,7 @@ export function AdminBicyclesPage() {
                 })
               }}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>

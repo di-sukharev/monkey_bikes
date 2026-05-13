@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { TableCell, TableRow } from '@/components/ui/table'
+import { manufacturerStatusLabel } from './model'
 
 export function AdminManufacturerRow({
   disabled,
@@ -37,16 +38,16 @@ export function AdminManufacturerRow({
       </TableCell>
       <TableCell>{profile.city}</TableCell>
       <TableCell>
-        {profile.submittedAt ? new Date(profile.submittedAt).toLocaleDateString() : 'Not submitted'}
+        {profile.submittedAt ? new Date(profile.submittedAt).toLocaleDateString('ru-RU') : 'Не отправлен'}
       </TableCell>
       <TableCell>
         <div className="grid gap-2">
           <Input
             className="h-11"
-            aria-label={`Moderation comment for ${profile.publicName}`}
+            aria-label={`Комментарий модерации для ${profile.publicName}`}
             disabled={disabled}
             value={moderationComment}
-            placeholder="Moderation comment"
+            placeholder="Комментарий модерации"
             onChange={(event) => setModerationComment(event.target.value)}
           />
           <div className="flex flex-wrap gap-2">
@@ -56,7 +57,7 @@ export function AdminManufacturerRow({
               disabled={disabled || !canDecideModeration}
               onClick={() => onUpdate({ status: 'approved' })}
             >
-              Approve
+              Одобрить
             </Button>
             <Button
               type="button"
@@ -65,7 +66,7 @@ export function AdminManufacturerRow({
               disabled={disabled || !canDecideModeration || needsComment}
               onClick={() => onUpdate({ status: 'rejected', moderationComment })}
             >
-              Reject
+              Отклонить
             </Button>
             <Button
               type="button"
@@ -74,7 +75,7 @@ export function AdminManufacturerRow({
               disabled={disabled || profile.status === 'blocked' || needsComment}
               onClick={() => onUpdate({ status: 'blocked', moderationComment })}
             >
-              Block
+              Заблокировать
             </Button>
           </div>
         </div>
@@ -86,7 +87,7 @@ export function AdminManufacturerRow({
 export function ManufacturerStatusBadge({ status }: { status: ManufacturerProfileStatus }) {
   return (
     <Badge variant={status === 'blocked' || status === 'rejected' ? 'destructive' : 'secondary'}>
-      {status}
+      {manufacturerStatusLabel(status)}
     </Badge>
   )
 }

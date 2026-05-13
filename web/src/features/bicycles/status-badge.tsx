@@ -1,6 +1,7 @@
 import type { BicycleSize, BicycleStatus } from '@web-app-demo/contracts'
 
 import { Badge } from '@/components/ui/badge'
+import { bicycleStatusLabel } from './model'
 
 export function BicycleStatusBadge({ status }: { status: BicycleStatus }) {
   const variant =
@@ -14,7 +15,7 @@ export function BicycleStatusBadge({ status }: { status: BicycleStatus }) {
             ? 'destructive'
             : 'outline'
 
-  return <Badge variant={variant}>{status}</Badge>
+  return <Badge variant={variant}>{bicycleStatusLabel(status)}</Badge>
 }
 
 export function BicycleSizeBadge({ size }: { size: BicycleSize }) {

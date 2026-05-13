@@ -70,16 +70,16 @@ export function ManufacturerOrdersPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Manufacturer orders"
-        title="Login required"
-        description="Sign in with a manufacturer account to review related rental orders."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заказы производителя"
+        title="Нужен вход"
+        description="Войдите под производителем, чтобы смотреть связанные заказы аренды."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -87,9 +87,9 @@ export function ManufacturerOrdersPage() {
   if (auth.user.role !== 'manufacturer') {
     return (
       <GateCard
-        eyebrow="Manufacturer orders"
-        title="Access denied"
-        description="Your account is not registered as a manufacturer."
+        eyebrow="Заказы производителя"
+        title="Доступ запрещен"
+        description="Ваш аккаунт не зарегистрирован как производитель."
       />
     )
   }
@@ -103,15 +103,15 @@ export function ManufacturerOrdersPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Manufacturer orders
+              Заказы производителя
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Related orders</h1>
-            <CardDescription>Review orders that include your bicycles, handoff state, and checklist history.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Связанные заказы</h1>
+            <CardDescription>Смотрите заказы с вашими велосипедами, состояние передачи и историю чеклистов.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -135,14 +135,14 @@ export function ManufacturerOrdersPage() {
           {ordersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading related orders...
+              Загружаем связанные заказы...
             </div>
           )}
 
           {ordersQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load related orders</AlertTitle>
+              <AlertTitle>Не удалось загрузить связанные заказы</AlertTitle>
               <AlertDescription>{formatRequestError(ordersQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -153,8 +153,8 @@ export function ManufacturerOrdersPage() {
                 <EmptyMedia variant="icon">
                   <ClipboardListIcon />
                 </EmptyMedia>
-                <EmptyTitle>No related orders found.</EmptyTitle>
-                <EmptyDescription>Orders containing your bicycles will appear here after customers create requests.</EmptyDescription>
+                <EmptyTitle>Связанные заказы не найдены.</EmptyTitle>
+                <EmptyDescription>Заказы с вашими велосипедами появятся здесь после создания клиентских заявок.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -175,7 +175,7 @@ export function ManufacturerOrdersPage() {
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
               >
                 <ChevronLeftIcon data-icon="inline-start" />
-                Previous
+                Назад
               </Button>
             </PaginationItem>
             <PaginationItem>
@@ -186,7 +186,7 @@ export function ManufacturerOrdersPage() {
                 disabled={page >= totalPages || ordersQuery.isFetching}
                 onClick={() => setPage((current) => current + 1)}
               >
-                Next
+                Далее
                 <ChevronRightIcon data-icon="inline-end" />
               </Button>
             </PaginationItem>
@@ -207,16 +207,16 @@ export function ManufacturerOrderDetailPage() {
   })
 
   if (auth.isBootstrapping || orderQuery.isLoading) {
-    return <LoadingState message="Loading related order..." />
+    return <LoadingState message="Загружаем связанный заказ..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Manufacturer order"
-        title="Login required"
-        description="Sign in with a manufacturer account to review this order."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Заказ производителя"
+        title="Нужен вход"
+        description="Войдите под производителем, чтобы просмотреть этот заказ."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -224,9 +224,9 @@ export function ManufacturerOrderDetailPage() {
   if (auth.user.role !== 'manufacturer') {
     return (
       <GateCard
-        eyebrow="Manufacturer order"
-        title="Access denied"
-        description="Your account is not registered as a manufacturer."
+        eyebrow="Заказ производителя"
+        title="Доступ запрещен"
+        description="Ваш аккаунт не зарегистрирован как производитель."
       />
     )
   }
@@ -234,14 +234,14 @@ export function ManufacturerOrderDetailPage() {
   if (orderQuery.isError) {
     return (
       <GateCard
-        eyebrow="Manufacturer order"
-        title="Order unavailable"
+        eyebrow="Заказ производителя"
+        title="Заказ недоступен"
         description={formatRequestError(orderQuery.error)}
         action={
           <div className="grid gap-3">
             <p className="text-sm text-muted-foreground">{requestErrorNextStep(orderQuery.error)}</p>
             <Button className="w-fit" asChild>
-              <Link to="/manufacturer/orders">Back to related orders</Link>
+              <Link to="/manufacturer/orders">Назад к связанным заказам</Link>
             </Button>
           </div>
         }
@@ -252,7 +252,7 @@ export function ManufacturerOrderDetailPage() {
   const order = orderQuery.data?.order
 
   if (!order) {
-    return <LoadingState message="Loading related order..." />
+    return <LoadingState message="Загружаем связанный заказ..." />
   }
 
   return (
@@ -261,10 +261,10 @@ export function ManufacturerOrderDetailPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Manufacturer order
+              Заказ производителя
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Order {order.id}</h1>
-            <CardDescription>Only your bicycles, your subtotals, and your checklist history are shown.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Заказ {order.id}</h1>
+            <CardDescription>Показаны только ваши велосипеды, ваши суммы и история ваших чеклистов.</CardDescription>
           </div>
           <CardAction>
             <OrderStatusBadge status={order.status} />
@@ -278,7 +278,7 @@ export function ManufacturerOrderDetailPage() {
           <section className="grid gap-3 border-t pt-4">
             <div className="flex items-center gap-2">
               <BikeIcon className="size-4 text-muted-foreground" />
-              <h2 className="text-base font-semibold">Issue and return history</h2>
+              <h2 className="text-base font-semibold">История выдачи и возврата</h2>
             </div>
             <ManufacturerOrderChecklists checklists={order.checklists} />
           </section>

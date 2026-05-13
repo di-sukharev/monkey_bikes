@@ -9,7 +9,13 @@ import { Button } from '@/components/ui/button'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { adminBicycleStatusOptionsFor, canAdminApproveBicycle, formatMoney } from './model'
+import {
+  adminBicycleStatusOptionsFor,
+  bicycleStatusLabel,
+  canAdminApproveBicycle,
+  formatMoney,
+} from './model'
+import { manufacturerStatusLabel } from '../manufacturers/model'
 import { BicycleSizeBadge, BicycleStatusBadge } from './status-badge'
 
 export function AdminBicycleRow({
@@ -35,9 +41,11 @@ export function AdminBicycleRow({
           <span className="font-medium">{bicycle.title}</span>
           <span className="text-sm text-muted-foreground">{bicycle.manufacturer.publicName}</span>
           {bicycle.manufacturer.status !== 'approved' && (
-            <span className="text-sm text-muted-foreground">Manufacturer {bicycle.manufacturer.status}</span>
+            <span className="text-sm text-muted-foreground">
+              Производитель: {manufacturerStatusLabel(bicycle.manufacturer.status)}
+            </span>
           )}
-          <span className="text-sm text-muted-foreground">{formatMoney(bicycle.pricePerDayKopecks)} / day</span>
+          <span className="text-sm text-muted-foreground">{formatMoney(bicycle.pricePerDayKopecks)} / день</span>
         </div>
       </TableCell>
       <TableCell className="align-top">
@@ -48,12 +56,12 @@ export function AdminBicycleRow({
       </TableCell>
       <TableCell className="align-top">{bicycle.city}</TableCell>
       <TableCell className="align-top">
-        {bicycle.submittedAt ? new Date(bicycle.submittedAt).toLocaleDateString() : '-'}
+        {bicycle.submittedAt ? new Date(bicycle.submittedAt).toLocaleDateString('ru-RU') : '-'}
       </TableCell>
       <TableCell className="align-top">
         <div className="grid gap-2">
           <Textarea
-            aria-label={`Moderation comment for ${bicycle.title}`}
+            aria-label={`Комментарий модерации для ${bicycle.title}`}
             className="min-h-20"
             disabled={disabled}
             value={comment}
@@ -66,7 +74,7 @@ export function AdminBicycleRow({
               disabled={disabled || !canApprove}
               onClick={() => onModerate({ decision: 'approved' })}
             >
-              Approve
+              Одобрить
             </Button>
             <Button
               type="button"
@@ -75,27 +83,27 @@ export function AdminBicycleRow({
               disabled={disabled || bicycle.status !== 'moderation' || comment.trim().length === 0}
               onClick={() => onModerate({ decision: 'rejected', moderationComment: comment })}
             >
-              Reject
+              Отклонить
             </Button>
           </div>
           <NativeSelect
-            aria-label={`Operational status for ${bicycle.title}`}
+            aria-label={`Операционный статус для ${bicycle.title}`}
             disabled={disabled || !canUpdateOperationalStatus}
             value={bicycle.status}
             onChange={(event) =>
               onStatusChange({ status: event.target.value as AdminBicycleStatusUpdateRequest['status'] })
             }
           >
-            <NativeSelectOption value={bicycle.status}>{bicycle.status}</NativeSelectOption>
+            <NativeSelectOption value={bicycle.status}>{bicycleStatusLabel(bicycle.status)}</NativeSelectOption>
             {statusOptions.map((status) => (
               <NativeSelectOption key={status} value={status}>
-                {status}
+                {bicycleStatusLabel(status)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
           {bicycle.status === 'rented' && (
             <span className="text-sm text-muted-foreground">
-              Rented bicycles change status through the return checklist.
+              Выданные велосипеды меняют статус через чеклист возврата.
             </span>
           )}
         </div>

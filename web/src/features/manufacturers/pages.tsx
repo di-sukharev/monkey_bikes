@@ -50,6 +50,7 @@ import {
   emptyManufacturerProfile,
   manufacturerProfileQueryKey,
   manufacturerProfileToForm,
+  manufacturerStatusLabel,
   manufacturerStatuses,
   type AdminManufacturerStatusFilter,
 } from './model'
@@ -72,7 +73,7 @@ export function ManufacturerProfilePage() {
   const saveProfile = useMutation({
     mutationFn: (input: ManufacturerProfileUpsertRequest) => auth.api.upsertManufacturerProfile(input),
     onSuccess: async () => {
-      setNotice('Profile saved as draft')
+      setNotice('Профиль сохранен как черновик')
       await queryClient.invalidateQueries({ queryKey: profileQueryKey })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
@@ -82,7 +83,7 @@ export function ManufacturerProfilePage() {
   const submitProfile = useMutation({
     mutationFn: () => auth.api.submitManufacturerProfile(),
     onSuccess: async () => {
-      setNotice('Profile submitted for moderation')
+      setNotice('Профиль отправлен на модерацию')
       await queryClient.invalidateQueries({ queryKey: profileQueryKey })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
@@ -90,18 +91,18 @@ export function ManufacturerProfilePage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Manufacturer profile"
-        title="Login required"
-        description="Sign in with a manufacturer account to edit the public manufacturer profile."
+        eyebrow="Профиль производителя"
+        title="Нужен вход"
+        description="Войдите под производителем, чтобы редактировать публичный профиль."
         action={
           <Button asChild>
-            <Link to="/">Go to auth</Link>
+            <Link to="/">К авторизации</Link>
           </Button>
         }
       />
@@ -111,9 +112,9 @@ export function ManufacturerProfilePage() {
   if (auth.user.role !== 'manufacturer') {
     return (
       <GateCard
-        eyebrow="Manufacturer profile"
-        title="Access denied"
-        description="Your account is not registered as a manufacturer."
+        eyebrow="Профиль производителя"
+        title="Доступ запрещен"
+        description="Ваш аккаунт не зарегистрирован как производитель."
       />
     )
   }
@@ -133,11 +134,11 @@ export function ManufacturerProfilePage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Manufacturer profile
+              Профиль производителя
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Profile</h1>
+            <h1 className="text-3xl font-semibold tracking-tight">Профиль</h1>
             <CardDescription>
-              Keep public manufacturer details ready for administrator moderation.
+              Поддерживайте публичные данные производителя готовыми к модерации администратором.
             </CardDescription>
           </div>
           {profile && (
@@ -150,14 +151,14 @@ export function ManufacturerProfilePage() {
           {profileQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading profile...
+              Загружаем профиль...
             </div>
           )}
 
           {profileQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load profile</AlertTitle>
+              <AlertTitle>Не удалось загрузить профиль</AlertTitle>
               <AlertDescription>{formatRequestError(profileQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -165,7 +166,7 @@ export function ManufacturerProfilePage() {
           {notice && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>Manufacturer profile</AlertTitle>
+              <AlertTitle>Профиль производителя</AlertTitle>
               <AlertDescription>{notice}</AlertDescription>
             </Alert>
           )}
@@ -173,7 +174,7 @@ export function ManufacturerProfilePage() {
           {mutationError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not update profile</AlertTitle>
+              <AlertTitle>Не удалось обновить профиль</AlertTitle>
               <AlertDescription>{formatRequestError(mutationError)}</AlertDescription>
             </Alert>
           )}
@@ -181,7 +182,7 @@ export function ManufacturerProfilePage() {
           {profile?.moderationComment && (
             <Alert>
               <CircleAlertIcon />
-              <AlertTitle>Moderation comment</AlertTitle>
+              <AlertTitle>Комментарий модерации</AlertTitle>
               <AlertDescription>{profile.moderationComment}</AlertDescription>
             </Alert>
           )}
@@ -211,7 +212,7 @@ export function ManufacturerProfilePage() {
                 submitProfile.mutate()
               }}
             >
-              Submit for moderation
+              Отправить на модерацию
             </Button>
           </div>
         </CardContent>
@@ -247,7 +248,7 @@ export function AdminManufacturersPage() {
       input: AdminManufacturerStatusUpdateRequest
     }) => auth.api.updateAdminManufacturerStatus(id, input),
     onSuccess: async (response) => {
-      setNotice(`${response.profile.publicName} updated`)
+      setNotice(`${response.profile.publicName}: профиль обновлен`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'manufacturers'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'bicycles'] })
       await queryClient.invalidateQueries({ queryKey: ['catalog', 'bicycles'] })
@@ -255,18 +256,18 @@ export function AdminManufacturersPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin manufacturers"
-        title="Login required"
-        description="Sign in with an administrator account to moderate manufacturer profiles."
+        eyebrow="Производители"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы модерировать профили производителей."
         action={
           <Button asChild>
-            <Link to="/">Go to auth</Link>
+            <Link to="/">К авторизации</Link>
           </Button>
         }
       />
@@ -276,9 +277,9 @@ export function AdminManufacturersPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin manufacturers"
-        title="Access denied"
-        description="Your account does not have permission to moderate manufacturer profiles."
+        eyebrow="Производители"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на модерацию профилей производителей."
       />
     )
   }
@@ -293,15 +294,15 @@ export function AdminManufacturersPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Admin manufacturers
+              Производители администратора
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Manufacturers</h1>
-            <CardDescription>Review submitted manufacturer profiles before catalog work begins.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Производители</h1>
+            <CardDescription>Проверяйте отправленные профили производителей перед работой с каталогом.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -309,7 +310,7 @@ export function AdminManufacturersPage() {
         <CardContent className="grid gap-4 py-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <NativeSelect
-              aria-label="Manufacturer status filter"
+              aria-label="Фильтр статуса производителя"
               className="w-full max-w-56"
               value={status}
               onChange={(event) => {
@@ -317,10 +318,10 @@ export function AdminManufacturersPage() {
                 setStatus(event.target.value as AdminManufacturerStatusFilter)
               }}
             >
-              <NativeSelectOption value="all">All statuses</NativeSelectOption>
+              <NativeSelectOption value="all">Все статусы</NativeSelectOption>
               {manufacturerStatuses.map((nextStatus) => (
                 <NativeSelectOption key={nextStatus} value={nextStatus}>
-                  {nextStatus}
+                  {manufacturerStatusLabel(nextStatus)}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
@@ -329,14 +330,14 @@ export function AdminManufacturersPage() {
           {manufacturersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading manufacturers...
+              Загружаем производителей...
             </div>
           )}
 
           {manufacturersQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load manufacturers</AlertTitle>
+              <AlertTitle>Не удалось загрузить производителей</AlertTitle>
               <AlertDescription>{formatRequestError(manufacturersQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -344,7 +345,7 @@ export function AdminManufacturersPage() {
           {notice && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>Manufacturer updated</AlertTitle>
+              <AlertTitle>Производитель обновлен</AlertTitle>
               <AlertDescription>{notice}</AlertDescription>
             </Alert>
           )}
@@ -352,7 +353,7 @@ export function AdminManufacturersPage() {
           {mutationError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not update manufacturer</AlertTitle>
+              <AlertTitle>Не удалось обновить производителя</AlertTitle>
               <AlertDescription>{mutationError}</AlertDescription>
             </Alert>
           )}
@@ -363,8 +364,8 @@ export function AdminManufacturersPage() {
                 <EmptyMedia variant="icon">
                   <StoreIcon />
                 </EmptyMedia>
-                <EmptyTitle>No manufacturer profiles found.</EmptyTitle>
-                <EmptyDescription>The current status filter did not return any profiles.</EmptyDescription>
+                <EmptyTitle>Профили производителей не найдены.</EmptyTitle>
+                <EmptyDescription>Текущий фильтр статуса не вернул профили.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -374,11 +375,11 @@ export function AdminManufacturersPage() {
               <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[28%]">Manufacturer</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>City</TableHead>
-                    <TableHead>Submitted</TableHead>
-                    <TableHead className="w-[32%]">Decision</TableHead>
+                    <TableHead className="w-[28%]">Производитель</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Город</TableHead>
+                    <TableHead>Отправлен</TableHead>
+                    <TableHead className="w-[32%]">Решение</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -411,7 +412,7 @@ export function AdminManufacturersPage() {
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -422,7 +423,7 @@ export function AdminManufacturersPage() {
               disabled={page >= totalPages || manufacturersQuery.isFetching}
               onClick={() => setPage((current) => current + 1)}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>

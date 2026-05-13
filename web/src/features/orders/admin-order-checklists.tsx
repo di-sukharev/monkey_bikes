@@ -44,12 +44,12 @@ type ChecklistDraft = Record<ChecklistConditionKey, OrderChecklistCondition> & {
 }
 
 const conditionFields: Array<{ key: ChecklistConditionKey; label: string }> = [
-  { key: 'frameCondition', label: 'Frame' },
-  { key: 'wheelsCondition', label: 'Wheels' },
-  { key: 'handlebarCondition', label: 'Handlebar' },
-  { key: 'saddleCondition', label: 'Saddle' },
-  { key: 'brakesCondition', label: 'Brakes' },
-  { key: 'exteriorCondition', label: 'Exterior' },
+  { key: 'frameCondition', label: 'Рама' },
+  { key: 'wheelsCondition', label: 'Колеса' },
+  { key: 'handlebarCondition', label: 'Руль' },
+  { key: 'saddleCondition', label: 'Седло' },
+  { key: 'brakesCondition', label: 'Тормоза' },
+  { key: 'exteriorCondition', label: 'Внешний вид' },
 ]
 
 const conditionOptions: OrderChecklistCondition[] = [
@@ -63,8 +63,8 @@ const conditionOptions: OrderChecklistCondition[] = [
 const safetyActions: OrderChecklistBicycleAction[] = ['none', 'maintenance', 'hidden']
 
 const typeLabels: Record<OrderChecklistType, string> = {
-  issue: 'Issue',
-  return: 'Return',
+  issue: 'Выдача',
+  return: 'Возврат',
 }
 
 export function AdminOrderChecklistsTable({ order }: { order: AdminOrderDto }) {
@@ -72,8 +72,8 @@ export function AdminOrderChecklistsTable({ order }: { order: AdminOrderDto }) {
     return (
       <Alert>
         <ClipboardListIcon />
-        <AlertTitle>No checklists yet</AlertTitle>
-        <AlertDescription>Issue and return checklists will be recorded here with the administrator who completed them.</AlertDescription>
+        <AlertTitle>Чеклистов пока нет</AlertTitle>
+        <AlertDescription>Чеклисты выдачи и возврата будут записаны здесь вместе с администратором, который их заполнил.</AlertDescription>
       </Alert>
     )
   }
@@ -83,22 +83,22 @@ export function AdminOrderChecklistsTable({ order }: { order: AdminOrderDto }) {
   return (
     <section className="grid gap-3 border-t pt-4">
       <div className="grid gap-1">
-        <h2 className="text-base font-semibold">Checklists</h2>
+        <h2 className="text-base font-semibold">Чеклисты</h2>
         <p className="text-sm text-muted-foreground">
-          Recorded bicycle condition at issue and return.
+          Зафиксированное состояние велосипеда при выдаче и возврате.
         </p>
       </div>
       <div className="overflow-x-auto rounded-lg border">
         <Table className="min-w-[980px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Bicycle</TableHead>
-              <TableHead>Conditions</TableHead>
-              <TableHead>Catalog action</TableHead>
-              <TableHead>Comment</TableHead>
-              <TableHead>Actor</TableHead>
-              <TableHead>Checked</TableHead>
+              <TableHead>Тип</TableHead>
+              <TableHead>Велосипед</TableHead>
+              <TableHead>Состояние</TableHead>
+              <TableHead>Действие в каталоге</TableHead>
+              <TableHead>Комментарий</TableHead>
+              <TableHead>Автор</TableHead>
+              <TableHead>Проверено</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -114,7 +114,7 @@ export function AdminOrderChecklistsTable({ order }: { order: AdminOrderDto }) {
                 <TableCell>{formatSafetyAction(checklist.safetyAction)}</TableCell>
                 <TableCell>{checklist.comment ?? '-'}</TableCell>
                 <TableCell>{checklist.checkedByUser.displayName ?? checklist.checkedByUser.email}</TableCell>
-                <TableCell>{new Date(checklist.checkedAt).toLocaleString()}</TableCell>
+                <TableCell>{new Date(checklist.checkedAt).toLocaleString('ru-RU')}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -138,27 +138,27 @@ export function AdminOrderChecklistTransitionPanel({
   const [comment, setComment] = useState('')
   const [drafts, setDrafts] = useState<Record<string, ChecklistDraft>>(() => initialDrafts(order, type))
   const status = type === 'issue' ? 'issued' : 'returned'
-  const submitLabel = type === 'issue' ? 'Issue order' : 'Return order'
+  const submitLabel = type === 'issue' ? 'Выдать заказ' : 'Вернуть заказ'
 
   return (
     <section className="grid gap-3 border-t pt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
-          <h2 className="text-base font-semibold">{typeLabels[type]} checklist</h2>
+          <h2 className="text-base font-semibold">{typeLabels[type]} чеклист</h2>
           <p className="text-sm text-muted-foreground">
-            One checklist is required for every bicycle in this order.
+            Для каждого велосипеда в заказе нужен отдельный чеклист.
           </p>
         </div>
-        <Badge variant="outline">{order.items.length} bicycle(s)</Badge>
+        <Badge variant="outline">Велосипедов: {order.items.length}</Badge>
       </div>
 
       <Alert>
         {type === 'issue' ? <ClipboardCheckIcon /> : <Undo2Icon />}
-        <AlertTitle>{type === 'issue' ? 'Ready for handoff' : 'Ready for return'}</AlertTitle>
+        <AlertTitle>{type === 'issue' ? 'Готов к передаче' : 'Готов к возврату'}</AlertTitle>
         <AlertDescription>
           {type === 'issue'
-            ? 'The order can be issued after successful rent and deposit payments and condition review.'
-            : 'Safety findings on return can move a bicycle to maintenance or hide it from the catalog.'}
+            ? 'Заказ можно выдать после успешной оплаты аренды и залога, а также проверки состояния.'
+            : 'Замечания безопасности при возврате могут перевести велосипед в обслуживание или скрыть из каталога.'}
         </AlertDescription>
       </Alert>
 
@@ -166,12 +166,12 @@ export function AdminOrderChecklistTransitionPanel({
         <Table className="min-w-[1280px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Bicycle</TableHead>
+              <TableHead>Велосипед</TableHead>
               {conditionFields.map((field) => (
                 <TableHead key={field.key}>{field.label}</TableHead>
               ))}
-              {type === 'return' && <TableHead>Catalog action</TableHead>}
-              <TableHead>Comment</TableHead>
+              {type === 'return' && <TableHead>Действие в каталоге</TableHead>}
+              <TableHead>Комментарий</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -190,7 +190,7 @@ export function AdminOrderChecklistTransitionPanel({
                   {conditionFields.map((field) => (
                     <TableCell key={field.key}>
                       <NativeSelect
-                        aria-label={`${typeLabels[type]} ${field.label} condition for ${title}`}
+                        aria-label={`${typeLabels[type]}: ${field.label.toLowerCase()} для ${title}`}
                         className="w-36"
                         disabled={disabled}
                         value={draft?.[field.key] ?? 'ok'}
@@ -210,7 +210,7 @@ export function AdminOrderChecklistTransitionPanel({
                   {type === 'return' && (
                     <TableCell>
                       <NativeSelect
-                        aria-label={`Return safety action for ${title}`}
+                        aria-label={`Действие безопасности при возврате для ${title}`}
                         className="w-40"
                         disabled={disabled}
                         value={draft?.safetyAction ?? 'none'}
@@ -229,10 +229,10 @@ export function AdminOrderChecklistTransitionPanel({
                   )}
                   <TableCell>
                     <Textarea
-                      aria-label={`${typeLabels[type]} checklist comment for ${title}`}
+                      aria-label={`Комментарий чеклиста: ${typeLabels[type].toLowerCase()} для ${title}`}
                       className="min-h-20 w-64"
                       disabled={disabled}
-                      placeholder="Optional note"
+                      placeholder="Необязательная заметка"
                       value={draft?.comment ?? ''}
                       onChange={(event) =>
                         updateDraft(item.bicycleId, {
@@ -250,9 +250,9 @@ export function AdminOrderChecklistTransitionPanel({
       <Textarea
         className="min-h-20"
         disabled={disabled}
-        placeholder="Comment for status history"
+        placeholder="Комментарий для истории статусов"
         value={comment}
-        aria-label={`${typeLabels[type]} status comment`}
+        aria-label={`Комментарий к переходу статуса: ${typeLabels[type].toLowerCase()}`}
         onChange={(event) => setComment(event.target.value)}
       />
       <div className="flex justify-end">
@@ -375,10 +375,27 @@ function ConditionSummary({ checklist }: { checklist: OrderChecklistDto }) {
 }
 
 function formatCondition(condition: OrderChecklistCondition) {
-  return condition.replace('_', ' ')
+  switch (condition) {
+    case 'damaged':
+      return 'Повреждено'
+    case 'not_applicable':
+      return 'Не применимо'
+    case 'ok':
+      return 'В порядке'
+    case 'unsafe':
+      return 'Небезопасно'
+    case 'worn':
+      return 'Изношено'
+  }
 }
 
 function formatSafetyAction(action: OrderChecklistBicycleAction) {
-  if (action === 'none') return 'No change'
-  return action
+  switch (action) {
+    case 'hidden':
+      return 'Скрыть'
+    case 'maintenance':
+      return 'На обслуживание'
+    case 'none':
+      return 'Без изменений'
+  }
 }

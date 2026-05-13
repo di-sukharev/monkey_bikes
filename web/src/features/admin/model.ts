@@ -7,11 +7,11 @@ export const adminChecklistTypes: OrderChecklistType[] = ['issue', 'return']
 export function adminChecklistTypeLabel(type: AdminChecklistTypeFilter) {
   switch (type) {
     case 'all':
-      return 'All checklists'
+      return 'Все чеклисты'
     case 'issue':
-      return 'Issue'
+      return 'Выдача'
     case 'return':
-      return 'Return'
+      return 'Возврат'
   }
 }
 

@@ -25,6 +25,8 @@ import {
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { ApiRequestError } from '@/lib/api'
+import { formatFormError } from '@/lib/form-errors'
+import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/use-auth'
 
@@ -32,8 +34,8 @@ type AuthMode = 'login' | 'register'
 type RegistrationRole = RegisterRequest['role']
 
 const registrationRoles: Array<{ label: string; value: RegistrationRole }> = [
-  { label: 'User', value: 'user' },
-  { label: 'Manufacturer', value: 'manufacturer' },
+  { label: 'Клиент', value: 'user' },
+  { label: 'Производитель', value: 'manufacturer' },
 ]
 
 export function AuthForm() {
@@ -67,28 +69,28 @@ export function AuthForm() {
         }
       } catch (caughtError) {
         if (caughtError instanceof ApiRequestError) {
-          setError(caughtError.message)
+          setError(formatRequestError(caughtError))
           return
         }
-        setError('Unexpected auth error')
+        setError('Неожиданная ошибка авторизации')
       }
     },
   })
 
   return (
-    <Card aria-label="Authentication">
+    <Card aria-label="Авторизация">
       <CardHeader>
         <h2 className="font-heading text-base leading-snug font-medium">
-          {isRegister ? 'Create account' : 'Login'}
+          {isRegister ? 'Создать аккаунт' : 'Войти'}
         </h2>
         <CardDescription>
-          {isRegister ? 'Start a new browser session.' : 'Continue with an existing account.'}
+          {isRegister ? 'Начните новую браузерную сессию.' : 'Продолжите с существующим аккаунтом.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-5">
         <ButtonGroup
           className="grid w-full grid-cols-2 rounded-lg bg-muted p-1"
-          aria-label="Auth mode"
+          aria-label="Режим авторизации"
         >
           {(['register', 'login'] as const).map((nextMode) => (
             <Button
@@ -105,7 +107,7 @@ export function AuthForm() {
                 setMode(nextMode)
               }}
             >
-              {nextMode === 'register' ? 'Register' : 'Login'}
+              {nextMode === 'register' ? 'Регистрация' : 'Вход'}
             </Button>
           ))}
         </ButtonGroup>
@@ -123,10 +125,10 @@ export function AuthForm() {
                   name="role"
                   children={(field) => (
                     <Field data-invalid={field.state.meta.errors.length > 0}>
-                      <FieldLabel>Account type</FieldLabel>
+                      <FieldLabel>Тип аккаунта</FieldLabel>
                       <ButtonGroup
                         className="grid w-full grid-cols-2 rounded-lg bg-muted p-1"
-                        aria-label="Account type"
+                        aria-label="Тип аккаунта"
                       >
                         {registrationRoles.map((role) => (
                           <Button
@@ -156,7 +158,7 @@ export function AuthForm() {
                   name="displayName"
                   children={(field) => (
                     <Field data-invalid={field.state.meta.errors.length > 0}>
-                      <FieldLabel htmlFor={field.name}>Name</FieldLabel>
+                      <FieldLabel htmlFor={field.name}>Имя</FieldLabel>
                       <Input
                         className="h-11"
                         id={field.name}
@@ -182,7 +184,7 @@ export function AuthForm() {
               name="email"
               children={(field) => (
                 <Field data-invalid={field.state.meta.errors.length > 0}>
-                  <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Электронная почта</FieldLabel>
                   <Input
                     className="h-11"
                     id={field.name}
@@ -208,7 +210,7 @@ export function AuthForm() {
               name="password"
               children={(field) => (
                 <Field data-invalid={field.state.meta.errors.length > 0}>
-                  <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                  <FieldLabel htmlFor={field.name}>Пароль</FieldLabel>
                   <Input
                     className="h-11"
                     id={field.name}
@@ -232,7 +234,7 @@ export function AuthForm() {
             {error && (
               <Alert variant="destructive">
                 <CircleAlertIcon />
-                <AlertTitle>Authentication failed</AlertTitle>
+                <AlertTitle>Не удалось авторизоваться</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
@@ -245,7 +247,7 @@ export function AuthForm() {
                   className="h-11 w-full"
                   disabled={!canSubmit || isSubmitting}
                 >
-                  {isSubmitting ? 'Working...' : isRegister ? 'Create account' : 'Login'}
+                  {isSubmitting ? 'Выполняется...' : isRegister ? 'Создать аккаунт' : 'Войти'}
                 </Button>
               )}
             />
@@ -259,17 +261,9 @@ export function AuthForm() {
 function FieldErrors({ errors, id }: { errors: unknown[]; id: string | undefined }) {
   if (!errors.length) return null
 
-  return <FieldError id={id}>{errors.map(formatError).join(', ')}</FieldError>
+  return <FieldError id={id}>{errors.map(formatFormError).join(', ')}</FieldError>
 }
 
 function fieldErrorId(fieldName: string, errors: unknown[]) {
   return errors.length > 0 ? `${fieldName}-error` : undefined
-}
-
-function formatError(error: unknown) {
-  if (typeof error === 'string') return error
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message)
-  }
-  return 'Invalid value'
 }

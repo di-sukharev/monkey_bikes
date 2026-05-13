@@ -26,11 +26,11 @@ export async function registerUser(email: string, role: 'manufacturer' | 'user' 
 
 export async function loginUser(page: Page, email: string) {
   await page.goto('/')
-  await page.getByLabel('Auth mode').getByRole('button', { name: 'Login' }).click()
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(e2ePassword)
-  await page.locator('form').getByRole('button', { name: 'Login' }).click()
-  await expect(page.getByRole('heading', { name: 'Session is active' })).toBeVisible()
+  await page.getByLabel('Режим авторизации').getByRole('button', { name: 'Вход' }).click()
+  await page.getByLabel('Электронная почта').fill(email)
+  await page.getByLabel('Пароль').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Войти' }).click()
+  await expect(page.getByRole('heading', { name: 'Сессия активна' })).toBeVisible()
 }
 
 export async function promoteUserToAdmin(email: string) {

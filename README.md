@@ -15,7 +15,7 @@ Local development does not require DigitalOcean or Yandex Cloud. Cloud tokens, `
 ## Что внутри
 
 - `backend` - Bun + Hono + Prisma + PostgreSQL, custom JWT auth, Zod validation, OpenAPI.
-- `web` - React + Vite + Tailwind CSS + shadcn/ui + TanStack Query/Form/Router, готовый auth-flow.
+- `web` - React + Vite + Tailwind CSS + локальная shadcn/ui Neobrutalism-тема + TanStack Query/Form/Router, готовый auth-flow.
 - `landing` - отдельный Astro-проект для статической landing-страницы.
 - `mobile` - Expo + React Native + Expo Router + TanStack Query/Form, auth-flow с SecureStore.
 - `packages/contracts` - общие Zod-схемы и TypeScript-типы API.
@@ -90,6 +90,6 @@ bun run --cwd backend seed:admin
 
 Backend устроен по потоку `route -> validation -> auth/session guard -> service -> Prisma -> DTO`. Routes остаются тонкими, бизнес-логика auth живёт в feature service, а `src/index.ts` только поднимает Bun server.
 
-Web UI строится на Tailwind CSS v4 и локальных shadcn/ui-примитивах из `web/src/components/ui`. В этом шаблоне registry добавлен заранее для discoverability, но новые экраны всё равно должны сохранять semantic HTML поверх визуальных primitives и не копировать ad hoc CSS вместо существующих компонентов.
+Web UI строится на Tailwind CSS v4 и локальных shadcn/ui-примитивах из `web/src/components/ui`, адаптированных под Neobrutalism CSS-variable тему. Старые shadcn token names и варианты компонентов сохранены как совместимый API, но новые web-экраны должны использовать существующие primitives (`Button`, `Card`, `Field`, `Input`, `Table`, `NativeSelect`, `Alert` и т.д.), сохранять semantic HTML поверх визуальных primitives и не копировать ad hoc CSS вместо design-system слоя.
 
 Подробнее: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), тесты: [docs/TESTING.md](docs/TESTING.md), деплой: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).

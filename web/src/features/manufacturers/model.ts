@@ -14,6 +14,23 @@ export const manufacturerStatuses: ManufacturerProfileStatus[] = [
 
 export type AdminManufacturerStatusFilter = ManufacturerProfileStatus | 'all'
 
+export function manufacturerStatusLabel(status: ManufacturerProfileStatus | 'all') {
+  switch (status) {
+    case 'all':
+      return 'Все статусы'
+    case 'approved':
+      return 'Одобрен'
+    case 'blocked':
+      return 'Заблокирован'
+    case 'draft':
+      return 'Черновик'
+    case 'moderation':
+      return 'На модерации'
+    case 'rejected':
+      return 'Отклонен'
+  }
+}
+
 export function manufacturerProfileQueryKey(userId: string | null | undefined) {
   return ['manufacturer', 'profile', userId ?? null] as const
 }

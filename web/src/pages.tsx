@@ -12,19 +12,18 @@ import {
   ChevronRightIcon,
   CircleAlertIcon,
   CircleCheckIcon,
-  LogOutIcon,
   ShieldCheckIcon,
   UserRoundIcon,
   UsersRoundIcon,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { useState } from 'react'
 
 import { AuthForm } from '@/components/AuthForm'
+import { AppSidebar } from '@/components/app-sidebar'
 import { FactCard, GateCard, LoadingState } from '@/components/page-state'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardAction,
@@ -54,6 +53,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@/components/ui/sidebar'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -64,62 +68,26 @@ const userRoles: UserRole[] = ['user', 'manufacturer', 'admin']
 const userStatuses: UserStatus[] = ['active', 'blocked']
 
 export function RootLayout() {
-  const auth = useAuth()
-
   return (
-    <main className="min-h-svh bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-        <div className="mx-auto flex min-h-16 w-full max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/85 sm:px-6">
+          <SidebarTrigger aria-label="Открыть меню" className="-ml-1" />
+          <div className="h-5 w-px bg-border md:hidden" aria-hidden="true" />
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight"
+            className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight md:hidden"
           >
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-xs text-primary-foreground">
               BR
             </span>
-            web_app_demo
+            Велопрокат
           </Link>
-
-          <nav className="order-3 flex w-full gap-1 sm:order-none sm:ml-auto sm:w-auto">
-            <NavLink to="/">Auth</NavLink>
-            <NavLink to="/app">App</NavLink>
-            <NavLink to="/bicycles">Catalog</NavLink>
-            {auth.user?.role === 'user' && <NavLink to="/orders">My orders</NavLink>}
-            {auth.user?.role === 'manufacturer' && (
-              <NavLink to="/manufacturer/profile">Manufacturer</NavLink>
-            )}
-            {auth.user?.role === 'manufacturer' && (
-              <NavLink to="/manufacturer/bicycles">My bicycles</NavLink>
-            )}
-            {auth.user?.role === 'manufacturer' && (
-              <NavLink to="/manufacturer/orders">Orders</NavLink>
-            )}
-            {auth.user?.role === 'admin' && <NavLink to="/admin">Admin</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/users">Users</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/manufacturers">Manufacturers</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/bicycles">Bicycles</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/orders">Orders</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/payments">Payments</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/checklists">Checklists</NavLink>}
-            {auth.user?.role === 'admin' && <NavLink to="/admin/reports">Reports</NavLink>}
-          </nav>
-
-          {auth.isAuthenticated && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="ml-auto sm:ml-0"
-              onClick={() => void auth.logout()}
-            >
-              <LogOutIcon data-icon="inline-start" />
-              Logout
-            </Button>
-          )}
-        </div>
-      </header>
-      <Outlet />
-    </main>
+        </header>
+        <Outlet />
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 
@@ -127,7 +95,7 @@ export function HomePage() {
   const auth = useAuth()
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user) {
@@ -136,20 +104,20 @@ export function HomePage() {
         <Card className="max-w-3xl">
           <CardHeader>
             <Badge variant="secondary" className="w-fit">
-              Authenticated starter
+              Активная сессия
             </Badge>
             <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
-              Session is active
+              Сессия активна
             </h1>
             <CardDescription className="text-base">
-              Logged in as <strong className="text-foreground">{auth.user.email}</strong>. This is
-              the baseline auth pattern for future web features.
+              Вы вошли как <strong className="text-foreground">{auth.user.email}</strong>.
+              Базовая авторизация готова для рабочих сценариев.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild>
               <Link to="/app">
-                Open app
+                Открыть профиль
                 <ArrowRightIcon data-icon="inline-end" />
               </Link>
             </Button>
@@ -168,14 +136,14 @@ export function HomePage() {
     >
       <div className="grid gap-5">
         <Badge variant="outline" className="w-fit">
-          Golden path template
+          Маркетплейс велопроката
         </Badge>
         <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-          Auth, validation, API state, and forms are wired from day one.
+          Аренда маленьких велосипедов для клиентов, производителей и администраторов.
         </h1>
         <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg">
-          The web app uses shared Zod contracts, TanStack Query for server state, TanStack Form for
-          input state, and an API client that refreshes sessions through the backend.
+          Выберите велосипеды в каталоге, создайте заявку на аренду и отслеживайте статусы,
+          платежи и выдачу в одном веб-приложении.
         </p>
       </div>
       <AuthForm />
@@ -187,18 +155,18 @@ export function AppPage() {
   const auth = useAuth()
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Protected example"
-        title="Login required"
-        description="This route intentionally stays small and shows where protected product UI begins."
+        eyebrow="Защищенный раздел"
+        title="Нужен вход"
+        description="Войдите в аккаунт, чтобы открыть профиль и рабочие разделы."
         action={
           <Button asChild>
-            <Link to="/">Go to auth</Link>
+            <Link to="/">К авторизации</Link>
           </Button>
         }
       />
@@ -209,7 +177,7 @@ export function AppPage() {
     <section className={cn(pageShellClass, 'grid gap-6')}>
       <div className="grid gap-3">
         <Badge variant="secondary" className="w-fit">
-          Current user
+          Текущий пользователь
         </Badge>
         <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
           {auth.user.displayName ?? auth.user.email}
@@ -218,10 +186,10 @@ export function AppPage() {
       </div>
 
       <dl className="grid gap-4 sm:grid-cols-2">
-        <FactCard label="User ID" value={auth.user.id} icon={<UserRoundIcon />} />
-        <FactCard label="Created" value={new Date(auth.user.createdAt).toLocaleString()} />
-        <FactCard label="Role" value={auth.user.role} icon={<ShieldCheckIcon />} />
-        <FactCard label="Status" value={auth.user.status} />
+        <FactCard label="ID пользователя" value={auth.user.id} icon={<UserRoundIcon />} />
+        <FactCard label="Создан" value={new Date(auth.user.createdAt).toLocaleString('ru-RU')} />
+        <FactCard label="Роль" value={userRoleLabel(auth.user.role)} icon={<ShieldCheckIcon />} />
+        <FactCard label="Статус" value={userStatusLabel(auth.user.status)} />
       </dl>
     </section>
   )
@@ -243,24 +211,24 @@ export function AdminUsersPage() {
     mutationFn: ({ id, input }: { id: string; input: AdminUpdateUserRequest }) =>
       auth.api.updateAdminUser(id, input),
     onSuccess: async (response) => {
-      setNotice(`${response.user.email} updated`)
+      setNotice(`${response.user.email}: пользователь обновлен`)
       await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
     },
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin users"
-        title="Login required"
-        description="Sign in with an administrator account to manage users."
+        eyebrow="Пользователи"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы управлять пользователями."
         action={
           <Button asChild>
-            <Link to="/">Go to auth</Link>
+            <Link to="/">К авторизации</Link>
           </Button>
         }
       />
@@ -270,9 +238,9 @@ export function AdminUsersPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin users"
-        title="Access denied"
-        description="Your account does not have permission to manage users."
+        eyebrow="Пользователи"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на управление пользователями."
       />
     )
   }
@@ -287,15 +255,15 @@ export function AdminUsersPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Admin users
+              Пользователи
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Users</h1>
-            <CardDescription>Review accounts and keep role/status changes centralized.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Пользователи</h1>
+            <CardDescription>Просматривайте аккаунты и централизованно меняйте роли и статусы.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -304,14 +272,14 @@ export function AdminUsersPage() {
           {usersQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading users...
+              Загружаем пользователей...
             </div>
           )}
 
           {usersQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load users</AlertTitle>
+              <AlertTitle>Не удалось загрузить пользователей</AlertTitle>
               <AlertDescription>{formatRequestError(usersQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -319,7 +287,7 @@ export function AdminUsersPage() {
           {notice && (
             <Alert>
               <CircleCheckIcon />
-              <AlertTitle>User updated</AlertTitle>
+              <AlertTitle>Пользователь обновлен</AlertTitle>
               <AlertDescription>{notice}</AlertDescription>
             </Alert>
           )}
@@ -327,7 +295,7 @@ export function AdminUsersPage() {
           {mutationError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not update user</AlertTitle>
+              <AlertTitle>Не удалось обновить пользователя</AlertTitle>
               <AlertDescription>{mutationError}</AlertDescription>
             </Alert>
           )}
@@ -338,8 +306,8 @@ export function AdminUsersPage() {
                 <EmptyMedia variant="icon">
                   <UsersRoundIcon />
                 </EmptyMedia>
-                <EmptyTitle>No users found.</EmptyTitle>
-                <EmptyDescription>The current filters did not return any accounts.</EmptyDescription>
+                <EmptyTitle>Пользователи не найдены.</EmptyTitle>
+                <EmptyDescription>Текущие фильтры не вернули аккаунты.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -349,10 +317,10 @@ export function AdminUsersPage() {
               <Table className="min-w-[760px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[42%]">User</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
+                    <TableHead className="w-[42%]">Пользователь</TableHead>
+                    <TableHead>Роль</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Создан</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -385,7 +353,7 @@ export function AdminUsersPage() {
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -396,48 +364,13 @@ export function AdminUsersPage() {
               disabled={page >= totalPages || usersQuery.isFetching}
               onClick={() => setPage((current) => current + 1)}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>
         </PaginationContent>
       </Pagination>
     </section>
-  )
-}
-
-function NavLink({
-  to,
-  children,
-}: {
-  to:
-    | '/'
-    | '/app'
-    | '/admin'
-    | '/admin/users'
-    | '/admin/manufacturers'
-    | '/admin/bicycles'
-    | '/admin/orders'
-    | '/admin/payments'
-    | '/admin/checklists'
-    | '/admin/reports'
-    | '/manufacturer/profile'
-    | '/manufacturer/bicycles'
-    | '/manufacturer/orders'
-    | '/bicycles'
-    | '/orders'
-  children: ReactNode
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'text-muted-foreground')}
-      activeProps={{
-        className: cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'text-foreground'),
-      }}
-    >
-      {children}
-    </Link>
   )
 }
 
@@ -460,7 +393,7 @@ function AdminUserRow({
       </TableCell>
       <TableCell>
         <NativeSelect
-          aria-label={`Role for ${user.email}`}
+          aria-label={`Роль для ${user.email}`}
           className="w-full min-w-36"
           disabled={disabled}
           size="default"
@@ -474,14 +407,14 @@ function AdminUserRow({
         >
           {userRoles.map((role) => (
             <NativeSelectOption key={role} value={role}>
-              {role}
+              {userRoleLabel(role)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </TableCell>
       <TableCell>
         <NativeSelect
-          aria-label={`Status for ${user.email}`}
+          aria-label={`Статус для ${user.email}`}
           className="w-full min-w-32"
           disabled={disabled}
           size="default"
@@ -495,12 +428,32 @@ function AdminUserRow({
         >
           {userStatuses.map((status) => (
             <NativeSelectOption key={status} value={status}>
-              {status}
+              {userStatusLabel(status)}
             </NativeSelectOption>
           ))}
         </NativeSelect>
       </TableCell>
-      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+      <TableCell>{new Date(user.createdAt).toLocaleDateString('ru-RU')}</TableCell>
     </TableRow>
   )
+}
+
+function userRoleLabel(role: UserRole) {
+  switch (role) {
+    case 'admin':
+      return 'Администратор'
+    case 'manufacturer':
+      return 'Производитель'
+    case 'user':
+      return 'Клиент'
+  }
+}
+
+function userStatusLabel(status: UserStatus) {
+  switch (status) {
+    case 'active':
+      return 'Активен'
+    case 'blocked':
+      return 'Заблокирован'
+  }
 }

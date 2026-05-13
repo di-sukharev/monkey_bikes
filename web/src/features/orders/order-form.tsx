@@ -13,7 +13,8 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
-import { fulfillmentTypes, type OrderFormValues } from './model'
+import { formatFormError } from '@/lib/form-errors'
+import { fulfillmentTypeLabel, fulfillmentTypes, type OrderFormValues } from './model'
 
 export function OrderForm({
   disabled,
@@ -52,7 +53,7 @@ export function OrderForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Starts on"
+                label="Дата начала"
                 name={field.name}
                 type="date"
                 value={field.state.value}
@@ -67,7 +68,7 @@ export function OrderForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Ends on"
+                label="Дата окончания"
                 name={field.name}
                 type="date"
                 value={field.state.value}
@@ -80,7 +81,7 @@ export function OrderForm({
             name="fulfillmentType"
             children={(field) => (
               <Field data-invalid={field.state.meta.errors.length > 0}>
-                <FieldLabel htmlFor={field.name}>Fulfillment</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Получение</FieldLabel>
                 <NativeSelect
                   disabled={disabled}
                   id={field.name}
@@ -90,7 +91,7 @@ export function OrderForm({
                 >
                   {fulfillmentTypes.map((type) => (
                     <NativeSelectOption key={type} value={type}>
-                      {type}
+                      {fulfillmentTypeLabel(type)}
                     </NativeSelectOption>
                   ))}
                 </NativeSelect>
@@ -107,7 +108,7 @@ export function OrderForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Delivery address"
+                label="Адрес доставки"
                 name={field.name}
                 value={field.state.value ?? ''}
                 onBlur={field.handleBlur}
@@ -121,7 +122,7 @@ export function OrderForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Contact name"
+                label="Имя контактного лица"
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -135,7 +136,7 @@ export function OrderForm({
               <TextInput
                 disabled={disabled}
                 errors={field.state.meta.errors}
-                label="Contact phone"
+                label="Телефон контактного лица"
                 name={field.name}
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -151,7 +152,7 @@ export function OrderForm({
             <TextareaInput
               disabled={disabled}
               errors={field.state.meta.errors}
-              label="Comment"
+              label="Комментарий"
               name={field.name}
               value={field.state.value ?? ''}
               onBlur={field.handleBlur}
@@ -162,11 +163,11 @@ export function OrderForm({
 
         <Alert>
           <ShieldCheckIcon />
-          <AlertTitle>Safety agreement</AlertTitle>
+          <AlertTitle>Согласие с правилами безопасности</AlertTitle>
           <AlertDescription>
-            Use the bicycle only with trained supervision, within the stated load and fit limits,
-            on a controlled surface. Stop the rental activity immediately if the rider shows stress
-            or the environment becomes unsafe.
+            Используйте велосипед только под подготовленным присмотром, в пределах указанных
+            ограничений по нагрузке и размеру, на контролируемой поверхности. Немедленно
+            остановите занятие, если участник испытывает стресс или среда становится небезопасной.
           </AlertDescription>
         </Alert>
 
@@ -180,7 +181,7 @@ export function OrderForm({
                 disabled={disabled}
                 onCheckedChange={(checked) => field.handleChange(checked === true)}
               />
-              <FieldLabel htmlFor={field.name}>Safety rules accepted</FieldLabel>
+              <FieldLabel htmlFor={field.name}>Правила безопасности приняты</FieldLabel>
               <FieldErrors
                 id={fieldErrorId(field.name, field.state.meta.errors)}
                 errors={field.state.meta.errors}
@@ -194,7 +195,7 @@ export function OrderForm({
             selector={(state) => [state.canSubmit, state.isSubmitting] as const}
             children={([canSubmit, isSubmitting]) => (
               <Button type="submit" disabled={disabled || !canSubmit || isSubmitting}>
-                Create request
+                Создать заявку
               </Button>
             )}
           />
@@ -286,17 +287,9 @@ function TextareaInput({
 function FieldErrors({ errors, id }: { errors: unknown[]; id: string | undefined }) {
   if (!errors.length) return null
 
-  return <FieldError id={id}>{errors.map(formatError).join(', ')}</FieldError>
+  return <FieldError id={id}>{errors.map(formatFormError).join(', ')}</FieldError>
 }
 
 function fieldErrorId(fieldName: string, errors: unknown[]) {
   return errors.length > 0 ? `${fieldName}-error` : undefined
-}
-
-function formatError(error: unknown) {
-  if (typeof error === 'string') return error
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message)
-  }
-  return 'Invalid value'
 }

@@ -32,7 +32,7 @@ test('admin filter helpers normalize route search values', () => {
   expect(parseDateOnlySearch('2026-05-13', '2026-05-12')).toBe('2026-05-13')
   expect(parseDateOnlySearch('bad-date', '2026-05-12')).toBe('2026-05-12')
   expect(todayDateOnly(new Date(2026, 4, 13))).toBe('2026-05-13')
-  expect(adminOrderQuickFilterLabel('orders_today')).toBe('Orders today')
+  expect(adminOrderQuickFilterLabel('orders_today')).toBe('Заявки на сегодня')
   expect(orderAdminListQueryKey(2, 'all', 'orders_today', '2026-05-13')).toEqual([
     'admin',
     'orders',
@@ -48,7 +48,7 @@ test('admin bicycle and checklist filter helpers stay explicit', () => {
   expect(parseAdminBicycleStatusFilter('lost')).toBe('moderation')
   expect(parseAdminChecklistTypeFilter('return')).toBe('return')
   expect(parseAdminChecklistTypeFilter('unknown')).toBe('all')
-  expect(adminChecklistTypeLabel('issue')).toBe('Issue')
+  expect(adminChecklistTypeLabel('issue')).toBe('Выдача')
   expect(adminChecklistsQueryKey(1, 'return', 'order_1', 'bike_1')).toEqual([
     'admin',
     'checklists',

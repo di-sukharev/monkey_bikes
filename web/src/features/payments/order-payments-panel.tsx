@@ -63,37 +63,37 @@ export function OrderPaymentsPanel({
     <section className="grid gap-3 border-t pt-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-1">
-          <h2 className="text-base font-semibold">Payments</h2>
+          <h2 className="text-base font-semibold">Платежи</h2>
           <p className="text-sm text-muted-foreground">
-            Rent and deposit payments are separate stub attempts.
+            Оплата аренды и залога выполняется отдельными тестовыми попытками.
           </p>
         </div>
         <Badge variant={order.paymentRequirementsMet ? 'secondary' : 'outline'}>
-          {order.paymentRequirementsMet ? 'paid' : 'not fully paid'}
+          {order.paymentRequirementsMet ? 'оплачено' : 'оплачено не полностью'}
         </Badge>
       </div>
 
       {order.status === 'request' && !order.paymentRequirementsMet && (
         <Alert>
           <CreditCardIcon />
-          <AlertTitle>Waiting for confirmation</AlertTitle>
-          <AlertDescription>Payments become available after administrator confirmation.</AlertDescription>
+          <AlertTitle>Ожидается подтверждение</AlertTitle>
+          <AlertDescription>Платежи становятся доступны после подтверждения администратором.</AlertDescription>
         </Alert>
       )}
 
       {(order.status === 'cancelled' || order.status === 'returned') && !order.paymentRequirementsMet && (
         <Alert>
           <BanIcon />
-          <AlertTitle>Payments unavailable</AlertTitle>
-          <AlertDescription>This order status does not accept new payment attempts.</AlertDescription>
+          <AlertTitle>Платежи недоступны</AlertTitle>
+          <AlertDescription>Этот статус заказа не принимает новые платежные попытки.</AlertDescription>
         </Alert>
       )}
 
       {mode === 'admin' && order.status === 'confirmed' && !order.paymentRequirementsMet && (
         <Alert>
           <CircleAlertIcon />
-          <AlertTitle>Issuance is blocked</AlertTitle>
-          <AlertDescription>Both rent and deposit payments must be successful before issuance.</AlertDescription>
+          <AlertTitle>Выдача заблокирована</AlertTitle>
+          <AlertDescription>Перед выдачей должны быть успешно оплачены и аренда, и залог.</AlertDescription>
         </Alert>
       )}
 
@@ -101,14 +101,14 @@ export function OrderPaymentsPanel({
         <Alert>
           <CheckCircle2Icon />
           <AlertTitle>{notice}</AlertTitle>
-          <AlertDescription>Payment status has been updated.</AlertDescription>
+          <AlertDescription>Статус платежа обновлен.</AlertDescription>
         </Alert>
       )}
 
       {error ? (
         <Alert variant="destructive">
           <CircleAlertIcon />
-          <AlertTitle>Payment action failed</AlertTitle>
+          <AlertTitle>Действие с платежом не удалось</AlertTitle>
           <AlertDescription>
             {formatRequestError(error)}
             <span className="mt-1 block">{requestErrorNextStep(error)}</span>
@@ -120,11 +120,11 @@ export function OrderPaymentsPanel({
         <Table className="min-w-[780px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Attempt</TableHead>
-              {interactive && <TableHead className="w-[260px]">Actions</TableHead>}
+              <TableHead>Тип</TableHead>
+              <TableHead>Сумма</TableHead>
+              <TableHead>Статус</TableHead>
+              <TableHead>Попытка</TableHead>
+              {interactive && <TableHead className="w-[260px]">Действия</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -138,7 +138,7 @@ export function OrderPaymentsPanel({
                   <TableCell className="font-medium">{formatPaymentType(type)}</TableCell>
                   <TableCell>{formatMoney(paymentAmountFor(order, type))}</TableCell>
                   <TableCell>
-                    {latestPayment ? <PaymentStatusBadge status={latestPayment.status} /> : <Badge variant="outline">not created</Badge>}
+                    {latestPayment ? <PaymentStatusBadge status={latestPayment.status} /> : <Badge variant="outline">не создан</Badge>}
                   </TableCell>
                   <TableCell>
                     <div className="grid gap-1 text-sm">
@@ -179,7 +179,7 @@ export function PaymentStatusSummary({ order }: { order: OrderDto }) {
         return (
           <span key={type} className="inline-flex items-center gap-1">
             <span className="text-xs text-muted-foreground">{formatPaymentType(type)}</span>
-            {payment ? <PaymentStatusBadge status={payment.status} /> : <Badge variant="outline">none</Badge>}
+            {payment ? <PaymentStatusBadge status={payment.status} /> : <Badge variant="outline">нет</Badge>}
           </span>
         )
       })}
@@ -208,7 +208,7 @@ function PaymentActions({
   const completing = pendingAction?.kind === 'complete' && pendingAction.paymentId === activePaymentId
 
   if (latestStatus === 'succeeded') {
-    return <span className="text-sm text-muted-foreground">Completed</span>
+    return <span className="text-sm text-muted-foreground">Завершен</span>
   }
 
   if (activePaymentId) {
@@ -217,34 +217,34 @@ function PaymentActions({
         <Button
           type="button"
           size="sm"
-          aria-label={`Mark ${formatPaymentType(type)} payment as succeeded`}
+          aria-label={`Отметить платеж ${formatPaymentType(type)} как успешный`}
           disabled={completing}
           onClick={() => onComplete?.(activePaymentId, 'stub-success')}
         >
           {completing && pendingAction?.action === 'stub-success' ? <Spinner /> : <CheckCircle2Icon data-icon="inline-start" />}
-          Success
+          Успех
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          aria-label={`Mark ${formatPaymentType(type)} payment as failed`}
+          aria-label={`Отметить платеж ${formatPaymentType(type)} как ошибочный`}
           disabled={completing}
           onClick={() => onComplete?.(activePaymentId, 'stub-fail')}
         >
           {completing && pendingAction?.action === 'stub-fail' ? <Spinner /> : <XCircleIcon data-icon="inline-start" />}
-          Fail
+          Ошибка
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          aria-label={`Cancel ${formatPaymentType(type)} payment`}
+          aria-label={`Отменить платеж ${formatPaymentType(type)}`}
           disabled={completing}
           onClick={() => onComplete?.(activePaymentId, 'stub-cancel')}
         >
           {completing && pendingAction?.action === 'stub-cancel' ? <Spinner /> : <BanIcon data-icon="inline-start" />}
-          Cancel
+          Отменить
         </Button>
       </div>
     )
@@ -256,15 +256,15 @@ function PaymentActions({
         type="button"
         size="sm"
         variant={latestStatus === 'failed' || latestStatus === 'cancelled' ? 'outline' : 'default'}
-        aria-label={`${latestStatus === 'failed' || latestStatus === 'cancelled' ? 'Retry' : 'Create'} ${formatPaymentType(type)} payment`}
+        aria-label={`${latestStatus === 'failed' || latestStatus === 'cancelled' ? 'Повторить' : 'Создать'} платеж ${formatPaymentType(type)}`}
         disabled={createPending}
         onClick={() => onCreate?.(type)}
       >
         {createPending ? <Spinner /> : <RotateCcwIcon data-icon="inline-start" />}
-        {latestStatus === 'failed' || latestStatus === 'cancelled' ? 'Retry' : 'Create'}
+        {latestStatus === 'failed' || latestStatus === 'cancelled' ? 'Повторить' : 'Создать'}
       </Button>
     )
   }
 
-  return <span className="text-sm text-muted-foreground">Unavailable</span>
+  return <span className="text-sm text-muted-foreground">Недоступно</span>
 }

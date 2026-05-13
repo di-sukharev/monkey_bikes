@@ -37,10 +37,11 @@ import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/use-auth'
-import { formatMoney } from '../orders/model'
+import { formatMoney, orderStatusLabel } from '../orders/model'
 import {
   formatPaymentType,
   paymentAdminListQueryKey,
+  paymentStatusLabel,
   paymentStatuses,
   paymentTypes,
 } from './model'
@@ -66,16 +67,16 @@ export function AdminPaymentsPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin payments"
-        title="Login required"
-        description="Sign in with an administrator account to review payments."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Платежи"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы просматривать платежи."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -83,9 +84,9 @@ export function AdminPaymentsPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin payments"
-        title="Access denied"
-        description="Your account does not have permission to review payments."
+        eyebrow="Платежи"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на просмотр платежей."
       />
     )
   }
@@ -99,15 +100,15 @@ export function AdminPaymentsPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Admin payments
+              Платежи администратора
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Payments</h1>
-            <CardDescription>Stub rent and deposit payment attempts.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Платежи</h1>
+            <CardDescription>Тестовые попытки оплаты аренды и залога.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -115,7 +116,7 @@ export function AdminPaymentsPage() {
         <CardContent className="grid gap-4 py-4">
           <div className="flex flex-wrap gap-2">
             <NativeSelect
-              aria-label="Payment status filter"
+              aria-label="Фильтр статуса платежа"
               className="w-full max-w-56"
               value={status}
               onChange={(event) => {
@@ -123,15 +124,15 @@ export function AdminPaymentsPage() {
                 setStatus(event.target.value as PaymentStatus | 'all')
               }}
             >
-              <NativeSelectOption value="all">All statuses</NativeSelectOption>
+              <NativeSelectOption value="all">Все статусы</NativeSelectOption>
               {paymentStatuses.map((nextStatus) => (
                 <NativeSelectOption key={nextStatus} value={nextStatus}>
-                  {nextStatus}
+                  {paymentStatusLabel(nextStatus)}
                 </NativeSelectOption>
               ))}
             </NativeSelect>
             <NativeSelect
-              aria-label="Payment type filter"
+              aria-label="Фильтр типа платежа"
               className="w-full max-w-56"
               value={type}
               onChange={(event) => {
@@ -139,7 +140,7 @@ export function AdminPaymentsPage() {
                 setType(event.target.value as PaymentType | 'all')
               }}
             >
-              <NativeSelectOption value="all">All types</NativeSelectOption>
+              <NativeSelectOption value="all">Все типы</NativeSelectOption>
               {paymentTypes.map((nextType) => (
                 <NativeSelectOption key={nextType} value={nextType}>
                   {formatPaymentType(nextType)}
@@ -151,14 +152,14 @@ export function AdminPaymentsPage() {
           {paymentsQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading payments...
+              Загружаем платежи...
             </div>
           )}
 
           {paymentsQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load payments</AlertTitle>
+              <AlertTitle>Не удалось загрузить платежи</AlertTitle>
               <AlertDescription>{formatRequestError(paymentsQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -169,8 +170,8 @@ export function AdminPaymentsPage() {
                 <EmptyMedia variant="icon">
                   <CreditCardIcon />
                 </EmptyMedia>
-                <EmptyTitle>No payments found.</EmptyTitle>
-                <EmptyDescription>The current filters did not return payment attempts.</EmptyDescription>
+                <EmptyTitle>Платежи не найдены.</EmptyTitle>
+                <EmptyDescription>Текущие фильтры не вернули платежные попытки.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -180,12 +181,12 @@ export function AdminPaymentsPage() {
               <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead className="w-[140px]">Details</TableHead>
+                    <TableHead>Платеж</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Сумма</TableHead>
+                    <TableHead>Заказ</TableHead>
+                    <TableHead>Клиент</TableHead>
+                    <TableHead className="w-[140px]">Детали</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -202,7 +203,7 @@ export function AdminPaymentsPage() {
                       <TableCell>
                         <div className="grid gap-1">
                           <span>{payment.order.startsOn} - {payment.order.endsOn}</span>
-                          <span className="text-sm text-muted-foreground">{payment.order.status}</span>
+                          <span className="text-sm text-muted-foreground">{orderStatusLabel(payment.order.status)}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -215,7 +216,7 @@ export function AdminPaymentsPage() {
                       </TableCell>
                       <TableCell>
                         <Button type="button" variant="outline" size="sm" asChild>
-                          <Link to="/admin/orders/$id" params={{ id: payment.order.id }}>Open</Link>
+                          <Link to="/admin/orders/$id" params={{ id: payment.order.id }}>Открыть</Link>
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -238,7 +239,7 @@ export function AdminPaymentsPage() {
               onClick={() => setPage((current) => Math.max(1, current - 1))}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -249,7 +250,7 @@ export function AdminPaymentsPage() {
               disabled={page >= totalPages || paymentsQuery.isFetching}
               onClick={() => setPage((current) => current + 1)}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>

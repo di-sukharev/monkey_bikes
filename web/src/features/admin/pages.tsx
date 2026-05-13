@@ -46,16 +46,16 @@ export function AdminDashboardPage() {
   const today = todayDateOnly()
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin"
-        title="Login required"
-        description="Sign in with an administrator account to open the admin workspace."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Админка"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы открыть рабочую область."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -63,9 +63,9 @@ export function AdminDashboardPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin"
-        title="Access denied"
-        description="Your account does not have permission to use the admin workspace."
+        eyebrow="Админка"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на рабочую область администратора."
       />
     )
   }
@@ -74,11 +74,11 @@ export function AdminDashboardPage() {
     <section className={cn(pageShellClass, 'grid gap-6')}>
       <div className="grid gap-2">
         <Badge variant="outline" className="w-fit">
-          Admin workspace
+          Рабочая область администратора
         </Badge>
-        <h1 className="text-3xl font-semibold tracking-tight">Operations</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Операции</h1>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Users, moderation queues, rental orders, payments, and checklist history.
+          Пользователи, очереди модерации, заказы аренды, платежи и история чеклистов.
         </p>
       </div>
       <AdminQuickFilters today={today} />
@@ -115,16 +115,16 @@ export function AdminChecklistsPage() {
   })
 
   if (auth.isBootstrapping) {
-    return <LoadingState message="Checking session..." />
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (!auth.user) {
     return (
       <GateCard
-        eyebrow="Admin checklists"
-        title="Login required"
-        description="Sign in with an administrator account to review checklist history."
-        action={<Button asChild><Link to="/">Go to auth</Link></Button>}
+        eyebrow="Чеклисты"
+        title="Нужен вход"
+        description="Войдите под администратором, чтобы смотреть историю чеклистов."
+        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
       />
     )
   }
@@ -132,9 +132,9 @@ export function AdminChecklistsPage() {
   if (auth.user.role !== 'admin') {
     return (
       <GateCard
-        eyebrow="Admin checklists"
-        title="Access denied"
-        description="Your account does not have permission to review checklist history."
+        eyebrow="Чеклисты"
+        title="Доступ запрещен"
+        description="У аккаунта нет прав на просмотр истории чеклистов."
       />
     )
   }
@@ -148,15 +148,15 @@ export function AdminChecklistsPage() {
         <CardHeader className="border-b">
           <div className="grid gap-2">
             <Badge variant="outline" className="w-fit">
-              Admin checklists
+              Чеклисты администратора
             </Badge>
-            <h1 className="text-3xl font-semibold tracking-tight">Checklists</h1>
-            <CardDescription>Issue and return inspection history across rental orders.</CardDescription>
+            <h1 className="text-3xl font-semibold tracking-tight">Чеклисты</h1>
+            <CardDescription>История проверок при выдаче и возврате по заказам аренды.</CardDescription>
           </div>
           {data && (
             <CardAction>
               <Badge variant="secondary">
-                {data.total} total, page {data.page} of {totalPages}
+                Всего: {data.total}, страница {data.page} из {totalPages}
               </Badge>
             </CardAction>
           )}
@@ -190,14 +190,14 @@ export function AdminChecklistsPage() {
           {checklistsQuery.isLoading && (
             <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
               <Spinner />
-              Loading checklists...
+              Загружаем чеклисты...
             </div>
           )}
 
           {checklistsQuery.isError && (
             <Alert variant="destructive">
               <CircleAlertIcon />
-              <AlertTitle>Could not load checklists</AlertTitle>
+              <AlertTitle>Не удалось загрузить чеклисты</AlertTitle>
               <AlertDescription>{formatRequestError(checklistsQuery.error)}</AlertDescription>
             </Alert>
           )}
@@ -208,8 +208,8 @@ export function AdminChecklistsPage() {
                 <EmptyMedia variant="icon">
                   <ClipboardCheckIcon />
                 </EmptyMedia>
-                <EmptyTitle>No checklists found.</EmptyTitle>
-                <EmptyDescription>The current filters did not return issue or return records.</EmptyDescription>
+                <EmptyTitle>Чеклисты не найдены.</EmptyTitle>
+                <EmptyDescription>Текущие фильтры не вернули записи выдачи или возврата.</EmptyDescription>
               </EmptyHeader>
             </Empty>
           )}
@@ -234,7 +234,7 @@ export function AdminChecklistsPage() {
               }}
             >
               <ChevronLeftIcon data-icon="inline-start" />
-              Previous
+              Назад
             </Button>
           </PaginationItem>
           <PaginationItem>
@@ -250,7 +250,7 @@ export function AdminChecklistsPage() {
                 })
               }}
             >
-              Next
+              Далее
               <ChevronRightIcon data-icon="inline-end" />
             </Button>
           </PaginationItem>

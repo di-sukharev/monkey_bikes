@@ -8,7 +8,7 @@
 - TypeScript
 - Vite
 - Tailwind CSS
-- shadcn/ui
+- shadcn/ui primitives with a local Neobrutalism theme
 - TanStack Query
 - TanStack Form
 - TanStack Router
@@ -41,7 +41,7 @@ VITE_API_URL=http://localhost:3000
 
 Для серверного состояния используйте TanStack Query, для форм - TanStack Form, для валидации - общие Zod-схемы из `packages/contracts`. Access token хранится только в памяти клиента; refresh идёт через HttpOnly cookie, выставленную backend.
 
-UI-примитивы лежат в `src/components/ui` и сгенерированы через shadcn/ui. Этот шаблон намеренно содержит полный registry для discoverability, но новые экраны должны сначала использовать уже существующие компоненты оттуда (`Button`, `Card`, `Field`, `Input`, `Table`, `NativeSelect`, `Alert` и т.д.) и сохранять настоящую HTML-семантику поверх визуальных primitives. Новые shadcn-компоненты добавляйте из директории `web`:
+UI-примитивы лежат в `src/components/ui` и остаются локальным shadcn/ui-кодом, адаптированным под Neobrutalism CSS-variable тему. Сохраняйте совместимый API текущих primitives (`Button`, `Card`, `Field`, `Input`, `Table`, `NativeSelect`, `Alert` и т.д.) и не переписывайте экраны под upstream-варианты, если локальная совместимость уже решает задачу. Новые экраны должны сначала использовать существующие компоненты и сохранять настоящую HTML-семантику поверх визуальных primitives. Новые shadcn-компоненты добавляйте из директории `web`, затем приводите их визуальный слой к этой теме:
 
 ```bash
 bunx shadcn@latest add <component>

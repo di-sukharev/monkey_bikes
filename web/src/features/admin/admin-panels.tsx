@@ -1,5 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import type { AdminChecklistDto } from '@web-app-demo/contracts'
+import type {
+  AdminChecklistDto,
+  OrderChecklistBicycleAction,
+  OrderChecklistCondition,
+} from '@web-app-demo/contracts'
 import {
   BikeIcon,
   BarChart3Icon,
@@ -59,51 +63,51 @@ export function AdminQuickFilters({ today }: AdminQuickFiltersProps) {
     <section className="grid gap-3">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="grid gap-1">
-          <h2 className="text-xl font-semibold tracking-tight">Quick filters</h2>
-          <p className="text-sm text-muted-foreground">Operational queues calculated by backend filters.</p>
+          <h2 className="text-xl font-semibold tracking-tight">Быстрые фильтры</h2>
+          <p className="text-sm text-muted-foreground">Операционные очереди по серверным фильтрам.</p>
         </div>
         <Badge variant="secondary">{today}</Badge>
       </div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <QuickFilterCard
           icon={<ClipboardListIcon />}
-          title="Unconfirmed requests"
-          description="Rental requests waiting for an administrator decision."
+          title="Неподтвержденные заявки"
+          description="Заявки на аренду, ожидающие решения администратора."
           to="/admin/orders"
           search={{ quickFilter: 'unconfirmed_requests' }}
         />
         <QuickFilterCard
           icon={<CalendarDaysIcon />}
-          title="Orders today"
-          description="Current requests and active orders overlapping the selected date."
+          title="Заказы на сегодня"
+          description="Текущие заявки и активные заказы, пересекающиеся с выбранной датой."
           to="/admin/orders"
           search={{ quickFilter: 'orders_today', date: today }}
         />
         <QuickFilterCard
           icon={<CreditCardIcon />}
-          title="Unpaid deposit"
-          description="Confirmed orders that still have no successful deposit payment."
+          title="Неоплаченный залог"
+          description="Подтвержденные заказы без успешной оплаты залога."
           to="/admin/orders"
           search={{ quickFilter: 'unpaid_deposit' }}
         />
         <QuickFilterCard
           icon={<BikeIcon />}
-          title="Bicycles on moderation"
-          description="Submitted bicycle cards waiting for review."
+          title="Велосипеды на модерации"
+          description="Отправленные карточки велосипедов, ожидающие проверки."
           to="/admin/bicycles"
           search={{ status: 'moderation' }}
         />
         <QuickFilterCard
           icon={<FileWarningIcon />}
-          title="Maintenance"
-          description="Bicycles hidden from normal rental flow until service is complete."
+          title="Обслуживание"
+          description="Велосипеды скрыты из обычной аренды до завершения сервиса."
           to="/admin/bicycles"
           search={{ status: 'maintenance' }}
         />
         <QuickFilterCard
           icon={<ClipboardCheckIcon />}
-          title="Cancelled orders"
-          description="Cancelled rental orders for dispute and support review."
+          title="Отмененные заказы"
+          description="Отмененные заказы аренды для разбора споров и поддержки."
           to="/admin/orders"
           search={{ quickFilter: 'cancelled_orders' }}
         />
@@ -115,15 +119,15 @@ export function AdminQuickFilters({ today }: AdminQuickFiltersProps) {
 export function AdminSectionLinks() {
   return (
     <section className="grid gap-3">
-      <h2 className="text-xl font-semibold tracking-tight">Sections</h2>
+      <h2 className="text-xl font-semibold tracking-tight">Разделы</h2>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        <AdminSectionCard icon={<UsersRoundIcon />} title="Users" to="/admin/users" />
-        <AdminSectionCard icon={<StoreIcon />} title="Manufacturers" to="/admin/manufacturers" />
-        <AdminSectionCard icon={<BikeIcon />} title="Bicycles" to="/admin/bicycles" />
-        <AdminSectionCard icon={<ClipboardListIcon />} title="Orders" to="/admin/orders" />
-        <AdminSectionCard icon={<CreditCardIcon />} title="Payments" to="/admin/payments" />
-        <AdminSectionCard icon={<ClipboardCheckIcon />} title="Checklists" to="/admin/checklists" />
-        <AdminSectionCard icon={<BarChart3Icon />} title="Reports" to="/admin/reports" />
+        <AdminSectionCard icon={<UsersRoundIcon />} title="Пользователи" to="/admin/users" />
+        <AdminSectionCard icon={<StoreIcon />} title="Производители" to="/admin/manufacturers" />
+        <AdminSectionCard icon={<BikeIcon />} title="Велосипеды" to="/admin/bicycles" />
+        <AdminSectionCard icon={<ClipboardListIcon />} title="Заказы" to="/admin/orders" />
+        <AdminSectionCard icon={<CreditCardIcon />} title="Платежи" to="/admin/payments" />
+        <AdminSectionCard icon={<ClipboardCheckIcon />} title="Чеклисты" to="/admin/checklists" />
+        <AdminSectionCard icon={<BarChart3Icon />} title="Отчеты" to="/admin/reports" />
       </div>
     </section>
   )
@@ -141,12 +145,12 @@ export function AdminChecklistsFilters({
   return (
     <div className="grid gap-3 md:grid-cols-3">
       <NativeSelect
-        aria-label="Checklist type filter"
+        aria-label="Фильтр типа чеклиста"
         disabled={disabled}
         value={type}
         onChange={(event) => onTypeChange(event.target.value as AdminChecklistTypeFilter)}
       >
-        <NativeSelectOption value="all">All checklists</NativeSelectOption>
+        <NativeSelectOption value="all">Все чеклисты</NativeSelectOption>
         {adminChecklistTypes.map((nextType) => (
           <NativeSelectOption key={nextType} value={nextType}>
             {adminChecklistTypeLabel(nextType)}
@@ -154,16 +158,16 @@ export function AdminChecklistsFilters({
         ))}
       </NativeSelect>
       <Input
-        aria-label="Checklist order id filter"
+        aria-label="Фильтр чеклистов по ID заказа"
         disabled={disabled}
-        placeholder="Order ID"
+        placeholder="ID заказа"
         value={orderId}
         onChange={(event) => onOrderIdChange(event.target.value)}
       />
       <Input
-        aria-label="Checklist bicycle id filter"
+        aria-label="Фильтр чеклистов по ID велосипеда"
         disabled={disabled}
-        placeholder="Bicycle ID"
+        placeholder="ID велосипеда"
         value={bicycleId}
         onChange={(event) => onBicycleIdChange(event.target.value)}
       />
@@ -177,12 +181,12 @@ export function AdminChecklistsTable({ checklists }: { checklists: AdminChecklis
       <Table className="min-w-[1120px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Checklist</TableHead>
-            <TableHead>Order</TableHead>
-            <TableHead>Bicycle</TableHead>
-            <TableHead>Conditions</TableHead>
-            <TableHead>Checked by</TableHead>
-            <TableHead className="w-[140px]">Details</TableHead>
+            <TableHead>Чеклист</TableHead>
+            <TableHead>Заказ</TableHead>
+            <TableHead>Велосипед</TableHead>
+            <TableHead>Состояние</TableHead>
+            <TableHead>Проверил</TableHead>
+            <TableHead className="w-[140px]">Детали</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -192,7 +196,7 @@ export function AdminChecklistsTable({ checklists }: { checklists: AdminChecklis
                 <div className="grid gap-1">
                   <span className="font-medium">{adminChecklistTypeLabel(checklist.type)}</span>
                   <span className="text-sm text-muted-foreground">
-                    {new Date(checklist.checkedAt).toLocaleString()}
+                    {new Date(checklist.checkedAt).toLocaleString('ru-RU')}
                   </span>
                 </div>
               </TableCell>
@@ -215,11 +219,17 @@ export function AdminChecklistsTable({ checklists }: { checklists: AdminChecklis
               </TableCell>
               <TableCell>
                 <div className="grid gap-1 text-sm">
-                  <span>Frame {checklist.frameCondition}, wheels {checklist.wheelsCondition}</span>
-                  <span className="text-muted-foreground">
-                    Brakes {checklist.brakesCondition}, exterior {checklist.exteriorCondition}
+                  <span>
+                    Рама {formatChecklistCondition(checklist.frameCondition)}, колеса{' '}
+                    {formatChecklistCondition(checklist.wheelsCondition)}
                   </span>
-                  <span className="text-muted-foreground">Safety action {checklist.safetyAction}</span>
+                  <span className="text-muted-foreground">
+                    Тормоза {formatChecklistCondition(checklist.brakesCondition)}, внешний вид{' '}
+                    {formatChecklistCondition(checklist.exteriorCondition)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    Действие безопасности: {formatSafetyAction(checklist.safetyAction)}
+                  </span>
                 </div>
               </TableCell>
               <TableCell>
@@ -233,7 +243,7 @@ export function AdminChecklistsTable({ checklists }: { checklists: AdminChecklis
               <TableCell>
                 <Button type="button" variant="outline" size="sm" asChild>
                   <Link to="/admin/orders/$id" params={{ id: checklist.order.id }}>
-                    Open
+                    Открыть
                   </Link>
                 </Button>
               </TableCell>
@@ -243,6 +253,32 @@ export function AdminChecklistsTable({ checklists }: { checklists: AdminChecklis
       </Table>
     </div>
   )
+}
+
+function formatChecklistCondition(condition: OrderChecklistCondition) {
+  switch (condition) {
+    case 'damaged':
+      return 'повреждено'
+    case 'not_applicable':
+      return 'не применимо'
+    case 'ok':
+      return 'в порядке'
+    case 'unsafe':
+      return 'небезопасно'
+    case 'worn':
+      return 'изношено'
+  }
+}
+
+function formatSafetyAction(action: OrderChecklistBicycleAction) {
+  switch (action) {
+    case 'hidden':
+      return 'скрыть'
+    case 'maintenance':
+      return 'на обслуживание'
+    case 'none':
+      return 'без изменений'
+  }
 }
 
 function QuickFilterCard({
@@ -268,12 +304,12 @@ function QuickFilterCard({
   const action = to === '/admin/orders'
     ? (
         <Link to="/admin/orders" search={search}>
-          Open
+          Открыть
         </Link>
       )
     : (
         <Link to="/admin/bicycles" search={search}>
-          Open
+          Открыть
         </Link>
       )
 
@@ -313,7 +349,7 @@ function AdminSectionCard({
         </div>
         <CardAction>
           <Button type="button" variant="outline" size="sm" asChild>
-            <Link to={to}>Open</Link>
+            <Link to={to}>Открыть</Link>
           </Button>
         </CardAction>
       </CardHeader>

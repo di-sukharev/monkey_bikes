@@ -27,8 +27,10 @@ import { PaymentStatusSummary } from '../payments/order-payments-panel'
 import {
   formatMoney,
   formatOrderDates,
+  fulfillmentTypeLabel,
   orderListScopeLabel,
   orderListScopes,
+  orderStatusLabel,
   orderNextStep,
   orderStatusesForListScope,
   requestErrorNextStep,
@@ -50,13 +52,13 @@ export function CustomerOrderFilters({
 }) {
   const statuses = orderStatusesForListScope(scope)
   const statusFilterLabel = scope === 'all'
-    ? 'All statuses'
-    : `All ${orderListScopeLabel(scope).toLowerCase()} statuses`
+    ? 'Все статусы'
+    : `Все статусы: ${orderListScopeLabel(scope).toLowerCase()}`
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Tabs value={scope} onValueChange={(value) => onScopeChange(value as OrderListScope)}>
-        <TabsList aria-label="Order list scope">
+        <TabsList aria-label="Раздел списка заказов">
           {orderListScopes.map((nextScope) => (
             <TabsTrigger key={nextScope} value={nextScope} disabled={disabled}>
               {orderListScopeLabel(nextScope)}
@@ -65,7 +67,7 @@ export function CustomerOrderFilters({
         </TabsList>
       </Tabs>
       <NativeSelect
-        aria-label="Order status filter"
+        aria-label="Фильтр статуса заказа"
         className="w-full max-w-56"
         disabled={disabled}
         value={status}
@@ -74,7 +76,7 @@ export function CustomerOrderFilters({
         <NativeSelectOption value="all">{statusFilterLabel}</NativeSelectOption>
         {statuses.map((nextStatus) => (
           <NativeSelectOption key={nextStatus} value={nextStatus}>
-            {nextStatus}
+            {orderStatusLabel(nextStatus)}
           </NativeSelectOption>
         ))}
       </NativeSelect>
@@ -88,12 +90,12 @@ export function CustomerOrdersTable({ orders }: { orders: OrderDto[] }) {
       <Table className="min-w-[980px]">
         <TableHeader>
           <TableRow>
-            <TableHead>Request</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Payments</TableHead>
-            <TableHead>Dates</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead className="w-[140px]">Details</TableHead>
+            <TableHead>Заявка</TableHead>
+            <TableHead>Статус</TableHead>
+            <TableHead>Платежи</TableHead>
+            <TableHead>Даты</TableHead>
+            <TableHead>Итого</TableHead>
+            <TableHead className="w-[140px]">Детали</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -102,7 +104,7 @@ export function CustomerOrdersTable({ orders }: { orders: OrderDto[] }) {
               <TableCell>
                 <div className="grid gap-1">
                   <span className="font-medium">{order.items.map((item) => item.bicycle.title).join(', ')}</span>
-                  <span className="text-sm text-muted-foreground">{order.fulfillmentType}</span>
+                  <span className="text-sm text-muted-foreground">{fulfillmentTypeLabel(order.fulfillmentType)}</span>
                 </div>
               </TableCell>
               <TableCell><OrderStatusBadge status={order.status} /></TableCell>
@@ -111,7 +113,7 @@ export function CustomerOrdersTable({ orders }: { orders: OrderDto[] }) {
               <TableCell>{formatMoney(order.totalAmountKopecks)}</TableCell>
               <TableCell>
                 <Button type="button" variant="outline" size="sm" asChild>
-                  <Link to="/orders/$id" params={{ id: order.id }}>Open</Link>
+                  <Link to="/orders/$id" params={{ id: order.id }}>Открыть</Link>
                 </Button>
               </TableCell>
             </TableRow>
@@ -126,7 +128,7 @@ export function CustomerOrderNextStep({ order }: { order: OrderDto }) {
   return (
     <Alert>
       <CircleCheckIcon />
-      <AlertTitle>Next step</AlertTitle>
+      <AlertTitle>Следующий шаг</AlertTitle>
       <AlertDescription>{orderNextStep(order)}</AlertDescription>
     </Alert>
   )
@@ -139,17 +141,17 @@ export function CustomerFulfillmentPanel({ order }: { order: OrderDto }) {
     <section className="grid gap-3 md:grid-cols-2">
       <Alert>
         {order.fulfillmentType === 'delivery' ? <TruckIcon /> : <MapPinIcon />}
-        <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}</AlertTitle>
+        <AlertTitle>{order.fulfillmentType === 'delivery' ? 'Доставка' : 'Самовывоз'}</AlertTitle>
         <AlertDescription>
           {order.fulfillmentType === 'delivery' ? order.deliveryAddress : pickupAddresses}
         </AlertDescription>
       </Alert>
       <Alert>
         <RotateCcwIcon />
-        <AlertTitle>Return terms</AlertTitle>
+        <AlertTitle>Условия возврата</AlertTitle>
         <AlertDescription>
-          Return is coordinated with the administrator after issue. Keep all selected bicycles available
-          for condition review at the agreed pickup or delivery location.
+          Возврат согласуется с администратором после выдачи. Держите все выбранные велосипеды
+          доступными для проверки состояния в согласованном месте самовывоза или доставки.
         </AlertDescription>
       </Alert>
     </section>
@@ -172,15 +174,15 @@ export function CustomerCancelPanel({
   return (
     <section className="grid gap-3 border-t pt-4">
       <div className="grid gap-1">
-        <h2 className="text-base font-semibold">Cancel request</h2>
+        <h2 className="text-base font-semibold">Отменить заявку</h2>
         <p className="text-sm text-muted-foreground">
-          Cancellation is available until administrator confirmation.
+          Отмена доступна до подтверждения администратором.
         </p>
       </div>
       {error ? (
         <Alert variant="destructive">
           <CircleAlertIcon />
-          <AlertTitle>Could not cancel request</AlertTitle>
+          <AlertTitle>Не удалось отменить заявку</AlertTitle>
           <AlertDescription>
             {formatRequestError(error)}
             <span className="mt-1 block">{requestErrorNextStep(error)}</span>
@@ -190,9 +192,9 @@ export function CustomerCancelPanel({
       <Textarea
         className="min-h-20"
         disabled={disabled}
-        placeholder="Optional comment"
+        placeholder="Необязательный комментарий"
         value={comment}
-        aria-label="Cancellation comment"
+        aria-label="Комментарий к отмене"
         onChange={(event) => onCommentChange(event.target.value)}
       />
       <div className="flex justify-end">
@@ -203,7 +205,7 @@ export function CustomerCancelPanel({
           onClick={onCancel}
         >
           <XCircleIcon data-icon="inline-start" />
-          Cancel request
+          Отменить заявку
         </Button>
       </div>
     </section>
@@ -213,10 +215,10 @@ export function CustomerCancelPanel({
 export function CustomerOrderTotals({ order }: { order: OrderDto }) {
   return (
     <div className="grid gap-3 md:grid-cols-4">
-      <Fact label="Rental" value={formatMoney(order.rentalAmountKopecks)} />
-      <Fact label="Deposit" value={formatMoney(order.depositAmountKopecks)} />
-      <Fact label="Delivery" value={formatMoney(order.deliveryAmountKopecks)} />
-      <Fact label="Total" value={formatMoney(order.totalAmountKopecks)} />
+      <Fact label="Аренда" value={formatMoney(order.rentalAmountKopecks)} />
+      <Fact label="Залог" value={formatMoney(order.depositAmountKopecks)} />
+      <Fact label="Доставка" value={formatMoney(order.deliveryAmountKopecks)} />
+      <Fact label="Итого" value={formatMoney(order.totalAmountKopecks)} />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import type {
   AdminOrderQuickFilter,
+  AdminOrderWarningDto,
   ApiErrorCode,
   FulfillmentType,
   ManufacturerOrderDto,
@@ -11,6 +12,8 @@ import type {
 import { orderListScopeSchema, orderStatusesForScope } from '@web-app-demo/contracts'
 
 import { ApiRequestError } from '@/lib/api'
+import { bicycleStatusLabel } from '../bicycles/model'
+import { manufacturerStatusLabel } from '../manufacturers/model'
 
 export const orderStatuses: OrderStatus[] = orderStatusesForScope('all')
 export const adminOrderQuickFilters: AdminOrderQuickFilter[] = [
@@ -61,6 +64,15 @@ export function formatOrderDates(order: Pick<OrderDto, 'endsOn' | 'startsOn'>) {
   return order.startsOn === order.endsOn
     ? order.startsOn
     : `${order.startsOn} - ${order.endsOn}`
+}
+
+export function fulfillmentTypeLabel(type: FulfillmentType) {
+  switch (type) {
+    case 'delivery':
+      return 'Доставка'
+    case 'pickup':
+      return 'Самовывоз'
+  }
 }
 
 export function selectedBicyclesTotal(bicycles: PublicBicycleDto[]) {
@@ -128,26 +140,43 @@ export function orderStatusesForListScope(scope: OrderListScope) {
 export function orderListScopeLabel(scope: OrderListScope) {
   switch (scope) {
     case 'all':
-      return 'All'
+      return 'Все'
     case 'current':
-      return 'Current'
+      return 'Текущие'
     case 'history':
-      return 'History'
+      return 'История'
   }
 }
 
 export function adminOrderQuickFilterLabel(filter: AdminOrderQuickFilterOption) {
   switch (filter) {
     case 'none':
-      return 'Manual status'
+      return 'Ручной статус'
     case 'unconfirmed_requests':
-      return 'Unconfirmed requests'
+      return 'Неподтвержденные заявки'
     case 'orders_today':
-      return 'Orders today'
+      return 'Заявки на сегодня'
     case 'unpaid_deposit':
-      return 'Unpaid deposit'
+      return 'Неоплаченный залог'
     case 'cancelled_orders':
-      return 'Cancelled orders'
+      return 'Отмененные заявки'
+  }
+}
+
+export function orderStatusLabel(status: OrderStatus | 'all') {
+  switch (status) {
+    case 'all':
+      return 'Все статусы'
+    case 'cancelled':
+      return 'Отменена'
+    case 'confirmed':
+      return 'Подтверждена'
+    case 'issued':
+      return 'Выдана'
+    case 'request':
+      return 'Заявка'
+    case 'returned':
+      return 'Возвращена'
   }
 }
 
@@ -178,34 +207,34 @@ export function todayDateOnly(now = new Date()) {
 export function orderNextStep(order: OrderDto) {
   switch (order.status) {
     case 'request':
-      return 'Waiting for administrator confirmation. You can cancel the request until it is confirmed.'
+      return 'Ожидается подтверждение администратора. Заявку можно отменить до подтверждения.'
     case 'confirmed':
       return order.paymentRequirementsMet
-        ? 'Payments are complete. Wait for the administrator to issue the order.'
-        : 'Complete rent and deposit payments to make the order ready for issue.'
+        ? 'Платежи завершены. Дождитесь выдачи заказа администратором.'
+        : 'Оплатите аренду и залог, чтобы заказ был готов к выдаче.'
     case 'issued':
-      return 'The bicycle has been issued. Coordinate return with the administrator at the agreed location.'
+      return 'Велосипед выдан. Согласуйте возврат с администратором в выбранном месте.'
     case 'returned':
-      return 'The order is returned. No further action is required.'
+      return 'Заказ возвращен. Дополнительные действия не нужны.'
     case 'cancelled':
-      return 'The order is cancelled. Create a new request from the catalog if you need another rental.'
+      return 'Заказ отменен. Если нужна новая аренда, создайте заявку из каталога.'
   }
 }
 
 export function manufacturerOrderNextStep(order: ManufacturerOrderDto) {
   switch (order.status) {
     case 'request':
-      return 'The request is waiting for administrator confirmation. Customer contact is hidden until confirmation.'
+      return 'Заявка ожидает подтверждения администратора. Контакты клиента скрыты до подтверждения.'
     case 'confirmed':
       return order.fulfillmentContact
-        ? 'Prepare the selected bicycles and coordinate handoff with the listed customer contact.'
-        : 'Prepare the selected bicycles. Contact details will appear when fulfillment coordination is available.'
+        ? 'Подготовьте выбранные велосипеды и согласуйте передачу с указанным клиентом.'
+        : 'Подготовьте выбранные велосипеды. Контакты появятся, когда станет доступна координация передачи.'
     case 'issued':
-      return 'The selected bicycles are issued. Coordinate return readiness and watch for administrator return checklists.'
+      return 'Выбранные велосипеды выданы. Подготовьте возврат и следите за чеклистами администратора.'
     case 'returned':
-      return 'The order is returned. Review issue and return checklist history for your bicycles.'
+      return 'Заказ возвращен. Проверьте историю чеклистов выдачи и возврата по вашим велосипедам.'
     case 'cancelled':
-      return 'The order is cancelled. No producer action is required.'
+      return 'Заказ отменен. От производителя действий не требуется.'
   }
 }
 
@@ -214,29 +243,128 @@ export function requestErrorNextStep(error: unknown) {
 
   switch (code) {
     case 'UNAUTHORIZED':
-      return 'Sign in again and retry the action.'
+      return 'Войдите в аккаунт снова и повторите действие.'
     case 'FORBIDDEN':
-      return 'Use a customer account for this action.'
+      return 'Для этого действия нужен аккаунт клиента.'
     case 'NOT_FOUND':
     case 'PAYMENT_NOT_FOUND':
-      return 'Open your orders list and refresh the order details.'
+      return 'Откройте список заказов и обновите детали заказа.'
     case 'ORDER_NOT_CANCELLABLE':
-      return 'The order is already confirmed or later. Contact the administrator if plans changed.'
+      return 'Заказ уже подтвержден или перешел дальше. Если планы изменились, свяжитесь с администратором.'
     case 'PAYMENT_NOT_ALLOWED':
-      return 'Payments become available after administrator confirmation.'
+      return 'Платежи становятся доступны после подтверждения администратором.'
     case 'PAYMENT_NOT_COMPLETABLE':
-      return 'This payment attempt is closed. Create a new attempt when retry is available.'
+      return 'Эта платежная попытка закрыта. Создайте новую попытку, когда повтор будет доступен.'
     case 'PAYMENT_PROVIDER_DISABLED':
-      return 'Payment processing is disabled in this environment. Contact the administrator.'
+      return 'Обработка платежей отключена в этом окружении. Свяжитесь с администратором.'
     case 'PAYMENT_DEV_ENDPOINTS_DISABLED':
-      return 'Payment completion is disabled in this environment. Wait for administrator assistance.'
+      return 'Тестовое завершение платежей отключено. Дождитесь помощи администратора.'
     case 'PAYMENT_ACTIVE_ATTEMPT_EXISTS':
-      return 'Continue or finish the active payment attempt before creating another one.'
+      return 'Продолжите или завершите активную платежную попытку перед созданием новой.'
     case 'VALIDATION_ERROR':
-      return 'Review the entered data and retry.'
+      return 'Проверьте введенные данные и повторите попытку.'
     default:
-      return 'Refresh the page and retry. If the problem remains, contact the administrator.'
+      return 'Обновите страницу и повторите попытку. Если проблема останется, свяжитесь с администратором.'
   }
+}
+
+export function formatAdminOrderWarning(warning: AdminOrderWarningDto) {
+  return translateWarningMessage(warning.message)
+}
+
+export function formatConflict(value: unknown) {
+  if (!value || typeof value !== 'object') return 'Конфликт доступности'
+  const conflict = value as {
+    bicycleTitle?: unknown
+    conflictingOrderId?: unknown
+    startsOn?: unknown
+    endsOn?: unknown
+  }
+  const title = typeof conflict.bicycleTitle === 'string' ? conflict.bicycleTitle : 'Велосипед'
+  const orderId =
+    typeof conflict.conflictingOrderId === 'string' ? conflict.conflictingOrderId : 'другой заказ'
+  const startsOn = typeof conflict.startsOn === 'string' ? conflict.startsOn : '?'
+  const endsOn = typeof conflict.endsOn === 'string' ? conflict.endsOn : '?'
+  return `${title} конфликтует с ${orderId} (${startsOn} - ${endsOn}).`
+}
+
+export function formatWarning(value: unknown) {
+  if (!value || typeof value !== 'object') return 'Предупреждение по доступности'
+  const warning = value as { message?: unknown; type?: unknown }
+  if (typeof warning.type === 'string' && typeof warning.message === 'string') {
+    return translateWarningMessage(warning.message)
+  }
+  return 'Предупреждение по доступности'
+}
+
+function translateWarningMessage(message: string) {
+  const availabilityConflict = message.match(/^(.+) conflicts with order (.+)\.$/)
+  if (availabilityConflict) {
+    return `${availabilityConflict[1]} конфликтует с заказом ${availabilityConflict[2]}.`
+  }
+
+  const bicycleStatus = message.match(/^(.+) is currently ([a-z_]+); expected ([a-z_]+)\.$/)
+  if (bicycleStatus) {
+    return `${bicycleStatus[1]} сейчас в статусе «${translateDomainWord(
+      bicycleStatus[2],
+    )}», ожидается «${translateDomainWord(bicycleStatus[3])}».`
+  }
+
+  const manufacturerStatus = message.match(/^(.+) belongs to a ([a-z_]+) manufacturer\.$/)
+  if (manufacturerStatus) {
+    return `${manufacturerStatus[1]} принадлежит производителю со статусом «${translateDomainWord(
+      manufacturerStatus[2],
+    )}».`
+  }
+
+  const deliveryUnavailable = message.match(/^(.+) no longer supports delivery\.$/)
+  if (deliveryUnavailable) {
+    return `${deliveryUnavailable[1]} больше не поддерживает доставку.`
+  }
+
+  return replaceDomainWords(
+    message
+      .replaceAll('Selected bicycle', 'Выбранный велосипед')
+      .replaceAll('conflicts with order', 'конфликтует с заказом')
+      .replaceAll('is currently', 'сейчас в статусе')
+      .replaceAll('expected', 'ожидаемый статус')
+      .replaceAll('belongs to a', 'принадлежит производителю со статусом')
+      .replaceAll('manufacturer', 'производитель')
+      .replaceAll('no longer supports delivery', 'больше не поддерживает доставку')
+      .replaceAll('max load', 'максимальная нагрузка')
+      .replaceAll('seat', 'седло')
+      .replaceAll('frame', 'рама')
+      .replaceAll('wheel', 'колесо')
+      .replaceAll(' kg', ' кг')
+      .replaceAll(' cm', ' см'),
+    domainWordTranslations,
+  )
+}
+
+function translateDomainWord(source: string) {
+  return domainWordTranslations[source] ?? source
+}
+
+const domainWordTranslations: Record<string, string> = {
+  archived: bicycleStatusLabel('archived').toLowerCase(),
+  approved: manufacturerStatusLabel('approved').toLowerCase(),
+  available: bicycleStatusLabel('available').toLowerCase(),
+  blocked: manufacturerStatusLabel('blocked').toLowerCase(),
+  draft: bicycleStatusLabel('draft').toLowerCase(),
+  hidden: bicycleStatusLabel('hidden').toLowerCase(),
+  maintenance: bicycleStatusLabel('maintenance').toLowerCase(),
+  moderation: bicycleStatusLabel('moderation').toLowerCase(),
+  rejected: bicycleStatusLabel('rejected').toLowerCase(),
+  rented: bicycleStatusLabel('rented').toLowerCase(),
+  reserved: bicycleStatusLabel('reserved').toLowerCase(),
+}
+
+function replaceDomainWords(message: string, replacements: Record<string, string>) {
+  return Object.entries(replacements).reduce(
+    (nextMessage, [source, replacement]) =>
+      nextMessage.replace(new RegExp(`\\b${source}\\b`, 'g'), replacement),
+    message,
+  )
 }
 
 function uniqueIds(values: string[]) {
