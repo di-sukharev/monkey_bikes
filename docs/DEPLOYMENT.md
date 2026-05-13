@@ -175,6 +175,7 @@ doctl apps create \
 Backend production env:
 
 ```bash
+PORT=8080
 APP_ENV=production
 DATABASE_URL=${bicycle-rent-db.DATABASE_URL}
 JWT_SECRET=<at-least-32-random-characters>
