@@ -34,6 +34,9 @@ const backendEnv = normalizeEnv({
     process.env.JWT_SECRET ?? 'web-e2e-secret-at-least-thirty-two-characters',
   CORS_ORIGINS: [frontendUrl, 'http://localhost:5173'].join(','),
   COOKIE_SECURE: 'false',
+  PAYMENT_PROVIDER: 'stub',
+  PAYMENT_STUB_DEV_ENDPOINTS_ENABLED: 'true',
+  PAYMENT_CURRENCY: 'RUB',
 })
 
 export default defineConfig({

@@ -403,6 +403,14 @@
 
 Минимальная проверка: `bun run e2e:web`; при изменении контрактов также `bun run typecheck` и релевантные backend tests.
 
+Статус выполнения:
+
+- Выполнено: добавлен dedicated Playwright happy-path, который проходит manufacturer bicycle moderation, public catalog, customer request, admin confirmation, rent/deposit stub payments, issue checklist, return checklist and final returned state.
+- Выполнено: E2E setup использует repo Playwright infrastructure, реальные backend/Vite/test DB, future date-only dates, уникальные данные и явный DB reset для устойчивого повторного запуска.
+- Выполнено: payment stub env зафиксирован в Playwright backend server config; финальные проверки подтверждают UI status, status history, checklists, rent/deposit payment type/provider/currency/amount/status и возврат велосипеда в available.
+- Выполнено: общие E2E helper'ы для users/database/dates вынесены из старого auth spec; старый catalog publication сценарий оставлен коротким, без дублирования полного rental flow.
+- Проверено: web typecheck, lint, unit tests, dedicated rental E2E и полный `bun run e2e:web` suite на test DB; review loop достиг оценки 9.6/10.
+
 ## Сквозные требования для всех задач
 
 - Контракты API описывать в `packages/contracts` через Zod и использовать на backend/web сторонах.
