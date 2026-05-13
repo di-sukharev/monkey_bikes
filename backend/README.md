@@ -89,8 +89,21 @@ Backend загружает `backend/.env` через `dotenv`, а Prisma config 
 явно; известные example-пароли отклоняются, а non-local database URL требует
 явного `SEED_ADMIN_ALLOW_NON_LOCAL=true`.
 
+Для ручного наполнения тестового приложения есть отдельный скрипт
+`bun run seed:demo-data`. Он создает тестовые данные для просмотра: админа,
+производителя, пользователя, профиль производителя, несколько велосипедов и
+демо заказы. Перед запуском задайте `SEED_DEMO_PASSWORD` в `.env`; пароли будут
+сформированы как `<SEED_DEMO_PASSWORD>-admin`,
+`<SEED_DEMO_PASSWORD>-manufacturer`, `<SEED_DEMO_PASSWORD>-customer`.
+Скрипт ориентирован на локальное использование; для non-local БД нужно явно
+указать `SEED_DEMO_ALLOW_NON_LOCAL=true`.
+
 ```bash
 bun run seed:admin
+```
+
+```bash
+bun run seed:demo-data
 ```
 
 ## Архитектура

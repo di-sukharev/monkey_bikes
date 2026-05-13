@@ -9,6 +9,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { formatFormError } from '@/lib/form-errors'
+import { createFormSchemaValidator } from '@/lib/form-schema-validator'
 
 export function ManufacturerProfileForm({
   disabled,
@@ -22,10 +23,7 @@ export function ManufacturerProfileForm({
   const form = useForm({
     defaultValues: initialValues,
     validators: {
-      onChange: ({ value }) => {
-        const result = manufacturerProfileUpsertRequestSchema.safeParse(value)
-        return result.success ? undefined : result.error.issues
-      },
+      onSubmit: createFormSchemaValidator(manufacturerProfileUpsertRequestSchema),
     },
     onSubmit: async ({ value }) => {
       onSubmit(manufacturerProfileUpsertRequestSchema.parse(value))
@@ -154,9 +152,9 @@ export function ManufacturerProfileForm({
 
         <div className="flex justify-end">
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-            children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={disabled || !canSubmit || isSubmitting}>
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Button type="submit" disabled={disabled || isSubmitting}>
                 Сохранить черновик
               </Button>
             )}

@@ -7,15 +7,18 @@ import type {
   OrderChecklistDto,
   OrderChecklistType,
 } from '@web-app-demo/contracts'
+import { adminOrderStatusUpdateRequestSchema } from '@web-app-demo/contracts'
 import {
   CircleCheckIcon,
   ClipboardCheckIcon,
   ClipboardListIcon,
+  CircleAlertIcon,
   Undo2Icon,
 } from 'lucide-react'
 import { useState } from 'react'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { formatFormError } from '@/lib/form-errors'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
@@ -137,8 +140,14 @@ export function AdminOrderChecklistTransitionPanel({
 }) {
   const [comment, setComment] = useState('')
   const [drafts, setDrafts] = useState<Record<string, ChecklistDraft>>(() => initialDrafts(order, type))
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const status = type === 'issue' ? 'issued' : 'returned'
   const submitLabel = type === 'issue' ? 'Выдать заказ' : 'Вернуть заказ'
+  const transitionPayload = adminOrderStatusUpdateRequestSchema.safeParse({
+    status,
+    comment,
+    checklists: order.items.map((item) => toChecklistInput(item.bicycleId, drafts[item.bicycleId], type)),
+  })
 
   return (
     <section className="grid gap-3 border-t pt-4">
@@ -151,6 +160,14 @@ export function AdminOrderChecklistTransitionPanel({
         </div>
         <Badge variant="outline">Велосипедов: {order.items.length}</Badge>
       </div>
+
+      {submitError && (
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Не удалось подтвердить переход</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      )}
 
       <Alert>
         {type === 'issue' ? <ClipboardCheckIcon /> : <Undo2Icon />}
@@ -234,10 +251,12 @@ export function AdminOrderChecklistTransitionPanel({
                       disabled={disabled}
                       placeholder="Необязательная заметка"
                       value={draft?.comment ?? ''}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        setSubmitError(null)
                         updateDraft(item.bicycleId, {
                           comment: event.target.value,
-                        })}
+                        })
+                      }}
                     />
                   </TableCell>
                 </TableRow>
@@ -253,20 +272,24 @@ export function AdminOrderChecklistTransitionPanel({
         placeholder="Комментарий для истории статусов"
         value={comment}
         aria-label={`Комментарий к переходу статуса: ${typeLabels[type].toLowerCase()}`}
-        onChange={(event) => setComment(event.target.value)}
+        onChange={(event) => {
+          setSubmitError(null)
+          setComment(event.target.value)
+        }}
       />
       <div className="flex justify-end">
         <Button
           type="button"
           disabled={disabled}
-          onClick={() =>
-            onSubmit({
-              status,
-              comment,
-              checklists: order.items.map((item) =>
-                toChecklistInput(item.bicycleId, drafts[item.bicycleId], type),
-              ),
-            })}
+          onClick={() => {
+            if (!transitionPayload.success) {
+              setSubmitError(transitionPayload.error.issues.map(formatFormError).join(', '))
+              return
+            }
+
+            setSubmitError(null)
+            onSubmit(transitionPayload.data)
+          }}
         >
           {disabled
             ? <Spinner />
@@ -280,6 +303,7 @@ export function AdminOrderChecklistTransitionPanel({
   )
 
   function updateDraft(bicycleId: string, patch: Partial<ChecklistDraft>) {
+    setSubmitError(null)
     setDrafts((current) => ({
       ...current,
       [bicycleId]: {
@@ -289,7 +313,6 @@ export function AdminOrderChecklistTransitionPanel({
       },
     }))
   }
-}
 
 function initialDrafts(order: AdminOrderDto, type: OrderChecklistType) {
   const existingByBicycle = new Map(

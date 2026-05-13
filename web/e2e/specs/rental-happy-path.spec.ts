@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, test, uniqueEmail } from '../helpers/test'
 import { futureDateOnly } from '../helpers/dates'
 import { readRentalOrderSnapshot, resetE2eDatabase } from '../helpers/database'
@@ -102,8 +103,19 @@ test('completes the rental happy path from catalog request to returned order', a
 
   await page.goto('/bicycles')
   await expect(page.getByRole('heading', { name: 'Велосипеды', exact: true })).toBeVisible()
-  await page.getByLabel('Дата начала').fill(startsOn)
-  await page.getByLabel('Дата окончания').fill(endsOn)
+  const unavailableCatalogResponse = page.waitForResponse((response) => {
+    const url = new URL(response.url())
+
+    return (
+      response.request().method() === 'GET' &&
+      url.pathname === '/api/bicycles' &&
+      url.searchParams.get('startsOn') === startsOn &&
+      url.searchParams.get('endsOn') === endsOn
+    )
+  })
+  await fillDateFilter(page, 'Дата начала', startsOn)
+  await fillDateFilter(page, 'Дата окончания', endsOn)
+  await expect((await unavailableCatalogResponse).status()).toBe(200)
   await expect(page.getByText('Велосипеды не найдены.')).toBeVisible()
   await expect(page.getByText(bicycleTitle)).not.toBeVisible()
 
@@ -178,3 +190,12 @@ test('completes the rental happy path from catalog request to returned order', a
   expect(orderSnapshot.checklists.map((checklist) => checklist.safetyAction)).toEqual(['none', 'none'])
   expect(orderSnapshot.items[0]?.bicycle.status).toBe('available')
 })
+
+async function fillDateFilter(page: Page, label: string, value: string) {
+  const input = page.getByLabel(label)
+
+  await input.fill(value)
+  await input.dispatchEvent('input', { bubbles: true })
+  await input.dispatchEvent('change', { bubbles: true })
+  await expect(input).toHaveValue(value)
+}

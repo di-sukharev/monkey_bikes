@@ -8,6 +8,7 @@ import type {
   OrderListScope,
   OrderStatus,
   PublicBicycleDto,
+  OrderCreateInput,
 } from '@web-app-demo/contracts'
 import { orderListScopeSchema, orderStatusesForScope } from '@web-app-demo/contracts'
 
@@ -27,17 +28,7 @@ export const fulfillmentTypes: FulfillmentType[] = ['pickup', 'delivery']
 export const orderListScopes: OrderListScope[] = orderListScopeSchema.options
 export type AdminOrderQuickFilterOption = AdminOrderQuickFilter | 'none'
 
-export type OrderFormValues = {
-  bicycleIds: string[]
-  startsOn: string
-  endsOn: string
-  fulfillmentType: FulfillmentType
-  deliveryAddress: string | null
-  contactName: string
-  contactPhone: string
-  userComment: string | null
-  safetyAgreementAccepted: boolean
-}
+export type OrderFormValues = OrderCreateInput
 
 export function emptyOrderForm(bicycleIds: string[]): OrderFormValues {
   return {

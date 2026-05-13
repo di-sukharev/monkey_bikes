@@ -68,6 +68,15 @@ EXPO_PUBLIC_API_URL=http://localhost:43180
 bun run --cwd backend seed:admin
 ```
 
+Для локального ручного тестирования UI можно запускать отдельный seed:
+`bun run --cwd backend seed:demo-data`. Скрипт создаст набор демо-данных для
+среза приложения. Перед запуском задайте `SEED_DEMO_PASSWORD` в `backend/.env`:
+скрипт создаст три учетные записи с паролями вида `<SEED_DEMO_PASSWORD>-admin`,
+`<...>-manufacturer`, `<...>-customer`.
+
+По умолчанию seed:demo-data также работает только с локальной БД; для внешней
+временно можно добавить `SEED_DEMO_ALLOW_NON_LOCAL=true`.
+
 ## Основные команды
 
 - `bun run dev` - запустить workspace-проекты в dev-режиме параллельно: backend `43180`, web `43181`, landing `43182`, Expo `43183`.
@@ -81,6 +90,7 @@ bun run --cwd backend seed:admin
 - `bun run e2e:web` - Playwright auth/admin/manufacturer smoke через backend + Vite.
 - `bun run e2e:mobile` - Maestro auth smoke по установленному mobile build.
 - `bun run --cwd backend seed:admin` - создать или обновить локального администратора.
+- `bun run --cwd backend seed:demo-data` - создать локальный набор демо-данных (admin/manufacturer/user, профиль производителя, велосипеды, заказы).
 - `bun run --cwd backend prisma:migrate` - создать/применить Prisma migration в dev.
 - `bun run --cwd backend prisma:deploy` - применить готовые миграции на сервере.
 

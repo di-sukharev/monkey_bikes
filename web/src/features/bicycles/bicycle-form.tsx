@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
 import { formatFormError } from '@/lib/form-errors'
+import { createFormSchemaValidator } from '@/lib/form-schema-validator'
 import { bicycleSizes, type BicycleFormValues } from './model'
 
 export function BicycleForm({
@@ -24,10 +25,7 @@ export function BicycleForm({
   const form = useForm({
     defaultValues: initialValues,
     validators: {
-      onChange: ({ value }) => {
-        const result = bicycleUpsertRequestSchema.safeParse(value)
-        return result.success ? undefined : result.error.issues
-      },
+      onSubmit: createFormSchemaValidator(bicycleUpsertRequestSchema),
     },
     onSubmit: async ({ value }) => {
       onSubmit(bicycleUpsertRequestSchema.parse(value))
@@ -289,11 +287,15 @@ export function BicycleForm({
           )}
         />
 
-        <div className="flex justify-end">
+        <div className="grid gap-2">
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-            children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={disabled || !canSubmit || isSubmitting}>
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Button
+                type="submit"
+                disabled={disabled || isSubmitting}
+                className="w-fit justify-self-end"
+              >
                 {mode === 'create' ? 'Создать черновик' : 'Сохранить черновик'}
               </Button>
             )}

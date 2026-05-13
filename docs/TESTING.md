@@ -47,30 +47,27 @@ bun run e2e:web
 
 Что делает web E2E:
 
-- запускает `docker compose up -d postgres_test`, если не задан `E2E_SKIP_DOCKER=1`;
+- читает `DATABASE_URL_TEST` и `JWT_SECRET` из `backend/.env`, если они не заданы в shell;
+- требует `DATABASE_URL_TEST` или совместимый alias `TEST_DATABASE_URL`;
+- использует только локальную PostgreSQL test database из env и не запускает Docker;
+- выбирает хешированные порты от пути checkout-а, а если они уже заняты, автоматически берет ближайшие свободные в своем диапазоне;
 - генерирует Prisma client и применяет миграции;
-- поднимает backend на `E2E_BACKEND_PORT` (по умолчанию порт вычисляется от пути репозитория);
-- поднимает Vite на `E2E_WEB_PORT` (по умолчанию порт вычисляется от пути репозитория);
+- очищает E2E-данные в test database перед браузерным прогоном;
+- поднимает backend отдельно на `E2E_BACKEND_PORT` (по умолчанию диапазон `50000-52999`);
+- поднимает Vite отдельно на `E2E_WEB_PORT` (по умолчанию диапазон `56000-58999`);
 - прогоняет браузерные smoke-сценарии auth session, admin user management, manufacturer profile moderation, изоляции manufacturer profile cache между аккаунтами и публикации велосипеда в публичный каталог.
 
 Полезные env:
 
 ```bash
-DATABASE_URL_TEST="postgresql://postgres:postgres@localhost:<test-port>/web_app_demo_test?schema=public"
+DATABASE_URL_TEST="postgresql://<postgres-user>:<postgres-password>@localhost:5432/bicycle_monkey_rent_test?schema=public"
 E2E_BACKEND_PORT=<backend-port>
 E2E_WEB_PORT=<web-port>
-E2E_SKIP_DOCKER=1
+E2E_BACKEND_URL=http://127.0.0.1:<backend-port>
+E2E_WEB_URL=http://127.0.0.1:<web-port>
 ```
 
-Для Homebrew PostgreSQL используйте test database на `5432`:
-
-```bash
-E2E_SKIP_DOCKER=1 \
-DATABASE_URL_TEST="postgresql://<postgres-user>:<postgres-password>@localhost:5432/bicycle_monkey_rent_test?schema=public" \
-bun run e2e:web
-```
-
-По умолчанию Playwright вычисляет `POSTGRES_TEST_PORT` от абсолютного пути репозитория и откажется запускаться на базе без suffix `_test`, чтобы E2E случайно не писал в dev/prod данные. Playwright использует `DATABASE_URL_TEST`/`TEST_DATABASE_URL`, а не dev `DATABASE_URL`.
+По умолчанию Playwright берет `DATABASE_URL_TEST` из shell или `backend/.env`; проектный локальный путь - Homebrew PostgreSQL на `localhost:5432` и база `bicycle_monkey_rent_test`. Backend и web URL синхронизируются с выбранными портами и прокидываются в backend `PORT`, frontend `VITE_API_URL` и Playwright `baseURL`. Если ручные `E2E_BACKEND_PORT`/`E2E_WEB_PORT` совпали, URL и порт не совпали между собой, или выбранный ручной порт уже занят, запуск останавливается до старта серверов с явной ошибкой. Playwright откажется запускаться на базе без suffix `_test`, чтобы E2E случайно не писал в dev/prod данные. Web E2E использует `DATABASE_URL_TEST`/`TEST_DATABASE_URL`, а не dev `DATABASE_URL`.
 
 Playwright artifacts лежат в `web/e2e/.artifacts/` и не коммитятся. Для интерактивной отладки:
 

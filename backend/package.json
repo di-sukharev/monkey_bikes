@@ -13,6 +13,7 @@
     "test:unit": "bun scripts/test-unit.mjs",
     "test:integration": "bun scripts/test-integration.mjs",
     "smoke:docker": "bun scripts/docker-smoke.mjs",
+    "seed:demo-data": "bun run prisma:generate && bun scripts/seed-demo-data.ts",
     "seed:admin": "bun run prisma:generate && bun scripts/seed-admin.ts",
     "prisma": "prisma",
     "prisma:generate": "bun scripts/prisma-generate.mjs",

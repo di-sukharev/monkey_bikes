@@ -28,6 +28,7 @@ import { ApiRequestError } from '@/lib/api'
 import { formatFormError } from '@/lib/form-errors'
 import { formatRequestError } from '@/lib/request-error'
 import { useAuth } from '@/lib/use-auth'
+import { createFormSchemaValidator } from '@/lib/form-schema-validator'
 
 type AuthMode = 'login' | 'register'
 type RegistrationRole = NonNullable<RegisterRequest['role']>
@@ -52,15 +53,15 @@ export function AuthForm() {
     defaultValues: {
       email: '',
       password: '',
-      displayName: '' as string | undefined,
       role: 'user' as RegistrationRole,
+    } as {
+      email: string
+      password: string
+      displayName?: string
+      role?: RegistrationRole
     },
     validators: {
-      onChange: ({ value }) => {
-        const schema = isRegister ? registerRequestSchema : loginRequestSchema
-        const result = schema.safeParse(value)
-        return result.success ? undefined : result.error.issues
-      },
+      onSubmit: ({ value }) => createFormSchemaValidator(isRegister ? registerRequestSchema : loginRequestSchema)({ value }),
     },
     onSubmit: async ({ value }) => {
       setError(null)
@@ -216,19 +217,19 @@ export function AuthForm() {
             )}
 
             <form.Subscribe
-              selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-              children={([canSubmit, isSubmitting]) => (
+              selector={(state) => state.isSubmitting}
+              children={(isSubmitting) => (
                 <Button
                   type="submit"
                   fullWidth
                   size="lg"
-                  disabled={!canSubmit || isSubmitting}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Выполняется...' : isRegister ? 'Создать аккаунт' : 'Войти'}
                 </Button>
               )}
             />
-          </FieldGroup>
+            </FieldGroup>
         </form>
       </CardContent>
     </Card>

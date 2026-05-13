@@ -71,6 +71,13 @@ test('registers, restores the session, opens protected UI, and logs out', async 
 
   await expect((await refreshAfterProtectedReload).status()).toBe(200)
   await expect(page.getByText('Проверяем сессию...')).toBeVisible()
+  const loadingState = page.getByTestId('loading-state')
+  const loadingCard = page.getByTestId('loading-state-card')
+
+  await expect(loadingState).toHaveClass(/grid/)
+  await expect(loadingState).toHaveClass(/place-items-center/)
+  await expect(loadingCard).toBeVisible()
+
   await expect(page.getByRole('heading', { name: 'Нужен вход' })).toHaveCount(0)
 
   releaseMeAfterReload()

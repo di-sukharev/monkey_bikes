@@ -25,48 +25,51 @@ const links = {
 
 const roles = [
   {
-    title: 'Арендаторам',
-    text: 'Подбор по размеру, датам, цене и доступности. Заявка фиксирует контакт, формат получения и согласие с правилами безопасного использования.',
+    icon: '🙈',
+    title: 'Арендаторам-обезьянкам',
+    text: 'Крошечный подбор по размеру, датам и доступности. В заявке указываются контакт, формат получения и согласие с правилами безопасного приключения.',
   },
   {
+    icon: '🛠️',
     title: 'Производителям',
-    text: 'Профиль, карточки велосипедов, модерация и видимость заказов, где участвует их инвентарь.',
+    text: 'Управление профилем и карточками мини-байков, модерация перед публикацией и статусы заказов по своему инвентарю.',
   },
   {
+    icon: '🧠',
     title: 'Администраторам',
-    text: 'Модерация каталога, подтверждение заявок, статусы заказов, чеклисты выдачи и возврата, базовые отчеты.',
+    text: 'Единый контроль: модерация каталога, подтверждение заявок, статусы, чеклисты выдачи/возврата и базовые отчеты.',
   },
 ]
 
 const heroFacts = [
   {
     term: 'Платежи',
-    description: 'заглушки без реального списания',
+    description: 'демо-сценарий без реального списания',
   },
   {
     term: 'Логистика',
-    description: 'самовывоз или доставка с ручным подтверждением',
+    description: 'самовывоз или доставка с ручной подгрузкой в сценарии',
   },
   {
     term: 'Контроль',
-    description: 'модерация, статусы и чеклисты',
+    description: 'модерация, статусы и чеклисты до финального аплодисментов',
   },
 ]
 
 const flow = [
-  'Каталог показывает только модерированные доступные велосипеды.',
-  'Пользователь выбирает даты, велосипеды, самовывоз или доставку и отправляет заявку.',
-  'Администратор проверяет доступность, контакты, стоимость, залог и доставку.',
-  'После подтверждения проходят платежные заглушки аренды и залога без реального списания денег.',
-  'Выдача и возврат фиксируются чеклистами состояния и контрольными статусами заказа.',
+  'Каталог показывает только модерированные и доступные мини-байки, подходящие по размеру для маленьких обезьянок.',
+  'Арендатор выбирает даты, сценарий поездки и способ получения, затем отправляет заявку с контактами.',
+  'Админ проверяет доступность, расчет, залог, логику доставки и подтверждает заявку.',
+  'После подтверждения сценарий переходит в этап выдачи с чеклистом состояния байка.',
+  'После возвращения байка чеклист обновляется, и мини-байк снова готов к следующему приключению.',
 ]
 
 const safeguards = [
-  'Модерация производителей и карточек до публикации.',
-  'Расчет периода аренды идет по календарным датам без зависимости от часового пояса клиента.',
-  'Сервис показывает расчет аренды и залога, а платежи в MVP работают только как заглушки.',
-  'Производитель видит только связанные заказы и минимум контактных данных для исполнения аренды.',
-  'Проблемы на возврате могут скрыть велосипед или отправить его в обслуживание.',
+  'Модерация производителей и карточек проводится до публикации, чтобы в каталоге были только проверенные модели.',
+  'Расчет аренды идет по календарным датам без зависимости от часовых поясов клиента.',
+  'Оплата в текущем MVP — только демонстрационный сценарий без реальных списаний.',
+  'Производитель видит только связанные заказы и нужный минимум контактных данных.',
+  'Если на возврате есть проблемы, байк можно временно скрыть или отправить в обслуживание.',
 ]
 ---
 
@@ -79,14 +82,15 @@ const safeguards = [
     <meta name="generator" content={Astro.generator} />
     <meta
       name="description"
-      content="Bicycle Monkey Rent — MVP-сервис аренды маленьких велосипедов для цирковых номеров: каталог, заявки, роли, модерация, платежные заглушки и чеклисты безопасности."
+      content="Bicycle Monkey Rent — аренда велосипедиков для маленьких обезьянок: каталог, заявки, роли, модерация, оплата в демо-режиме и чеклисты безопасности."
     />
     <meta property="og:title" content="Bicycle Monkey Rent" />
     <meta property="og:type" content="website" />
     <meta
       property="og:description"
-      content="Каталог, заявки и админ-контроль аренды маленьких велосипедов в рамках честного MVP без реального эквайринга."
+      content="Трековая магия для маленьких обезьянок: каталог, заявки, роли и надежный контроль процесса аренды."
     />
+    <meta name="theme-color" content="#ff9ecf" />
     <meta property="og:image" content={assetHref('/images/hero-equipment.jpg')} />
     <title>Bicycle Monkey Rent</title>
   </head>
@@ -98,14 +102,13 @@ const safeguards = [
 
       <section class="section intro" aria-labelledby="intro-title">
         <div>
-          <p class="eyebrow">Что уже входит в MVP</p>
-          <h2 id="intro-title">Не витрина обещаний, а рабочий контур аренды.</h2>
+          <p class="eyebrow">Что уже живет в MVP</p>
+          <h2 id="intro-title">Забавный, но не фейковый контур аренды для маленьких хвостатых.</h2>
         </div>
         <p>
           Сервис связывает арендатора, производителя и администратора вокруг
-          одного заказа. Он не заменяет реальный эквайринг, уведомления,
-          мобильное приложение или автоматическую логистику, но показывает
-          ключевой процесс от выбора велосипеда до возврата и проверки состояния.
+          одного заказа, чтобы мини-байк для маленькой обезьянки дошел от каталога до
+          безопасного возврата без «черных ящиков» в процессе.
         </p>
       </section>
 
@@ -122,7 +125,7 @@ const safeguards = [
         <SectionHeader eyebrow="Роли" title="Каждая роль видит только свой контекст" titleId="roles-title" />
         <div class="role-grid">
           {roles.map((role) => (
-            <RoleCard title={role.title} text={role.text} />
+            <RoleCard icon={role.icon} title={role.title} text={role.text} />
           ))}
         </div>
         <div class="role-actions">
@@ -134,7 +137,7 @@ const safeguards = [
       <section class="section safety" id="safety" aria-labelledby="safety-title">
         <SectionHeader
           eyebrow="Безопасность и ограничения"
-          title="MVP явно отделяет демонстрационные механики от реальных операций"
+          title="Внутри магии — прозрачные границы"
           titleId="safety-title"
         />
         <div class="safety-grid">
@@ -147,4 +150,291 @@ const safeguards = [
       <CtaSection authHref={links.auth} catalogHref={links.catalog} />
     </main>
   </body>
+  <style is:global>
+    :root {
+      --background: #fff8f0;
+      --foreground: #2a2236;
+      --muted: #664d68;
+      --line: rgba(118, 68, 132, 0.24);
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface-strong: #ffffff;
+      --primary: #8c2cc0;
+      --primary-foreground: #fff8ff;
+      --accent: #ff8f1c;
+      --accent-soft: #ffe6d7;
+      --shadow: 0 18px 60px rgba(102, 44, 150, 0.18);
+    }
+
+    :root,
+    body {
+      font-family: "Comic Sans MS", "Trebuchet MS", "Marker Felt", "Comic Sans", cursive, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background:
+        radial-gradient(circle at 12% 12%, #ffe6b0 0%, transparent 32%),
+        radial-gradient(circle at 88% 4%, #ffd6ef 0%, transparent 34%),
+        radial-gradient(circle at 58% 78%, #d7f1ff 0%, transparent 40%),
+        var(--background);
+    }
+
+    .site-header {
+      border-bottom-width: 2px;
+      border-radius: 0 0 16px 16px;
+      background: linear-gradient(90deg, #fff7fd, #fffdf5);
+      padding-block: 0.95rem;
+      animation: wiggle 8s ease-in-out infinite;
+    }
+
+    .site-header nav a {
+      border: 1px solid transparent;
+    }
+
+    .site-header nav a:hover {
+      background: var(--accent-soft);
+      color: var(--foreground);
+      border-color: var(--line);
+    }
+
+    .site-header .brand span {
+      background: linear-gradient(135deg, #ff8f1c, #d96cff);
+      animation: bounce 3.8s ease-in-out infinite;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      filter: saturate(1.1);
+    }
+
+    .hero {
+      overflow: hidden;
+      border: 2px solid var(--line);
+      border-radius: 30px;
+      margin: 1rem;
+      min-height: min(760px, 84svh);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-media {
+      background-image:
+        linear-gradient(90deg, rgba(37, 16, 56, 0.8) 0%, rgba(37, 16, 56, 0.18) 52%, rgba(37, 16, 56, 0.1) 100%),
+        linear-gradient(180deg, rgba(44, 13, 70, 0.08), rgba(0, 0, 0, 0.5)),
+        image-set(
+          url("/images/hero-equipment.webp") type("image/webp"),
+          url("/images/hero-equipment.jpg") type("image/jpeg")
+        );
+    }
+
+    .hero-media::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          120deg,
+          transparent,
+          transparent 22px,
+          rgba(255, 255, 255, 0.06) 23px,
+          rgba(255, 255, 255, 0.06) 24px
+        );
+      pointer-events: none;
+    }
+
+    .hero-facts {
+      gap: 0.85rem;
+      max-width: 100%;
+    }
+
+    .hero-facts div {
+      border-radius: 14px;
+      border-color: rgba(255, 255, 255, 0.34);
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .hero-facts dt,
+    .hero-facts dd {
+      color: #fff;
+    }
+
+    .hero-facts dt {
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 800;
+    }
+
+    .section {
+      width: min(1120px, calc(100% - 2rem));
+      padding-top: clamp(3.2rem, 8vw, 5.2rem);
+      padding-bottom: clamp(3.2rem, 8vw, 5.2rem);
+    }
+
+    .section + .section {
+      position: relative;
+      margin-top: 1rem;
+      padding-top: 3rem;
+    }
+
+    .section + .section::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 7rem;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    h1,
+    h2 {
+      text-wrap: balance;
+      letter-spacing: 0.005em;
+    }
+
+    h1 {
+      text-shadow: 0 2px 20px rgba(17, 12, 34, 0.2);
+    }
+
+    h2 {
+      color: #2a1f40;
+      font-size: clamp(2.1rem, 4.3vw, 3.4rem);
+    }
+
+    .flow-list li {
+      border-radius: 18px;
+      border-width: 2px;
+    }
+
+    .flow-list li::before {
+      content: "";
+      position: absolute;
+      left: 2.4rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, var(--accent), transparent);
+      opacity: 0.45;
+    }
+
+    .flow-list li,
+    .role-card,
+    .safety-item,
+    .cta {
+      backdrop-filter: blur(4px);
+      background: var(--surface);
+      border-color: var(--line);
+    }
+
+    .flow-list li,
+    .flow-list li::before,
+    .role-card,
+    .safety-item {
+      box-shadow: 0 8px 24px rgba(70, 34, 106, 0.09);
+    }
+
+    .flow-list li {
+      position: relative;
+    }
+
+    .flow-list span {
+      background: linear-gradient(135deg, #ffb45f, #ff7da2);
+      color: #2b163a;
+      border: 2px solid rgba(255, 255, 255, 0.7);
+    }
+
+    .role-grid,
+    .safety-grid {
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    }
+
+    .role-card,
+    .safety-item {
+      border-radius: 18px;
+      border: 2px dashed var(--line);
+      position: relative;
+      padding: 1.1rem;
+    }
+
+    .role-card h3 {
+      margin-top: 0.35rem;
+    }
+
+    .role-icon {
+      margin: 0;
+      font-size: 1.45rem;
+    }
+
+    .safety-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 0.75rem;
+      align-items: start;
+    }
+
+    .safety-item span {
+      margin-top: 0.2rem;
+      font-size: 1.2rem;
+      filter: saturate(1.2);
+    }
+
+    .cta {
+      border: 2px dashed var(--line);
+      border-radius: 24px;
+      padding: 1.3rem;
+      background: linear-gradient(130deg, rgba(255, 225, 236, 0.65), rgba(255, 243, 223, 0.74));
+    }
+
+    .button {
+      border-radius: 14px;
+      transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 20px rgba(97, 51, 149, 0.2);
+    }
+
+    .button.primary {
+      background: linear-gradient(130deg, #8b2bc0, #e95cc0);
+      border-color: transparent;
+    }
+
+    .hero .button.secondary {
+      border-color: rgba(255, 255, 255, 0.48);
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    @keyframes wiggle {
+      0%,
+      100% {
+        transform: rotate(-0.4deg);
+      }
+      50% {
+        transform: rotate(0.4deg);
+      }
+    }
+
+    @keyframes bounce {
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+      }
+      90% {
+        transform: translateY(-3px);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        margin: 0.75rem;
+        min-height: min(700px, 84svh);
+      }
+
+      .flow-list li::before {
+        display: none;
+      }
+    }
+  </style>
 </html>

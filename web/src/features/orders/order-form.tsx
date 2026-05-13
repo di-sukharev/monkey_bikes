@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Textarea } from '@/components/ui/textarea'
 import { formatFormError } from '@/lib/form-errors'
+import { createFormSchemaValidator } from '@/lib/form-schema-validator'
 import { fulfillmentTypeLabel, fulfillmentTypes, type OrderFormValues } from './model'
 
 export function OrderForm({
@@ -28,10 +29,7 @@ export function OrderForm({
   const form = useForm({
     defaultValues: initialValues,
     validators: {
-      onChange: ({ value }) => {
-        const result = orderCreateRequestSchema.safeParse(value)
-        return result.success ? undefined : result.error.issues
-      },
+      onSubmit: createFormSchemaValidator(orderCreateRequestSchema),
     },
     onSubmit: async ({ value }) => {
       await onSubmit(orderCreateRequestSchema.parse(value))
@@ -192,9 +190,9 @@ export function OrderForm({
 
         <div className="flex justify-end">
           <form.Subscribe
-            selector={(state) => [state.canSubmit, state.isSubmitting] as const}
-            children={([canSubmit, isSubmitting]) => (
-              <Button type="submit" disabled={disabled || !canSubmit || isSubmitting}>
+            selector={(state) => state.isSubmitting}
+            children={(isSubmitting) => (
+              <Button type="submit" disabled={disabled || isSubmitting}>
                 Создать заявку
               </Button>
             )}

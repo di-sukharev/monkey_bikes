@@ -24,7 +24,10 @@ import { ThemedView } from '@/components/themed-view';
 import { TEST_IDS } from '@/constants/testIds';
 import { Spacing } from '@/constants/theme';
 import { ApiRequestError } from '@/lib/api';
+import { formatFormError } from '@/lib/form-errors';
+import { formatRequestError } from '@/lib/request-error';
 import { useAuth } from '@/lib/auth';
+import { createFormSchemaValidator } from '@/lib/form-schema-validator';
 
 type AuthMode = 'register' | 'login';
 
@@ -34,17 +37,17 @@ export default function HomeScreen() {
   const [error, setError] = useState<string | null>(null);
   const isRegister = mode === 'register';
 
-  const form = useForm({
+    const form = useForm({
     defaultValues: {
-      displayName: '' as string | undefined,
       email: '',
       password: '',
+    } as {
+      email: string
+      password: string
+      displayName?: string
     },
     validators: {
-      onChange: ({ value }) => {
-        const result = registerRequestSchema.safeParse(value);
-        return result.success ? undefined : result.error.issues;
-      },
+      onSubmit: ({ value }) => createFormSchemaValidator(isRegister ? registerRequestSchema : loginRequestSchema)({ value }),
     },
     onSubmit: async ({ value }) => {
       setError(null);
@@ -57,10 +60,10 @@ export default function HomeScreen() {
         }
       } catch (caughtError) {
         if (caughtError instanceof ApiRequestError) {
-          setError(caughtError.message);
+          setError(formatRequestError(caughtError));
           return;
         }
-        setError('Unexpected auth error');
+        setError('Не удалось выполнить запрос.');
       }
     },
   });
@@ -199,13 +202,13 @@ export default function HomeScreen() {
 
               {error && <ThemedText style={styles.formError}>{error}</ThemedText>}
 
-              <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting] as const}>
-                {([canSubmit, isSubmitting]) => (
+              <form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
                   <Pressable
                     accessibilityLabel={isRegister ? 'Create account' : 'Login'}
                     accessibilityRole="button"
-                    disabled={!canSubmit || isSubmitting}
-                    style={[styles.primaryButton, (!canSubmit || isSubmitting) && styles.disabled]}
+                    disabled={isSubmitting}
+                    style={[styles.primaryButton, isSubmitting && styles.disabled]}
                     testID={TEST_IDS.auth.submitButton}
                     onPress={() => void form.handleSubmit()}>
                     <ThemedText type="smallBold" style={styles.primaryButtonText}>
@@ -255,15 +258,7 @@ function Field({ label, testID, value, errors, onBlur, onChangeText, ...inputPro
 
 function FieldErrors({ errors }: { errors: unknown[] }) {
   if (!errors.length) return null;
-  return <ThemedText style={styles.fieldError}>{errors.map(formatError).join(', ')}</ThemedText>;
-}
-
-function formatError(error: unknown) {
-  if (typeof error === 'string') return error;
-  if (error && typeof error === 'object' && 'message' in error) {
-    return String(error.message);
-  }
-  return 'Invalid value';
+  return <ThemedText style={styles.fieldError}>{errors.map(formatFormError).join(', ')}</ThemedText>;
 }
 
 const styles = StyleSheet.create({

@@ -4,14 +4,20 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
-import { pageShellClass } from '@/lib/page-layout'
+import { cn } from '@/lib/utils'
 
 export function LoadingState({ message }: { message: string }) {
   return (
-    <section className={pageShellClass}>
-      <Card className="max-w-sm">
-        <CardContent className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-          <Spinner />
+    <section
+      data-testid="loading-state"
+      className={cn(
+        'mx-auto w-full max-w-6xl px-4 sm:px-6',
+        'grid min-h-[100svh] place-items-center',
+      )}
+    >
+      <Card data-testid="loading-state-card" className="w-full max-w-sm">
+        <CardContent className="flex items-center justify-center gap-3 py-4 text-sm text-muted-foreground">
+          <Spinner className="size-5" />
           {message}
         </CardContent>
       </Card>
@@ -40,7 +46,7 @@ export function GateCard({
   title: string
 }) {
   return (
-    <section className={pageShellClass}>
+    <section className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:py-16">
       <Card className="max-w-2xl">
         <CardHeader>
           <Badge variant="outline" className="w-fit">

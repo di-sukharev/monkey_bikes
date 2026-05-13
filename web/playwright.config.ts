@@ -1,23 +1,25 @@
 import { defineConfig, devices } from '@playwright/test'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-  assertPlaywrightTestDatabaseUrl,
-  defaultBackendPort,
-  defaultWebPort,
-  testDatabaseUrl,
-} from './e2e/env'
+import { applyE2ePortEnv, loadBackendE2eEnv, resolveE2ePorts } from './e2e/ports'
 
 const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
 const repositoryRoot = resolve(frontendRoot, '..')
 const backendRoot = resolve(repositoryRoot, 'backend')
 
-const backendPort = Number(defaultBackendPort)
-const frontendPort = Number(defaultWebPort)
-const backendUrl = process.env.E2E_BACKEND_URL ?? `http://127.0.0.1:${backendPort}`
-const frontendUrl = process.env.E2E_WEB_URL ?? `http://127.0.0.1:${frontendPort}`
+loadBackendE2eEnv()
+const portPlan = await resolveE2ePorts()
+applyE2ePortEnv(portPlan)
+
+const { assertPlaywrightTestDatabaseUrl, testDatabaseUrl } = await import('./e2e/env')
+
+const backendPort = portPlan.backendPort
+const frontendPort = portPlan.webPort
+const backendUrl = portPlan.backendUrl
+const frontendUrl = portPlan.webUrl
 const databaseUrl = testDatabaseUrl
 assertPlaywrightTestDatabaseUrl(databaseUrl)
+const e2eSlowMoMs = Number(process.env.E2E_SLOWMO_MS)
 
 function normalizeEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   return Object.fromEntries(
@@ -32,7 +34,7 @@ const backendEnv = normalizeEnv({
   DATABASE_URL: databaseUrl,
   JWT_SECRET:
     process.env.JWT_SECRET ?? 'web-e2e-secret-at-least-thirty-two-characters',
-  CORS_ORIGINS: [frontendUrl, 'http://localhost:43181'].join(','),
+  CORS_ORIGINS: frontendUrl,
   COOKIE_SECURE: 'false',
   PAYMENT_PROVIDER: 'stub',
   PAYMENT_STUB_DEV_ENDPOINTS_ENABLED: 'true',
@@ -61,7 +63,12 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        ...(Number.isFinite(e2eSlowMoMs) && e2eSlowMoMs > 0
+          ? { launchOptions: { slowMo: e2eSlowMoMs } }
+          : {}),
+      },
     },
   ],
   webServer: [

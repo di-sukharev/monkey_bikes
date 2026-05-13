@@ -2,12 +2,14 @@
 interface Props {
   text: string
   title: string
+  icon?: string
 }
 
-const { text, title } = Astro.props
+const { text, title, icon } = Astro.props
 ---
 
 <article class="role-card">
+  {icon && <p class="role-icon">{icon}</p>}
   <h3>{title}</h3>
   <p>{text}</p>
 </article>

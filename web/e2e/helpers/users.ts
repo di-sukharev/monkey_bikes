@@ -1,9 +1,9 @@
 import { expect, type Page } from '@playwright/test'
 import { createPrisma } from '../../../backend/src/db'
-import { defaultBackendPort, testDatabaseUrl } from '../env'
+import { defaultBackendUrl, testDatabaseUrl } from '../env'
 import { e2ePassword } from './test'
 
-const backendUrl = process.env.E2E_BACKEND_URL ?? `http://127.0.0.1:${defaultBackendPort}`
+const backendUrl = defaultBackendUrl
 const databaseUrl = testDatabaseUrl
 
 export async function registerUser(email: string, role: 'manufacturer' | 'user' = 'user') {

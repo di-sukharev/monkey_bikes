@@ -20,7 +20,7 @@ const rawEnvSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .default(
-      'http://localhost:43181,http://127.0.0.1:43181,http://localhost:43182,http://127.0.0.1:43182,http://localhost:43183,http://127.0.0.1:43183',
+      'http://localhost:43180,http://127.0.0.1:43180,http://10.0.2.2:43180,http://localhost:43181,http://127.0.0.1:43181,http://localhost:43182,http://127.0.0.1:43182,http://localhost:43183,http://127.0.0.1:43183',
     )
     .transform((value) =>
       value
