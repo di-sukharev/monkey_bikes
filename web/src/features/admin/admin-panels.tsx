@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import type { AdminChecklistDto } from '@web-app-demo/contracts'
 import {
   BikeIcon,
+  BarChart3Icon,
   CalendarDaysIcon,
   ClipboardCheckIcon,
   ClipboardListIcon,
@@ -122,6 +123,7 @@ export function AdminSectionLinks() {
         <AdminSectionCard icon={<ClipboardListIcon />} title="Orders" to="/admin/orders" />
         <AdminSectionCard icon={<CreditCardIcon />} title="Payments" to="/admin/payments" />
         <AdminSectionCard icon={<ClipboardCheckIcon />} title="Checklists" to="/admin/checklists" />
+        <AdminSectionCard icon={<BarChart3Icon />} title="Reports" to="/admin/reports" />
       </div>
     </section>
   )
@@ -300,7 +302,7 @@ function AdminSectionCard({
 }: {
   icon: ReactNode
   title: string
-  to: '/admin/bicycles' | '/admin/checklists' | '/admin/manufacturers' | '/admin/orders' | '/admin/payments' | '/admin/users'
+  to: '/admin/bicycles' | '/admin/checklists' | '/admin/manufacturers' | '/admin/orders' | '/admin/payments' | '/admin/reports' | '/admin/users'
 }) {
   return (
     <Card>

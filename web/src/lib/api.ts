@@ -7,6 +7,11 @@ import {
   adminOrderStatusUpdateRequestSchema,
   adminPaymentsQuerySchema,
   adminPaymentsResponseSchema,
+  adminBicycleUtilizationReportResponseSchema,
+  adminManufacturerReportResponseSchema,
+  adminReportListQuerySchema,
+  adminReportPeriodQuerySchema,
+  adminReportSummaryResponseSchema,
   apiErrorSchema,
   adminBicycleModerationRequestSchema,
   adminBicycleResponseSchema,
@@ -54,6 +59,11 @@ import {
   type AdminChecklistsResponse,
   type AdminPaymentsQuery,
   type AdminPaymentsResponse,
+  type AdminBicycleUtilizationReportResponse,
+  type AdminManufacturerReportResponse,
+  type AdminReportListQuery,
+  type AdminReportPeriodQuery,
+  type AdminReportSummaryResponse,
   type OrderCreateInput,
   type OrderCancelInput,
   type OrderResponse,
@@ -538,6 +548,51 @@ export class ApiClient {
     })
   }
 
+  adminReportSummary(
+    input: AdminReportPeriodQuery,
+  ): Promise<AdminReportSummaryResponse> {
+    const query = adminReportPeriodQuerySchema.parse(input)
+    const params = reportPeriodParams(query)
+
+    return this.request(
+      `/api/admin/reports/summary?${params.toString()}`,
+      adminReportSummaryResponseSchema,
+      {
+        auth: true,
+      },
+    )
+  }
+
+  adminBicycleUtilizationReport(
+    input: Partial<AdminReportListQuery> & AdminReportPeriodQuery,
+  ): Promise<AdminBicycleUtilizationReportResponse> {
+    const query = adminReportListQuerySchema.parse(input)
+    const params = reportListParams(query)
+
+    return this.request(
+      `/api/admin/reports/bicycle-utilization?${params.toString()}`,
+      adminBicycleUtilizationReportResponseSchema,
+      {
+        auth: true,
+      },
+    )
+  }
+
+  adminManufacturerReport(
+    input: Partial<AdminReportListQuery> & AdminReportPeriodQuery,
+  ): Promise<AdminManufacturerReportResponse> {
+    const query = adminReportListQuerySchema.parse(input)
+    const params = reportListParams(query)
+
+    return this.request(
+      `/api/admin/reports/manufacturers?${params.toString()}`,
+      adminManufacturerReportResponseSchema,
+      {
+        auth: true,
+      },
+    )
+  }
+
   adminBicycles(input: Partial<AdminBicyclesQuery> = {}): Promise<AdminBicyclesResponse> {
     const query = adminBicyclesQuerySchema.parse(input)
     const params = paginatedParams(query.page, query.pageSize)
@@ -684,6 +739,20 @@ function paginatedParams(page: number, pageSize: number) {
     page: String(page),
     pageSize: String(pageSize),
   })
+}
+
+function reportPeriodParams(query: AdminReportPeriodQuery) {
+  return new URLSearchParams({
+    startsOn: query.startsOn,
+    endsOn: query.endsOn,
+  })
+}
+
+function reportListParams(query: AdminReportListQuery) {
+  const params = reportPeriodParams(query)
+  params.set('page', String(query.page))
+  params.set('pageSize', String(query.pageSize))
+  return params
 }
 
 async function toApiError(response: Response) {

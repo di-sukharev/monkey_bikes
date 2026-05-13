@@ -965,6 +965,79 @@ test('ApiClient manages stub payments and admin payment filters', async () => {
   ])
 })
 
+test('ApiClient sends admin report period and pagination queries', async () => {
+  let accessToken: string | null = 'admin-access-token'
+  const calls: Array<{ path: string; search: string; authorization: string | null }> = []
+
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    const headers = new Headers(init?.headers)
+    calls.push({
+      path: url.pathname,
+      search: url.search,
+      authorization: headers.get('Authorization'),
+    })
+
+    if (url.pathname === '/api/admin/reports/summary') {
+      return json(adminReportSummaryResponse(), 200)
+    }
+
+    if (url.pathname === '/api/admin/reports/bicycle-utilization') {
+      return json(adminBicycleUtilizationReportResponse(), 200)
+    }
+
+    if (url.pathname === '/api/admin/reports/manufacturers') {
+      return json(adminManufacturerReportResponse(), 200)
+    }
+
+    return json({ error: { code: 'NOT_FOUND', message: 'Unexpected request' } }, 404)
+  }
+
+  const client = new ApiClient({
+    getAccessToken: () => accessToken,
+    setAccessToken: (nextAccessToken) => {
+      accessToken = nextAccessToken
+    },
+  })
+
+  const summary = await client.adminReportSummary({
+    startsOn: '2026-05-01',
+    endsOn: '2026-05-31',
+  })
+  const utilization = await client.adminBicycleUtilizationReport({
+    startsOn: '2026-05-01',
+    endsOn: '2026-05-31',
+    page: 2,
+    pageSize: 10,
+  })
+  const manufacturers = await client.adminManufacturerReport({
+    startsOn: '2026-05-01',
+    endsOn: '2026-05-31',
+    pageSize: 5,
+  })
+
+  expect(summary.successfulPayments.rent.amountKopecks).toBe(500000)
+  expect(utilization.items[0]?.title).toBe('Tiny Performer S')
+  expect(manufacturers.items[0]?.manufacturer.publicName).toBe('Tiny Bikes')
+  expect(calls).toEqual([
+    {
+      path: '/api/admin/reports/summary',
+      search: '?startsOn=2026-05-01&endsOn=2026-05-31',
+      authorization: 'Bearer admin-access-token',
+    },
+    {
+      path: '/api/admin/reports/bicycle-utilization',
+      search: '?startsOn=2026-05-01&endsOn=2026-05-31&page=2&pageSize=10',
+      authorization: 'Bearer admin-access-token',
+    },
+    {
+      path: '/api/admin/reports/manufacturers',
+      search: '?startsOn=2026-05-01&endsOn=2026-05-31&page=1&pageSize=5',
+      authorization: 'Bearer admin-access-token',
+    },
+  ])
+})
+
 test('ApiClient preserves domain error details for admin order conflicts', async () => {
   let accessToken: string | null = 'admin-access-token'
 
@@ -1384,5 +1457,83 @@ function adminChecklistResponse() {
       title: 'Tiny Performer S',
       status: 'maintenance',
     },
+  }
+}
+
+function adminReportPeriod() {
+  return {
+    startsOn: '2026-05-01',
+    endsOn: '2026-05-31',
+    days: 31,
+  }
+}
+
+function adminReportSummaryResponse() {
+  return {
+    period: adminReportPeriod(),
+    orders: {
+      activeRentalOrderCount: 1,
+      activeRentalItemCount: 1,
+      cancelledOrderCount: 0,
+    },
+    successfulPayments: {
+      rent: {
+        count: 1,
+        amountKopecks: 500000,
+      },
+      deposit: {
+        count: 1,
+        amountKopecks: 500000,
+      },
+    },
+    mostRentedSizes: [
+      {
+        size: 'S',
+        rentalItemCount: 1,
+        rentedDays: 2,
+      },
+    ],
+  }
+}
+
+function adminBicycleUtilizationReportResponse() {
+  return {
+    period: adminReportPeriod(),
+    items: [
+      {
+        bicycleId: 'bike_1',
+        title: 'Tiny Performer S',
+        size: 'S',
+        manufacturer: manufacturerSummary(),
+        rentalItemCount: 1,
+        rentedDays: 2,
+        rentalAmountKopecks: 500000,
+        utilizationRate: 2 / 31,
+      },
+    ],
+    page: 2,
+    pageSize: 10,
+    total: 1,
+  }
+}
+
+function adminManufacturerReportResponse() {
+  return {
+    period: adminReportPeriod(),
+    items: [
+      {
+        manufacturer: manufacturerSummary(),
+        activeRentalOrderCount: 1,
+        bicycleCount: 1,
+        rentalItemCount: 1,
+        rentedDays: 2,
+        rentalAmountKopecks: 500000,
+        depositAmountKopecks: 500000,
+        cancelledOrderCount: 0,
+      },
+    ],
+    page: 1,
+    pageSize: 5,
+    total: 1,
   }
 }

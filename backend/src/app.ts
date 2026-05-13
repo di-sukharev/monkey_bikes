@@ -25,6 +25,8 @@ import {
 import { OrderService } from './order/service'
 import { createAdminPaymentRoutes, createPaymentRoutes } from './payment/routes'
 import { PaymentService } from './payment/service'
+import { createAdminReportRoutes } from './report/routes'
+import { ReportService } from './report/service'
 
 type AppBindings = {
   Variables: {
@@ -35,6 +37,7 @@ type AppBindings = {
     manufacturerProfileService: ManufacturerProfileService
     orderService: OrderService
     paymentService: PaymentService
+    reportService: ReportService
   }
 }
 
@@ -50,6 +53,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   const manufacturerProfileService = new ManufacturerProfileService(prisma)
   const orderService = new OrderService(prisma)
   const paymentService = new PaymentService(prisma, env)
+  const reportService = new ReportService(prisma)
   const app = new OpenAPIHono<AppBindings>({
     defaultHook: (result, c) => {
       if (!result.success) {
@@ -83,6 +87,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
     c.set('manufacturerProfileService', manufacturerProfileService)
     c.set('orderService', orderService)
     c.set('paymentService', paymentService)
+    c.set('reportService', reportService)
     await next()
   })
 
@@ -110,6 +115,7 @@ export function createApp({ env, prisma }: CreateAppOptions) {
   app.route('/api/admin', createAdminBicycleRoutes())
   app.route('/api/admin', createAdminOrderRoutes())
   app.route('/api/admin', createAdminPaymentRoutes())
+  app.route('/api/admin', createAdminReportRoutes())
 
   app.doc('/openapi.json', {
     openapi: '3.0.0',

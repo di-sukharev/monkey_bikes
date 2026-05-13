@@ -343,6 +343,15 @@
 
 Минимальная проверка: backend tests на агрегаты и пустые наборы; typecheck web/backend.
 
+Статус выполнения:
+
+- Выполнено: добавлены Zod-контракты admin reports для period, summary, bicycle utilization и manufacturer stats; period валидируется как date-only, inclusive и не длиннее 366 дней.
+- Выполнено: добавлены admin API `/api/admin/reports/summary`, `/api/admin/reports/bicycle-utilization`, `/api/admin/reports/manufacturers`; routes тонкие, доступ закрыт `admin` role guard.
+- Выполнено: агрегаты считаются в `ReportService`: успешные rent/deposit payments отделены от pending/failed/cancelled, платежный период использует UTC `[start, endExclusive)`, отмены считаются по status history events.
+- Выполнено: utilization и manufacturer reports агрегируются и пагинируются на SQL-уровне; rental activity считается по пересечению date-only периода и не включает request/cancelled как активную загрузку.
+- Выполнено: экран `/admin/reports` собран компонентно на shadcn/UI primitives; URL search является источником period/page state, есть loading/error/empty states и ссылка Reports в admin-навигации.
+- Проверено: backend unit/typecheck/prisma validate, backend integration на `DATABASE_URL_TEST`, web tests/typecheck/lint/build, browser smoke `/admin/reports`; review loop достиг оценки 9.6/10.
+
 ## 12. Landing-страница продукта
 
 Цель: подготовить отдельную Astro landing-страницу продукта в рамках MVP.

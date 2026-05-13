@@ -20,6 +20,8 @@ import {
   ManufacturerOrdersPage,
 } from './features/orders/manufacturer-pages'
 import { AdminPaymentsPage } from './features/payments/pages'
+import { normalizeAdminReportsSearch } from './features/reports/model'
+import { AdminReportsPage } from './features/reports/pages'
 import { AdminUsersPage, AppPage, HomePage, RootLayout } from './pages'
 
 const rootRoute = createRootRoute({
@@ -96,6 +98,13 @@ const adminChecklistsRoute = createRoute({
   component: AdminChecklistsPage,
 })
 
+const adminReportsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/reports',
+  validateSearch: (search: Record<string, unknown>) => normalizeAdminReportsSearch(search),
+  component: AdminReportsPage,
+})
+
 const adminOrderDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/orders/$id',
@@ -169,6 +178,7 @@ const routeTree = rootRoute.addChildren([
   adminOrdersRoute,
   adminPaymentsRoute,
   adminChecklistsRoute,
+  adminReportsRoute,
   adminOrderDetailRoute,
   manufacturerProfileRoute,
   manufacturerBicyclesRoute,

@@ -10,6 +10,11 @@ import {
   adminOrdersQuerySchema,
   adminOrderSchema,
   adminOrderStatusUpdateRequestSchema,
+  adminBicycleUtilizationReportResponseSchema,
+  adminManufacturerReportResponseSchema,
+  adminReportListQuerySchema,
+  adminReportPeriodQuerySchema,
+  adminReportSummaryResponseSchema,
   adminUpdateUserRequestSchema,
   adminUsersQuerySchema,
   apiErrorCodeSchema,
@@ -824,6 +829,121 @@ describe('contracts', () => {
     expect('payments' in manufacturerOrder).toBe(false)
     expect('userId' in manufacturerOrder).toBe(false)
     expect('checkedBy' in manufacturerOrder.checklists[0]!).toBe(false)
+  })
+
+  test('normalizes admin report period queries and DTOs', () => {
+    expect(adminReportPeriodQuerySchema.parse({
+      startsOn: '2026-05-01',
+      endsOn: '2026-05-31',
+    })).toEqual({
+      startsOn: '2026-05-01',
+      endsOn: '2026-05-31',
+    })
+
+    expect(adminReportListQuerySchema.parse({
+      startsOn: '2026-05-01',
+      endsOn: '2026-05-31',
+      page: '2',
+      pageSize: '10',
+    })).toEqual({
+      startsOn: '2026-05-01',
+      endsOn: '2026-05-31',
+      page: 2,
+      pageSize: 10,
+    })
+
+    expect(() =>
+      adminReportPeriodQuerySchema.parse({
+        startsOn: '2026-05-31',
+        endsOn: '2026-05-01',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      adminReportPeriodQuerySchema.parse({
+        startsOn: '2026-01-01',
+        endsOn: '2027-01-02',
+      }),
+    ).toThrow()
+
+    expect(adminReportSummaryResponseSchema.parse({
+      period: {
+        startsOn: '2026-05-01',
+        endsOn: '2026-05-31',
+        days: 31,
+      },
+      orders: {
+        activeRentalOrderCount: 2,
+        activeRentalItemCount: 3,
+        cancelledOrderCount: 1,
+      },
+      successfulPayments: {
+        rent: {
+          count: 1,
+          amountKopecks: 500000,
+        },
+        deposit: {
+          count: 1,
+          amountKopecks: 300000,
+        },
+      },
+      mostRentedSizes: [
+        {
+          size: 'S',
+          rentalItemCount: 2,
+          rentedDays: 6,
+        },
+      ],
+    }).successfulPayments.rent.amountKopecks).toBe(500000)
+
+    const utilization = adminBicycleUtilizationReportResponseSchema.parse({
+      period: {
+        startsOn: '2026-05-01',
+        endsOn: '2026-05-31',
+        days: 31,
+      },
+      items: [
+        {
+          bicycleId: 'bike_1',
+          title: 'Tiny Performer S',
+          size: 'S',
+          manufacturer: {
+            id: 'manufacturer_1',
+            publicName: 'Tiny Bikes',
+            region: null,
+            city: 'Moscow',
+          },
+          rentalItemCount: 2,
+          rentedDays: 6,
+          rentalAmountKopecks: 600000,
+          utilizationRate: 6 / 31,
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    })
+    expect(utilization.items[0]?.manufacturer.publicName).toBe('Tiny Bikes')
+
+    const manufacturers = adminManufacturerReportResponseSchema.parse({
+      period: utilization.period,
+      items: [
+        {
+          manufacturer: utilization.items[0]!.manufacturer,
+          activeRentalOrderCount: 2,
+          bicycleCount: 1,
+          rentalItemCount: 2,
+          rentedDays: 6,
+          rentalAmountKopecks: 600000,
+          depositAmountKopecks: 500000,
+          cancelledOrderCount: 1,
+        },
+      ],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    })
+    expect(manufacturers.items[0]?.cancelledOrderCount).toBe(1)
   })
 })
 
