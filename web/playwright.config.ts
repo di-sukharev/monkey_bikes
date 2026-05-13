@@ -32,7 +32,7 @@ const backendEnv = normalizeEnv({
   DATABASE_URL: databaseUrl,
   JWT_SECRET:
     process.env.JWT_SECRET ?? 'web-e2e-secret-at-least-thirty-two-characters',
-  CORS_ORIGINS: [frontendUrl, 'http://localhost:5173'].join(','),
+  CORS_ORIGINS: [frontendUrl, 'http://localhost:43181'].join(','),
   COOKIE_SECURE: 'false',
   PAYMENT_PROVIDER: 'stub',
   PAYMENT_STUB_DEV_ENDPOINTS_ENABLED: 'true',

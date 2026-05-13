@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button'
-import { ButtonGroup } from '@/components/ui/button-group'
 import { cn } from '@/lib/utils'
 
 type SegmentedControlOption<TValue extends string> = {
@@ -28,7 +27,8 @@ export function SegmentedControl<TValue extends string>({
   const columnClass = options.length === 3 ? columnClassByCount[3] : columnClassByCount[2]
 
   return (
-    <ButtonGroup
+    <div
+      role="group"
       aria-label={ariaLabel}
       className={cn('grid w-full rounded-lg bg-muted p-1', columnClass)}
     >
@@ -48,6 +48,6 @@ export function SegmentedControl<TValue extends string>({
           </Button>
         )
       })}
-    </ButtonGroup>
+    </div>
   )
 }

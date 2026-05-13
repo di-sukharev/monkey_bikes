@@ -96,14 +96,14 @@ Prerequisites:
 - Xcode/iOS Simulator для iOS или Android Studio/emulator для Android;
 - установленный Expo development build с `bundleIdentifier/package` `com.webappdemo.mobile`;
 - backend доступен по тому `EXPO_PUBLIC_API_URL`, с которым собран или запущен bundle.
-- для runner preflight задайте host-reachable `E2E_API_HEALTH_URL`, например `http://127.0.0.1:3000/health`.
+- для runner preflight задайте host-reachable `E2E_API_HEALTH_URL`, например `http://127.0.0.1:43180/health`.
 
 Development build пример:
 
 ```bash
 cd mobile
-EXPO_PUBLIC_API_URL=http://127.0.0.1:3000 bunx eas-cli build --profile development --platform ios
-EXPO_PUBLIC_API_URL=http://10.0.2.2:3000 bunx eas-cli build --profile development --platform android
+EXPO_PUBLIC_API_URL=http://127.0.0.1:43180 bunx eas-cli build --profile development --platform ios
+EXPO_PUBLIC_API_URL=http://10.0.2.2:43180 bunx eas-cli build --profile development --platform android
 ```
 
 Запуск smoke flow:
@@ -120,7 +120,7 @@ MAESTRO_APP_ID=com.webappdemo.mobile
 E2E_DISPLAY_NAME="Mobile E2E User"
 E2E_EMAIL="mobile-e2e@example.com"
 E2E_PASSWORD=password123
-E2E_API_HEALTH_URL=http://127.0.0.1:3000/health
+E2E_API_HEALTH_URL=http://127.0.0.1:43180/health
 ```
 
 Mobile E2E использует `testID` selectors из `mobile/src/constants/testIds.ts`; новые flows должны добавлять стабильные selectors в UI, а не полагаться на хрупкие координаты. Текстовые selectors допустимы для финальных пользовательских сообщений. Auth smoke проверяет register, session restore after app relaunch и logout.

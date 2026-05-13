@@ -74,14 +74,7 @@ export function ManufacturerOrdersPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заказы производителя"
-        title="Нужен вход"
-        description="Войдите под производителем, чтобы смотреть связанные заказы аренды."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'manufacturer') {
@@ -134,6 +127,7 @@ export function ManufacturerOrdersPage() {
 
           {ordersQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['', '', '', '', '', 'w-[140px]']}
               columns={6}
               label="Загружаем связанные заказы..."
               tableClassName="min-w-[980px]"
@@ -212,14 +206,7 @@ export function ManufacturerOrderDetailPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заказ производителя"
-        title="Нужен вход"
-        description="Войдите под производителем, чтобы просмотреть этот заказ."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'manufacturer') {

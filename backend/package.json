@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "bun run prisma:generate && bun --watch src/index.ts",
+    "dev": "bun run prisma:generate && PORT=43180 CORS_ORIGINS=\"http://localhost:43181,http://127.0.0.1:43181,http://localhost:43182,http://127.0.0.1:43182,http://localhost:43183,http://127.0.0.1:43183\" bun --watch src/index.ts",
     "start": "bun run prisma:generate && bun src/index.ts",
     "start:raw": "bun src/index.ts",
     "build": "bun run prisma:generate && tsc --noEmit",

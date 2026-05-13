@@ -34,7 +34,7 @@ bun run e2e:ui
 Создайте `web/.env` при необходимости:
 
 ```bash
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:43180
 ```
 
 ## Практика

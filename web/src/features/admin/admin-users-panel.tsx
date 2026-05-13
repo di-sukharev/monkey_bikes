@@ -95,6 +95,7 @@ export function AdminUsersPanel({
         <CardContent className="grid gap-4 py-4">
           {loading && (
             <TableSkeleton
+              columnClassNames={['w-[42%]', '', '', '']}
               columns={4}
               label="Загружаем пользователей..."
               tableClassName="min-w-[760px]"

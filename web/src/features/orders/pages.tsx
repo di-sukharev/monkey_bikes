@@ -140,14 +140,7 @@ export function OrderRequestPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заявка на аренду"
-        title="Нужен вход"
-        description="Войдите как клиент, чтобы создать заявку на аренду."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'user') {
@@ -292,14 +285,7 @@ export function OrdersPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заказы"
-        title="Нужен вход"
-        description="Войдите как клиент, чтобы смотреть заявки на аренду."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'user') {
@@ -352,6 +338,7 @@ export function OrdersPage() {
 
           {ordersQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['', '', '', '', '', 'w-[140px]']}
               columns={6}
               label="Загружаем заказы..."
               tableClassName="min-w-[980px]"
@@ -494,14 +481,7 @@ export function OrderDetailPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заказ"
-        title="Нужен вход"
-        description="Войдите как клиент, чтобы посмотреть этот заказ."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'user') {
@@ -650,14 +630,7 @@ export function AdminOrdersPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заказы"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы просматривать заявки на аренду."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {
@@ -747,6 +720,7 @@ export function AdminOrdersPage() {
 
           {ordersQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['', '', '', '', '', '', 'w-[140px]']}
               columns={7}
               label="Загружаем заказы..."
               tableClassName="min-w-[1120px]"
@@ -913,14 +887,7 @@ export function AdminOrderDetailPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Заказ администратора"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы просмотреть заявку на аренду."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {

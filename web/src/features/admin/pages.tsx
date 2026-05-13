@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronLeftIcon, ChevronRightIcon, CircleAlertIcon, ClipboardCheckIcon } from 'lucide-react'
 
@@ -50,14 +50,7 @@ export function AdminDashboardPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Админка"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы открыть рабочую область."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {
@@ -119,14 +112,7 @@ export function AdminChecklistsPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Чеклисты"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы смотреть историю чеклистов."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {
@@ -189,6 +175,7 @@ export function AdminChecklistsPage() {
 
           {checklistsQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['', '', '', '', '', 'w-[140px]']}
               columns={6}
               label="Загружаем чеклисты..."
               tableClassName="min-w-[1120px]"

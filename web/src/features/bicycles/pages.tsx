@@ -440,14 +440,7 @@ export function ManufacturerBicyclesPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Велосипеды производителя"
-        title="Нужен вход"
-        description="Войдите под производителем, чтобы управлять велосипедами."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'manufacturer') {
@@ -528,6 +521,7 @@ export function ManufacturerBicyclesPage() {
         <CardContent className="grid gap-4 py-4">
           {bicyclesQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['', '', '', '', 'w-[220px]']}
               columns={5}
               label="Загружаем ваши велосипеды..."
               tableClassName="min-w-[860px]"
@@ -705,14 +699,7 @@ export function AdminBicyclesPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Велосипеды"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы модерировать велосипеды."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {
@@ -771,6 +758,7 @@ export function AdminBicyclesPage() {
 
           {bicyclesQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['w-[28%]', '', '', '', 'w-[32%]']}
               columns={5}
               label="Загружаем велосипеды..."
               tableClassName="min-w-[980px]"

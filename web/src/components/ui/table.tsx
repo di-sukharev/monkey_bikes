@@ -128,6 +128,7 @@ const tableSkeletonHeaderWidths = [
 
 type TableSkeletonProps = Omit<React.ComponentProps<"div">, "children"> & {
   actionColumn?: boolean
+  columnClassNames?: string[]
   columns: number
   label?: string
   rows?: number
@@ -137,20 +138,16 @@ type TableSkeletonProps = Omit<React.ComponentProps<"div">, "children"> & {
 function TableSkeleton({
   actionColumn = true,
   className,
+  columnClassNames = [],
   columns,
   label = "Загружаем таблицу...",
-  rows = 2,
+  rows = 5,
   tableClassName,
   ...props
 }: TableSkeletonProps) {
   const columnIndexes = Array.from({ length: Math.max(1, columns) }, (_, index) => index)
   const rowIndexes = Array.from({ length: Math.max(1, rows) }, (_, index) => index)
   const lastColumnIndex = columnIndexes.length - 1
-  const gridTemplateColumns =
-    actionColumn && columnIndexes.length > 1
-      ? `repeat(${columnIndexes.length - 1}, minmax(7rem, 1fr)) minmax(8rem, 0.7fr)`
-      : `repeat(${columnIndexes.length}, minmax(7rem, 1fr))`
-  const gridStyle = { gridTemplateColumns } satisfies React.CSSProperties
 
   return (
     <div
@@ -160,68 +157,79 @@ function TableSkeleton({
       data-slot="table-skeleton"
       role="status"
       className={cn(
-        "min-h-36 overflow-hidden rounded-base border-2 border-dashed border-border bg-secondary-background shadow-shadow",
+        "min-h-72 overflow-hidden rounded-base border-2 border-dashed border-border bg-secondary-background shadow-shadow",
         className,
       )}
       {...props}
     >
       <div className="w-full overflow-x-auto">
-        <div
+        <table
           aria-hidden="true"
           className={cn(
-            "min-h-36 w-full bg-secondary-background opacity-0 [animation:table-skeleton-reveal_120ms_ease-out_120ms_forwards]",
+            "w-full caption-bottom bg-secondary-background text-sm font-base opacity-0 [animation:table-skeleton-reveal_120ms_ease-out_120ms_forwards]",
             tableClassName,
           )}
         >
-          <div className="grid h-12 items-center border-b-2 border-border/60" style={gridStyle}>
-            {columnIndexes.map((columnIndex) => (
-              <div key={columnIndex} className="px-4">
-                <Skeleton
+          <thead>
+            <tr className="border-b-2 border-border/60">
+              {columnIndexes.map((columnIndex) => (
+                <th
+                  key={columnIndex}
                   className={cn(
-                    "h-4",
-                    tableSkeletonHeaderWidths[columnIndex % tableSkeletonHeaderWidths.length],
+                    "h-12 px-4 text-left align-middle whitespace-nowrap",
+                    columnClassNames[columnIndex],
                   )}
-                />
-              </div>
-            ))}
-          </div>
+                >
+                  <Skeleton
+                    className={cn(
+                      "h-4",
+                      tableSkeletonHeaderWidths[columnIndex % tableSkeletonHeaderWidths.length],
+                    )}
+                  />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rowIndexes.map((rowIndex) => (
+              <tr key={rowIndex} className="h-12 border-b-2 border-border/40 last:border-b-0">
+                {columnIndexes.map((columnIndex) => {
+                  const isActionColumn = actionColumn && columnIndex === lastColumnIndex
 
-          {rowIndexes.map((rowIndex) => (
-            <div
-              key={rowIndex}
-              className="grid h-12 items-center border-b-2 border-border/40 last:border-b-0"
-              style={gridStyle}
-            >
-              {columnIndexes.map((columnIndex) => {
-                const isActionColumn = actionColumn && columnIndex === lastColumnIndex
-
-                return (
-                  <div key={columnIndex} className="px-4">
-                    {columnIndex === 0 ? (
-                      <div className="grid min-w-36 gap-2">
+                  return (
+                    <td
+                      key={columnIndex}
+                      className={cn(
+                        "p-4 align-middle whitespace-nowrap",
+                        columnClassNames[columnIndex],
+                      )}
+                    >
+                      {columnIndex === 0 ? (
+                        <div className="grid min-w-36 gap-2">
+                          <Skeleton
+                            className={cn(
+                              "h-4",
+                              tableSkeletonWidths[rowIndex % tableSkeletonWidths.length],
+                            )}
+                          />
+                          <Skeleton className="h-3 w-1/2" />
+                        </div>
+                      ) : (
                         <Skeleton
                           className={cn(
-                            "h-4",
-                            tableSkeletonWidths[rowIndex % tableSkeletonWidths.length],
+                            isActionColumn ? "h-8 w-24" : "h-4 max-w-full",
+                            !isActionColumn &&
+                              tableSkeletonWidths[(rowIndex + columnIndex) % tableSkeletonWidths.length],
                           )}
                         />
-                        <Skeleton className="h-3 w-1/2" />
-                      </div>
-                    ) : (
-                      <Skeleton
-                        className={cn(
-                          isActionColumn ? "h-8 w-24" : "h-4 max-w-full",
-                          !isActionColumn &&
-                            tableSkeletonWidths[(rowIndex + columnIndex) % tableSkeletonWidths.length],
-                        )}
-                      />
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
+                      )}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <span className="sr-only">{label}</span>
     </div>

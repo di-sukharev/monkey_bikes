@@ -72,14 +72,7 @@ export function AdminPaymentsPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Платежи"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы просматривать платежи."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {
@@ -150,6 +143,7 @@ export function AdminPaymentsPage() {
 
           {paymentsQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['', '', '', '', '', 'w-[140px]']}
               columns={6}
               label="Загружаем платежи..."
               tableClassName="min-w-[980px]"

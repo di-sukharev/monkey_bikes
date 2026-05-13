@@ -1,6 +1,7 @@
 import { e2ePassword, expect, test, uniqueEmail } from '../helpers/test'
 import {
   createApprovedManufacturerProfile,
+  loginUser,
   logoutUser,
   promoteUserToAdmin,
   registerUser,
@@ -13,6 +14,7 @@ test('registers, restores the session, opens protected UI, and logs out', async 
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: /Аренда маленьких велосипедов/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Открыть меню', exact: true })).toHaveCount(0)
   await page.getByLabel('Имя').fill(displayName)
   await page.getByLabel('Электронная почта').fill(email)
   await page.getByLabel('Пароль').fill(e2ePassword)
@@ -20,6 +22,7 @@ test('registers, restores the session, opens protected UI, and logs out', async 
 
   await expect(page.getByRole('heading', { name: 'Сессия активна' })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Открыть меню', exact: true })).toBeVisible()
   await expect
     .poll(async () =>
       (await page.context().cookies()).some(
@@ -46,21 +49,83 @@ test('registers, restores the session, opens protected UI, and logs out', async 
   await expect(page.getByRole('heading', { name: displayName })).toBeVisible()
   await expect(page.getByText(email)).toBeVisible()
 
+  let releaseMeAfterReload!: () => void
+  const meAfterReloadCanContinue = new Promise<void>((resolve) => {
+    releaseMeAfterReload = resolve
+  })
+
+  await page.route('**/api/auth/me', async (route) => {
+    await meAfterReloadCanContinue
+    await route.continue()
+  })
+
+  const refreshAfterProtectedReload = page.waitForResponse(
+    (response) =>
+      response.url().endsWith('/api/auth/refresh') && response.request().method() === 'POST',
+  )
+  const meAfterProtectedReload = page.waitForResponse(
+    (response) => response.url().endsWith('/api/auth/me') && response.request().method() === 'GET',
+  )
+
+  await page.reload()
+
+  await expect((await refreshAfterProtectedReload).status()).toBe(200)
+  await expect(page.getByText('Проверяем сессию...')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нужен вход' })).toHaveCount(0)
+
+  releaseMeAfterReload()
+
+  await expect((await meAfterProtectedReload).status()).toBe(200)
+  await expect(page.getByRole('heading', { name: displayName })).toBeVisible()
+  await page.unroute('**/api/auth/me')
+
   await page.goto('/admin/users')
+  await expect(page).toHaveURL(/\/admin\/users$/)
   await expect(page.getByRole('heading', { name: 'Доступ запрещен' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нужен вход' })).toHaveCount(0)
 
-  await logoutUser(page)
-  await expect(page.getByRole('heading', { name: 'Нужен вход' })).toBeVisible()
-
-  await page.getByRole('link', { name: 'К авторизации' }).click()
+  await page.getByRole('button', { name: 'Открыть меню', exact: true }).click()
+  await page.getByRole('button', { name: 'Выйти из аккаунта' }).click()
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get('redirectTo'))
+    .toBe('/admin/users')
   await expect(page.getByRole('button', { name: 'Создать аккаунт' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нужен вход' })).toHaveCount(0)
+})
+
+test('redirects guests from protected sections and returns after login', async ({ page }) => {
+  const adminEmail = uniqueEmail('web-e2e-admin-return')
+
+  await registerUser(adminEmail)
+  await promoteUserToAdmin(adminEmail)
+
+  await page.goto('/admin/users')
+
+  await expect(page).toHaveURL((url) => {
+    return url.pathname === '/' && url.searchParams.get('redirectTo') === '/admin/users'
+  })
+  await expect(page.getByRole('button', { name: 'Создать аккаунт' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Нужен вход' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Открыть меню', exact: true })).toHaveCount(0)
+
+  await page.getByLabel('Режим авторизации').getByRole('button', { name: 'Вход' }).click()
+  await page.getByLabel('Электронная почта').fill(adminEmail)
+  await page.getByLabel('Пароль').fill(e2ePassword)
+  await page.locator('form').getByRole('button', { name: 'Войти' }).click()
+
+  await expect(page).toHaveURL(/\/admin\/users$/)
+  await expect(page.getByRole('heading', { name: 'Пользователи' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Открыть меню', exact: true })).toBeVisible()
 })
 
 test('closes the mobile sidebar after navigation', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/')
+  const email = uniqueEmail('web-e2e-mobile-sidebar')
 
-  await page.getByRole('button', { name: 'Открыть меню' }).click()
+  await registerUser(email)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await loginUser(page, email)
+
+  await page.getByRole('button', { name: 'Открыть меню', exact: true }).click()
   const sidebarDialog = page.getByRole('dialog', { name: 'Боковое меню' })
   await expect(sidebarDialog).toBeVisible()
 

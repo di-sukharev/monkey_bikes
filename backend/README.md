@@ -33,6 +33,8 @@ bun run prisma:deploy
 
 Из корня репозитория используйте `bun run dev:backend`, `bun run build:backend`, `bun run typecheck:backend` и `bun run test:backend`.
 
+Локальный dev-server по умолчанию слушает `http://localhost:43180`.
+
 ## Локальная БД
 
 Для обычной разработки этот проект использует Homebrew PostgreSQL на стандартном

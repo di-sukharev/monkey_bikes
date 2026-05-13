@@ -16,7 +16,7 @@ import {
 } from '@web-app-demo/contracts';
 import type { z } from 'zod';
 
-const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+const apiBaseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:43180').replace(/\/$/, '');
 
 type ApiClientOptions = {
   getAccessToken: () => string | null;

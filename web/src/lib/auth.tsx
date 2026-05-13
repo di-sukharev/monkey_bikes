@@ -16,7 +16,7 @@ import { bootstrapAuthSession } from './bootstrap-auth'
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient()
   const [accessToken, setAccessTokenState] = useState<string | null>(null)
-  const [isBootstrapping, setIsBootstrapping] = useState(true)
+  const [isRefreshingSession, setIsRefreshingSession] = useState(true)
 
   const setAccessToken = useCallback(
     (nextAccessToken: string | null) => setAccessTokenState(nextAccessToken),
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       })
       .finally(() => {
         if (isMounted) {
-          setIsBootstrapping(false)
+          setIsRefreshingSession(false)
         }
       })
 
@@ -69,9 +69,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const meQuery = useQuery({
     queryKey: meQueryKey,
-    enabled: !isBootstrapping && Boolean(accessToken),
+    enabled: !isRefreshingSession && Boolean(accessToken),
     queryFn: () => api.me(),
   })
+  const isBootstrapping =
+    isRefreshingSession || (Boolean(accessToken) && meQuery.isPending)
 
   const register = useCallback(
     async (input: RegisterRequest) => {

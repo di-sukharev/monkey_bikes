@@ -48,16 +48,16 @@ bun run dev:mobile
 Для web можно создать `web/.env`:
 
 ```bash
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=http://localhost:43180
 ```
 
 Для Expo можно создать `mobile/.env`:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://localhost:3000
+EXPO_PUBLIC_API_URL=http://localhost:43180
 ```
 
-На Android emulator вместо localhost обычно нужен `http://10.0.2.2:3000`.
+На Android emulator вместо localhost обычно нужен `http://10.0.2.2:43180`.
 
 `backend/.env.example` также содержит локальные `SEED_ADMIN_EMAIL`,
 `SEED_ADMIN_PASSWORD` и `SEED_ADMIN_DISPLAY_NAME`; перед запуском `seed:admin`
@@ -70,7 +70,7 @@ bun run --cwd backend seed:admin
 
 ## Основные команды
 
-- `bun run dev` - запустить workspace-проекты в dev-режиме параллельно.
+- `bun run dev` - запустить workspace-проекты в dev-режиме параллельно: backend `43180`, web `43181`, landing `43182`, Expo `43183`.
 - `bun run dev:landing` - запустить Astro landing-проект.
 - `bun run typecheck` - TypeScript-проверка всех workspace-проектов.
 - `bun run typecheck:landing` - Astro typecheck landing-проекта.

@@ -1,0 +1,39 @@
+- generic [ref=e3]:
+  - generic:
+    - generic: 🌴
+    - generic: 🚲
+    - generic: 🥥
+    - generic: 🌋
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]: Маркетплейс велопроката
+      - generic [ref=e7]:
+        - generic [ref=e8]: 🙈
+        - generic [ref=e9]: 🙉
+        - generic [ref=e10]: 🙊
+    - heading "Аренда маленьких велосипедов для обезьянок." [level=1] [ref=e11]
+    - paragraph [ref=e12]: "Не просто маленькие велосипеды, а мини-велопарк для обезьянок: клиенты выбирают транспорт, производители ведут каталог, администраторы отслеживают статусы, платежи и выдачу."
+  - generic "Авторизация" [ref=e14]:
+    - generic [ref=e15]:
+      - heading "Создать аккаунт" [level=2] [ref=e16]
+      - generic [ref=e17]: Начните новую браузерную сессию.
+    - generic [ref=e18]:
+      - group "Режим авторизации" [ref=e19]:
+        - button "Регистрация" [pressed] [ref=e20] [cursor=pointer]
+        - button "Вход" [ref=e21] [cursor=pointer]
+      - generic [ref=e23]:
+        - group [ref=e24]:
+          - generic [ref=e25]: Тип аккаунта
+          - group "Тип аккаунта" [ref=e26]:
+            - button "Клиент" [pressed] [ref=e27] [cursor=pointer]
+            - button "Производитель" [ref=e28] [cursor=pointer]
+        - group [ref=e29]:
+          - generic [ref=e30]: Имя
+          - textbox "Имя" [ref=e31]
+        - group [ref=e32]:
+          - generic [ref=e33]: Электронная почта
+          - textbox "Электронная почта" [ref=e34]
+        - group [ref=e35]:
+          - generic [ref=e36]: Пароль
+          - textbox "Пароль" [ref=e37]
+        - button "Создать аккаунт" [ref=e38] [cursor=pointer]

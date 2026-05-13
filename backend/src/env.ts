@@ -14,12 +14,14 @@ const appEnvSchema = z.enum(['development', 'production', 'test'])
 const rawEnvSchema = z.object({
   APP_ENV: appEnvSchema.optional(),
   NODE_ENV: z.string().optional(),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(43180),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
   CORS_ORIGINS: z
     .string()
-    .default('http://localhost:5173,http://localhost:8081,http://localhost:19006')
+    .default(
+      'http://localhost:43181,http://127.0.0.1:43181,http://localhost:43182,http://127.0.0.1:43182,http://localhost:43183,http://127.0.0.1:43183',
+    )
     .transform((value) =>
       value
         .split(',')

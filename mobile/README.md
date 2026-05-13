@@ -34,13 +34,13 @@ bun run e2e:maestro
 Создайте `mobile/.env`:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://localhost:3000
+EXPO_PUBLIC_API_URL=http://localhost:43180
 ```
 
 На Android emulator используйте:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://10.0.2.2:3000
+EXPO_PUBLIC_API_URL=http://10.0.2.2:43180
 ```
 
 `EXPO_PUBLIC_*` переменные попадают в клиентский bundle, поэтому не кладите туда секреты.
@@ -70,7 +70,7 @@ export PATH="$HOME/.maestro/bin:$PATH"
 bun run e2e:maestro
 ```
 
-Перед запуском backend должен быть доступен по `EXPO_PUBLIC_API_URL`, с которым собран или запущен mobile bundle. Для iOS simulator обычно подходит `http://127.0.0.1:3000`, для Android emulator - `http://10.0.2.2:3000`.
+Перед запуском backend должен быть доступен по `EXPO_PUBLIC_API_URL`, с которым собран или запущен mobile bundle. Для iOS simulator обычно подходит `http://127.0.0.1:43180`, для Android emulator - `http://10.0.2.2:43180`.
 
 Стабильные selectors лежат в `src/constants/testIds.ts`, flow - в `.maestro/flows/auth-smoke.yaml`, runner - в `scripts/e2e/run-maestro.mjs`. Подробный runbook: `../docs/TESTING.md`.
 

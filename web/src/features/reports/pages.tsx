@@ -1,4 +1,4 @@
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import {
   BikeIcon,
@@ -96,14 +96,7 @@ export function AdminReportsPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Отчеты"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы открыть отчеты."
-        action={<Button asChild><Link to="/">К авторизации</Link></Button>}
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {

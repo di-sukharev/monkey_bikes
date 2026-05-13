@@ -1,4 +1,3 @@
-import { Link } from '@tanstack/react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
   AdminManufacturerStatusUpdateRequest,
@@ -97,18 +96,7 @@ export function ManufacturerProfilePage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Профиль производителя"
-        title="Нужен вход"
-        description="Войдите под производителем, чтобы редактировать публичный профиль."
-        action={
-          <Button asChild>
-            <Link to="/">К авторизации</Link>
-          </Button>
-        }
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'manufacturer') {
@@ -262,18 +250,7 @@ export function AdminManufacturersPage() {
   }
 
   if (!auth.user) {
-    return (
-      <GateCard
-        eyebrow="Производители"
-        title="Нужен вход"
-        description="Войдите под администратором, чтобы модерировать профили производителей."
-        action={
-          <Button asChild>
-            <Link to="/">К авторизации</Link>
-          </Button>
-        }
-      />
-    )
+    return <LoadingState message="Проверяем сессию..." />
   }
 
   if (auth.user.role !== 'admin') {
@@ -330,6 +307,7 @@ export function AdminManufacturersPage() {
 
           {manufacturersQuery.isLoading && (
             <TableSkeleton
+              columnClassNames={['w-[28%]', '', '', '', 'w-[32%]']}
               columns={5}
               label="Загружаем производителей..."
               tableClassName="min-w-[980px]"
