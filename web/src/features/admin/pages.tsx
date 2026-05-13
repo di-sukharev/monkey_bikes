@@ -21,7 +21,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
+import { TableSkeleton } from '@/components/ui/table'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -188,10 +188,11 @@ export function AdminChecklistsPage() {
           />
 
           {checklistsQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем чеклисты...
-            </div>
+            <TableSkeleton
+              columns={6}
+              label="Загружаем чеклисты..."
+              tableClassName="min-w-[1120px]"
+            />
           )}
 
           {checklistsQuery.isError && (

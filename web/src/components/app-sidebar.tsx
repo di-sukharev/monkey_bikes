@@ -9,6 +9,7 @@ import {
   FactoryIcon,
   LogInIcon,
   LogOutIcon,
+  MoreVerticalIcon,
   ShieldCheckIcon,
   UserRoundIcon,
   UsersRoundIcon,
@@ -16,6 +17,12 @@ import {
 } from 'lucide-react'
 import type { ComponentProps } from 'react'
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   Sidebar,
   SidebarContent,
@@ -25,11 +32,13 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { userRoleLabel } from '@/lib/user-labels'
 import { useAuth } from '@/lib/use-auth'
 
 type SidebarRoute =
@@ -75,7 +84,7 @@ export function AppSidebar({ className, ...props }: ComponentProps<typeof Sideba
 
   return (
     <Sidebar className={className} collapsible="icon" {...props}>
-      <SidebarHeader className="border-b border-sidebar-border">
+      <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" tooltip="Велопрокат">
@@ -127,11 +136,7 @@ export function AppSidebar({ className, ...props }: ComponentProps<typeof Sideba
         <SidebarFooter className="border-t border-sidebar-border">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                size="lg"
-                tooltip={displayName}
-              >
+              <SidebarMenuButton asChild size="lg" tooltip={displayName}>
                 <Link
                   to="/app"
                   activeOptions={{ exact: true }}
@@ -149,20 +154,28 @@ export function AppSidebar({ className, ...props }: ComponentProps<typeof Sideba
                   </span>
                 </Link>
               </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Выйти">
-                <button
-                  type="button"
-                  onClick={() => {
-                    closeMobileSidebar()
-                    void auth.logout()
-                  }}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuAction aria-label="Открыть меню пользователя">
+                    <MoreVerticalIcon />
+                  </SidebarMenuAction>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={isMobile ? 'end' : 'start'}
+                  className="min-w-36"
+                  side={isMobile ? 'bottom' : 'right'}
                 >
-                  <LogOutIcon />
-                  <span>Выйти</span>
-                </button>
-              </SidebarMenuButton>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      closeMobileSidebar()
+                      void auth.logout()
+                    }}
+                  >
+                    <LogOutIcon />
+                    <span>Выйти</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -230,15 +243,4 @@ function isNavigationItemActive(pathname: string, item: NavigationItem) {
   }
 
   return pathname === item.to || pathname.startsWith(`${item.to}/`)
-}
-
-function userRoleLabel(role: UserRole) {
-  switch (role) {
-    case 'admin':
-      return 'Администратор'
-    case 'manufacturer':
-      return 'Производитель'
-    case 'user':
-      return 'Клиент'
-  }
 }

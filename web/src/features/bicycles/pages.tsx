@@ -33,7 +33,8 @@ import {
 } from '@/components/ui/empty'
 import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { TableFilters, TableFilterSelect } from '@/components/table-filters'
+import { NativeSelectOption } from '@/components/ui/native-select'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
 import {
@@ -43,6 +44,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from '@/components/ui/table'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
@@ -545,10 +547,11 @@ export function ManufacturerBicyclesPage() {
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
           {bicyclesQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем велосипеды...
-            </div>
+            <TableSkeleton
+              columns={5}
+              label="Загружаем ваши велосипеды..."
+              tableClassName="min-w-[860px]"
+            />
           )}
 
           {bicyclesQuery.isError && (
@@ -766,30 +769,32 @@ export function AdminBicyclesPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <NativeSelect
-            aria-label="Фильтр статуса велосипеда"
-            className="w-full max-w-56"
-            value={status}
-            onChange={(event) => {
-              void navigate({
-                to: '/admin/bicycles',
-                search: adminBicyclesSearch(event.target.value as BicycleStatus | 'all'),
-              })
-            }}
-          >
-            <NativeSelectOption value="all">Все статусы</NativeSelectOption>
-            {bicycleStatuses.map((nextStatus) => (
-              <NativeSelectOption key={nextStatus} value={nextStatus}>
-                {bicycleStatusLabel(nextStatus)}
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
+          <TableFilters>
+            <TableFilterSelect
+              aria-label="Фильтр статуса велосипеда"
+              value={status}
+              onChange={(event) => {
+                void navigate({
+                  to: '/admin/bicycles',
+                  search: adminBicyclesSearch(event.target.value as BicycleStatus | 'all'),
+                })
+              }}
+            >
+              <NativeSelectOption value="all">Все статусы</NativeSelectOption>
+              {bicycleStatuses.map((nextStatus) => (
+                <NativeSelectOption key={nextStatus} value={nextStatus}>
+                  {bicycleStatusLabel(nextStatus)}
+                </NativeSelectOption>
+              ))}
+            </TableFilterSelect>
+          </TableFilters>
 
           {bicyclesQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем велосипеды...
-            </div>
+            <TableSkeleton
+              columns={5}
+              label="Загружаем велосипеды..."
+              tableClassName="min-w-[980px]"
+            />
           )}
 
           {bicyclesQuery.isError && (

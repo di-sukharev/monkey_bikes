@@ -43,10 +43,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { TableFilterInput, TableFilters, TableFilterSelect } from '@/components/table-filters'
+import { NativeSelectOption } from '@/components/ui/native-select'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
 import {
   Table,
   TableBody,
@@ -54,6 +53,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { pageShellClass } from '@/lib/page-layout'
@@ -193,10 +193,12 @@ export function OrderRequestPage() {
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
           {selectedBicyclesQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем выбранные велосипеды...
-            </div>
+            <TableSkeleton
+              actionColumn={false}
+              columns={5}
+              label="Загружаем выбранные велосипеды..."
+              tableClassName="min-w-[760px]"
+            />
           )}
 
           {selectedBicyclesQuery.isError && (
@@ -349,10 +351,11 @@ export function OrdersPage() {
           />
 
           {ordersQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем заказы...
-            </div>
+            <TableSkeleton
+              columns={6}
+              label="Загружаем заказы..."
+              tableClassName="min-w-[980px]"
+            />
           )}
 
           {ordersQuery.isError && (
@@ -690,8 +693,8 @@ export function AdminOrdersPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <NativeSelect
+          <TableFilters>
+            <TableFilterSelect
               aria-label="Быстрый фильтр заказов администратора"
               disabled={ordersQuery.isFetching}
               value={quickFilter}
@@ -709,8 +712,8 @@ export function AdminOrdersPage() {
                   {adminOrderQuickFilterLabel(nextFilter)}
                 </NativeSelectOption>
               ))}
-            </NativeSelect>
-            <NativeSelect
+            </TableFilterSelect>
+            <TableFilterSelect
               aria-label="Фильтр статуса заказов администратора"
               disabled={ordersQuery.isFetching || quickFilter !== 'none'}
               value={status}
@@ -727,8 +730,8 @@ export function AdminOrdersPage() {
                   {orderStatusLabel(nextStatus)}
                 </NativeSelectOption>
               ))}
-            </NativeSelect>
-            <Input
+            </TableFilterSelect>
+            <TableFilterInput
               aria-label="Фильтр заказов администратора по дате"
               disabled={ordersQuery.isFetching || quickFilter !== 'orders_today'}
               type="date"
@@ -740,13 +743,14 @@ export function AdminOrdersPage() {
                 })
               }}
             />
-          </div>
+          </TableFilters>
 
           {ordersQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем заказы...
-            </div>
+            <TableSkeleton
+              columns={7}
+              label="Загружаем заказы..."
+              tableClassName="min-w-[1120px]"
+            />
           )}
 
           {ordersQuery.isError && (

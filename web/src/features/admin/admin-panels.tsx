@@ -25,8 +25,8 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { TableFilterInput, TableFilters, TableFilterSelect } from '@/components/table-filters'
+import { NativeSelectOption } from '@/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -143,8 +143,8 @@ export function AdminChecklistsFilters({
   onTypeChange,
 }: AdminChecklistsFiltersProps) {
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <NativeSelect
+    <TableFilters>
+      <TableFilterSelect
         aria-label="Фильтр типа чеклиста"
         disabled={disabled}
         value={type}
@@ -156,22 +156,22 @@ export function AdminChecklistsFilters({
             {adminChecklistTypeLabel(nextType)}
           </NativeSelectOption>
         ))}
-      </NativeSelect>
-      <Input
+      </TableFilterSelect>
+      <TableFilterInput
         aria-label="Фильтр чеклистов по ID заказа"
         disabled={disabled}
         placeholder="ID заказа"
         value={orderId}
         onChange={(event) => onOrderIdChange(event.target.value)}
       />
-      <Input
+      <TableFilterInput
         aria-label="Фильтр чеклистов по ID велосипеда"
         disabled={disabled}
         placeholder="ID велосипеда"
         value={bicycleId}
         onChange={(event) => onBicycleIdChange(event.target.value)}
       />
-    </div>
+    </TableFilters>
   )
 }
 

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/card'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
+import { TableSkeleton } from '@/components/ui/table'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -186,7 +187,14 @@ export function AdminReportsPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          {utilizationQuery.isLoading && <ReportLoading message="Загружаем загрузку велосипедов..." />}
+          {utilizationQuery.isLoading && (
+            <TableSkeleton
+              actionColumn={false}
+              columns={5}
+              label="Загружаем загрузку велосипедов..."
+              tableClassName="min-w-[980px]"
+            />
+          )}
           {utilizationQuery.isError && (
             <ReportError title="Не удалось загрузить загрузку велосипедов" error={utilizationQuery.error} />
           )}
@@ -225,7 +233,14 @@ export function AdminReportsPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          {manufacturerQuery.isLoading && <ReportLoading message="Загружаем статистику производителей..." />}
+          {manufacturerQuery.isLoading && (
+            <TableSkeleton
+              actionColumn={false}
+              columns={7}
+              label="Загружаем статистику производителей..."
+              tableClassName="min-w-[1040px]"
+            />
+          )}
           {manufacturerQuery.isError && (
             <ReportError title="Не удалось загрузить статистику производителей" error={manufacturerQuery.error} />
           )}

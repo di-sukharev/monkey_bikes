@@ -16,7 +16,6 @@ import {
   CardDescription,
   CardHeader,
 } from '@/components/ui/card'
-import { ButtonGroup } from '@/components/ui/button-group'
 import {
   Field,
   FieldError,
@@ -24,14 +23,19 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { SegmentedControl } from '@/components/segmented-control'
 import { ApiRequestError } from '@/lib/api'
 import { formatFormError } from '@/lib/form-errors'
 import { formatRequestError } from '@/lib/request-error'
-import { cn } from '@/lib/utils'
 import { useAuth } from '@/lib/use-auth'
 
 type AuthMode = 'login' | 'register'
-type RegistrationRole = RegisterRequest['role']
+type RegistrationRole = NonNullable<RegisterRequest['role']>
+
+const authModes: Array<{ label: string; value: AuthMode }> = [
+  { label: 'Регистрация', value: 'register' },
+  { label: 'Вход', value: 'login' },
+]
 
 const registrationRoles: Array<{ label: string; value: RegistrationRole }> = [
   { label: 'Клиент', value: 'user' },
@@ -88,29 +92,15 @@ export function AuthForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-5">
-        <ButtonGroup
-          className="grid w-full grid-cols-2 rounded-lg bg-muted p-1"
+        <SegmentedControl
           aria-label="Режим авторизации"
-        >
-          {(['register', 'login'] as const).map((nextMode) => (
-            <Button
-              key={nextMode}
-              type="button"
-              variant={mode === nextMode ? 'outline' : 'ghost'}
-              className={cn(
-                'h-10 bg-transparent',
-                mode === nextMode && 'bg-background shadow-sm',
-              )}
-              aria-pressed={mode === nextMode}
-              onClick={() => {
-                setError(null)
-                setMode(nextMode)
-              }}
-            >
-              {nextMode === 'register' ? 'Регистрация' : 'Вход'}
-            </Button>
-          ))}
-        </ButtonGroup>
+          options={authModes}
+          value={mode}
+          onValueChange={(nextMode) => {
+            setError(null)
+            setMode(nextMode)
+          }}
+        />
 
         <form
           onSubmit={(event) => {
@@ -126,26 +116,12 @@ export function AuthForm() {
                   children={(field) => (
                     <Field data-invalid={field.state.meta.errors.length > 0}>
                       <FieldLabel>Тип аккаунта</FieldLabel>
-                      <ButtonGroup
-                        className="grid w-full grid-cols-2 rounded-lg bg-muted p-1"
+                      <SegmentedControl
                         aria-label="Тип аккаунта"
-                      >
-                        {registrationRoles.map((role) => (
-                          <Button
-                            key={role.value}
-                            type="button"
-                            variant={field.state.value === role.value ? 'outline' : 'ghost'}
-                            className={cn(
-                              'h-10 bg-transparent',
-                              field.state.value === role.value && 'bg-background shadow-sm',
-                            )}
-                            aria-pressed={field.state.value === role.value}
-                            onClick={() => field.handleChange(role.value)}
-                          >
-                            {role.label}
-                          </Button>
-                        ))}
-                      </ButtonGroup>
+                        options={registrationRoles}
+                        value={field.state.value ?? 'user'}
+                        onValueChange={(role) => field.handleChange(role)}
+                      />
                       <FieldErrors
                         id={fieldErrorId(field.name, field.state.meta.errors)}
                         errors={field.state.meta.errors}
@@ -160,9 +136,9 @@ export function AuthForm() {
                     <Field data-invalid={field.state.meta.errors.length > 0}>
                       <FieldLabel htmlFor={field.name}>Имя</FieldLabel>
                       <Input
-                        className="h-11"
                         id={field.name}
                         name={field.name}
+                        size="lg"
                         value={field.state.value ?? ''}
                         autoComplete="name"
                         aria-invalid={field.state.meta.errors.length > 0}
@@ -186,9 +162,9 @@ export function AuthForm() {
                 <Field data-invalid={field.state.meta.errors.length > 0}>
                   <FieldLabel htmlFor={field.name}>Электронная почта</FieldLabel>
                   <Input
-                    className="h-11"
                     id={field.name}
                     name={field.name}
+                    size="lg"
                     value={field.state.value}
                     type="text"
                     inputMode="email"
@@ -212,9 +188,9 @@ export function AuthForm() {
                 <Field data-invalid={field.state.meta.errors.length > 0}>
                   <FieldLabel htmlFor={field.name}>Пароль</FieldLabel>
                   <Input
-                    className="h-11"
                     id={field.name}
                     name={field.name}
+                    size="lg"
                     value={field.state.value}
                     type="password"
                     autoComplete={isRegister ? 'new-password' : 'current-password'}
@@ -244,7 +220,8 @@ export function AuthForm() {
               children={([canSubmit, isSubmitting]) => (
                 <Button
                   type="submit"
-                  className="h-11 w-full"
+                  fullWidth
+                  size="lg"
                   disabled={!canSubmit || isSubmitting}
                 >
                   {isSubmitting ? 'Выполняется...' : isRegister ? 'Создать аккаунт' : 'Войти'}

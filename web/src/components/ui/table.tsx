@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
@@ -105,6 +106,111 @@ function TableCaption({
   )
 }
 
+const tableSkeletonWidths = [
+  "w-[72%]",
+  "w-[48%]",
+  "w-[56%]",
+  "w-[42%]",
+  "w-[64%]",
+  "w-[52%]",
+  "w-[36%]",
+]
+
+const tableSkeletonHeaderWidths = [
+  "w-28",
+  "w-20",
+  "w-24",
+  "w-16",
+  "w-32",
+  "w-24",
+  "w-20",
+]
+
+type TableSkeletonProps = Omit<React.ComponentProps<"div">, "children"> & {
+  actionColumn?: boolean
+  columns: number
+  label?: string
+  rows?: number
+  tableClassName?: string
+}
+
+function TableSkeleton({
+  actionColumn = true,
+  className,
+  columns,
+  label = "Загружаем таблицу...",
+  rows = 5,
+  tableClassName,
+  ...props
+}: TableSkeletonProps) {
+  const columnIndexes = Array.from({ length: Math.max(1, columns) }, (_, index) => index)
+  const rowIndexes = Array.from({ length: Math.max(1, rows) }, (_, index) => index)
+  const lastColumnIndex = columnIndexes.length - 1
+
+  return (
+    <div
+      aria-busy="true"
+      aria-label={label}
+      aria-live="polite"
+      data-slot="table-skeleton"
+      role="status"
+      className={cn("overflow-x-auto rounded-lg border", className)}
+      {...props}
+    >
+      <Table aria-hidden="true" className={tableClassName}>
+        <TableHeader>
+          <TableRow className="hover:bg-secondary-background">
+            {columnIndexes.map((columnIndex) => (
+              <TableHead key={columnIndex}>
+                <Skeleton
+                  className={cn(
+                    "h-4",
+                    tableSkeletonHeaderWidths[columnIndex % tableSkeletonHeaderWidths.length],
+                  )}
+                />
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rowIndexes.map((rowIndex) => (
+            <TableRow key={rowIndex} className="hover:bg-secondary-background">
+              {columnIndexes.map((columnIndex) => {
+                const isActionColumn = actionColumn && columnIndex === lastColumnIndex
+
+                return (
+                  <TableCell key={columnIndex}>
+                    {columnIndex === 0 ? (
+                      <div className="grid min-w-36 gap-2">
+                        <Skeleton
+                          className={cn(
+                            "h-4",
+                            tableSkeletonWidths[rowIndex % tableSkeletonWidths.length],
+                          )}
+                        />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    ) : (
+                      <Skeleton
+                        className={cn(
+                          isActionColumn ? "h-8 w-24" : "h-4",
+                          !isActionColumn &&
+                            tableSkeletonWidths[(rowIndex + columnIndex) % tableSkeletonWidths.length],
+                        )}
+                      />
+                    )}
+                  </TableCell>
+                )
+              })}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <span className="sr-only">{label}</span>
+    </div>
+  )
+}
+
 export {
   Table,
   TableHeader,
@@ -114,4 +220,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableSkeleton,
 }

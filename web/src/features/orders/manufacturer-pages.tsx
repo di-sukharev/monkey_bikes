@@ -27,7 +27,7 @@ import {
   PaginationContent,
   PaginationItem,
 } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
+import { TableSkeleton } from '@/components/ui/table'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
 import { cn } from '@/lib/utils'
@@ -133,10 +133,11 @@ export function ManufacturerOrdersPage() {
           />
 
           {ordersQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем связанные заказы...
-            </div>
+            <TableSkeleton
+              columns={6}
+              label="Загружаем связанные заказы..."
+              tableClassName="min-w-[980px]"
+            />
           )}
 
           {ordersQuery.isError && (

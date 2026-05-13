@@ -4,6 +4,7 @@ import { readRentalOrderSnapshot, resetE2eDatabase } from '../helpers/database'
 import {
   createApprovedManufacturerProfile,
   loginUser,
+  logoutUser,
   promoteUserToAdmin,
   registerUser,
 } from '../helpers/users'
@@ -51,7 +52,7 @@ test('completes the rental happy path from catalog request to returned order', a
   await bicycleRow.getByRole('button', { name: 'Отправить' }).click()
   await expect(page.getByText(`${bicycleTitle}: отправлен на модерацию`)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await loginUser(page, adminEmail)
   await page.goto('/admin/bicycles')
   await expect(page.getByRole('heading', { name: 'Велосипеды', exact: true })).toBeVisible()
@@ -60,7 +61,7 @@ test('completes the rental happy path from catalog request to returned order', a
   await adminBicycleRow.getByRole('button', { name: 'Одобрить' }).click()
   await expect(page.getByText(`${bicycleTitle}: велосипед обновлен`)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await loginUser(page, renterEmail)
   await page.goto('/bicycles')
   await expect(page.getByRole('heading', { name: 'Велосипеды', exact: true })).toBeVisible()
@@ -84,7 +85,7 @@ test('completes the rental happy path from catalog request to returned order', a
   expect(orderId).not.toBe('')
   await expect(page.getByText('Заявка', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await loginUser(page, adminEmail)
   await page.goto(`/admin/orders/${orderId}`)
   await expect(page.getByRole('heading', { name: 'Заказ администратора' })).toBeVisible()
@@ -93,7 +94,7 @@ test('completes the rental happy path from catalog request to returned order', a
   await page.getByRole('button', { name: 'Подтвердить' }).click()
   await expect(page.getByText('Заказ: Подтверждена')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await loginUser(page, renterEmail)
   await page.goto(`/orders/${orderId}`)
   await expect(page.getByRole('heading', { name: 'Заявка на аренду' })).toBeVisible()
@@ -119,7 +120,7 @@ test('completes the rental happy path from catalog request to returned order', a
   await expect(page.getByText('Залог: Успешен')).toBeVisible()
   await expect(page.getByText('оплачено', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await loginUser(page, adminEmail)
   await page.goto(`/admin/orders/${orderId}`)
   await expect(page.getByRole('heading', { name: 'Заказ администратора' })).toBeVisible()
@@ -145,7 +146,7 @@ test('completes the rental happy path from catalog request to returned order', a
   await expect(historyTable.getByRole('row').filter({ hasText: 'Выдана' }).filter({ hasText: 'Возвращена' })).toBeVisible()
   await expect(page.getByRole('row').filter({ hasText: bicycleTitle }).filter({ hasText: 'Доступен' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await loginUser(page, renterEmail)
   await page.goto(`/orders/${orderId}`)
   await expect(page.getByRole('heading', { name: 'Заявка на аренду' })).toBeVisible()

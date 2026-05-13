@@ -19,6 +19,15 @@ export function LoadingState({ message }: { message: string }) {
   )
 }
 
+export function LoadingBanner({ message }: { message: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+      <Spinner />
+      {message}
+    </div>
+  )
+}
+
 export function GateCard({
   action,
   description,

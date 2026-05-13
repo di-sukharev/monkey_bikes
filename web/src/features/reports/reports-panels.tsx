@@ -32,6 +32,7 @@ import {
   EmptyTitle,
 } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
+import { TableFilterControl, TableFilters } from '@/components/table-filters'
 import { Progress } from '@/components/ui/progress'
 import {
   Table,
@@ -78,40 +79,44 @@ export function AdminReportsPeriodControls({
           </Button>
         </CardAction>
       </CardHeader>
-      <CardContent className="grid gap-3 py-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-        <div className="grid gap-1">
-          <label className="text-sm font-medium" htmlFor="reports-starts-on">Дата начала</label>
-          <Input
-            id="reports-starts-on"
-            aria-label="Дата начала отчета"
-            disabled={disabled}
-            type="date"
-            value={startsOn}
-            onChange={(event) => {
-              const nextStartsOn = event.target.value
-              if (!nextStartsOn) return
-              onPeriodChange(nextStartsOn, nextStartsOn > endsOn ? nextStartsOn : endsOn)
-            }}
-          />
-        </div>
-        <div className="grid gap-1">
-          <label className="text-sm font-medium" htmlFor="reports-ends-on">Дата окончания</label>
-          <Input
-            id="reports-ends-on"
-            aria-label="Дата окончания отчета"
-            disabled={disabled}
-            type="date"
-            value={endsOn}
-            onChange={(event) => {
-              const nextEndsOn = event.target.value
-              if (!nextEndsOn) return
-              onPeriodChange(nextEndsOn < startsOn ? nextEndsOn : startsOn, nextEndsOn)
-            }}
-          />
-        </div>
-        <Badge variant="secondary" className="h-9 justify-center px-3">
-          {startsOn} - {endsOn}
-        </Badge>
+      <CardContent className="py-4">
+        <TableFilters className="sm:items-end">
+          <TableFilterControl className="grid gap-1">
+            <label className="text-sm font-medium" htmlFor="reports-starts-on">Дата начала</label>
+            <Input
+              id="reports-starts-on"
+              aria-label="Дата начала отчета"
+              disabled={disabled}
+              size="lg"
+              type="date"
+              value={startsOn}
+              onChange={(event) => {
+                const nextStartsOn = event.target.value
+                if (!nextStartsOn) return
+                onPeriodChange(nextStartsOn, nextStartsOn > endsOn ? nextStartsOn : endsOn)
+              }}
+            />
+          </TableFilterControl>
+          <TableFilterControl className="grid gap-1">
+            <label className="text-sm font-medium" htmlFor="reports-ends-on">Дата окончания</label>
+            <Input
+              id="reports-ends-on"
+              aria-label="Дата окончания отчета"
+              disabled={disabled}
+              size="lg"
+              type="date"
+              value={endsOn}
+              onChange={(event) => {
+                const nextEndsOn = event.target.value
+                if (!nextEndsOn) return
+                onPeriodChange(nextEndsOn < startsOn ? nextEndsOn : startsOn, nextEndsOn)
+              }}
+            />
+          </TableFilterControl>
+          <Badge variant="secondary" className="h-11 w-full justify-center px-3 sm:w-auto">
+            {startsOn} - {endsOn}
+          </Badge>
+        </TableFilters>
       </CardContent>
     </Card>
   )

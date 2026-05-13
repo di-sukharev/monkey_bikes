@@ -15,7 +15,8 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { TableFilterInline, TableFilters, TableFilterSelect } from '@/components/table-filters'
+import { NativeSelectOption } from '@/components/ui/native-select'
 import {
   Table,
   TableBody,
@@ -55,19 +56,20 @@ export function ManufacturerOrderFilters({
     : `Все статусы: ${orderListScopeLabel(scope).toLowerCase()}`
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <Tabs value={scope} onValueChange={(value) => onScopeChange(value as OrderListScope)}>
-        <TabsList aria-label="Раздел списка заказов производителя">
-          {orderListScopes.map((nextScope) => (
-            <TabsTrigger key={nextScope} value={nextScope} disabled={disabled}>
-              {orderListScopeLabel(nextScope)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      <NativeSelect
+    <TableFilters>
+      <TableFilterInline>
+        <Tabs value={scope} onValueChange={(value) => onScopeChange(value as OrderListScope)}>
+          <TabsList aria-label="Раздел списка заказов производителя">
+            {orderListScopes.map((nextScope) => (
+              <TabsTrigger key={nextScope} value={nextScope} disabled={disabled}>
+                {orderListScopeLabel(nextScope)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      </TableFilterInline>
+      <TableFilterSelect
         aria-label="Фильтр статуса заказов производителя"
-        className="w-full max-w-56"
         disabled={disabled}
         value={status}
         onChange={(event) => onStatusChange(event.target.value as OrderStatus | 'all')}
@@ -78,8 +80,8 @@ export function ManufacturerOrderFilters({
             {orderStatusLabel(nextStatus)}
           </NativeSelectOption>
         ))}
-      </NativeSelect>
-    </div>
+      </TableFilterSelect>
+    </TableFilters>
   )
 }
 

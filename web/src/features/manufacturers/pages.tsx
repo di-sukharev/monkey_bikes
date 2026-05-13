@@ -31,7 +31,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { TableFilters, TableFilterSelect } from '@/components/table-filters'
+import { NativeSelectOption } from '@/components/ui/native-select'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
 import { Spinner } from '@/components/ui/spinner'
 import {
@@ -40,6 +41,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from '@/components/ui/table'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
@@ -308,10 +310,9 @@ export function AdminManufacturersPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <NativeSelect
+          <TableFilters>
+            <TableFilterSelect
               aria-label="Фильтр статуса производителя"
-              className="w-full max-w-56"
               value={status}
               onChange={(event) => {
                 setPage(1)
@@ -324,14 +325,15 @@ export function AdminManufacturersPage() {
                   {manufacturerStatusLabel(nextStatus)}
                 </NativeSelectOption>
               ))}
-            </NativeSelect>
-          </div>
+            </TableFilterSelect>
+          </TableFilters>
 
           {manufacturersQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем производителей...
-            </div>
+            <TableSkeleton
+              columns={5}
+              label="Загружаем производителей..."
+              tableClassName="min-w-[980px]"
+            />
           )}
 
           {manufacturersQuery.isError && (

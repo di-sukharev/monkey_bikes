@@ -1,6 +1,7 @@
 import { e2ePassword, expect, test, uniqueEmail } from '../helpers/test'
 import {
   createApprovedManufacturerProfile,
+  logoutUser,
   promoteUserToAdmin,
   registerUser,
 } from '../helpers/users'
@@ -48,7 +49,7 @@ test('registers, restores the session, opens protected UI, and logs out', async 
   await page.goto('/admin/users')
   await expect(page.getByRole('heading', { name: 'Доступ запрещен' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await expect(page.getByRole('heading', { name: 'Нужен вход' })).toBeVisible()
 
   await page.getByRole('link', { name: 'К авторизации' }).click()
@@ -139,7 +140,7 @@ test('manufacturer submits a profile and admin approves it', async ({ page }) =>
   await page.getByRole('button', { name: 'Отправить на модерацию' }).click()
   await expect(page.getByText('Профиль отправлен на модерацию')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await page.goto('/')
   await page.getByLabel('Режим авторизации').getByRole('button', { name: 'Вход' }).click()
   await page.getByLabel('Электронная почта').fill(adminEmail)
@@ -154,7 +155,7 @@ test('manufacturer submits a profile and admin approves it', async ({ page }) =>
   await row.getByRole('button', { name: 'Одобрить' }).click()
   await expect(page.getByText(`${publicName}: профиль обновлен`)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await page.goto('/')
   await page.getByLabel('Режим авторизации').getByRole('button', { name: 'Вход' }).click()
   await page.getByLabel('Электронная почта').fill(manufacturerEmail)
@@ -191,7 +192,7 @@ test('manufacturer profile cache is isolated across account switches', async ({ 
   await expect(page.getByText('Профиль сохранен как черновик')).toBeVisible()
   await expect(page.getByLabel('Публичное название')).toHaveValue(firstPublicName)
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await page.goto('/')
   await page.getByLabel('Тип аккаунта').getByRole('button', { name: 'Производитель' }).click()
   await page.getByLabel('Имя').fill('Cache Maker B')
@@ -247,7 +248,7 @@ test('manufacturer submits a bicycle and admin publishes it to the catalog', asy
   await bicycleRow.getByRole('button', { name: 'Отправить' }).click()
   await expect(page.getByText(`${bicycleTitle}: отправлен на модерацию`)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Выйти' }).click()
+  await logoutUser(page)
   await page.goto('/')
   await page.getByLabel('Режим авторизации').getByRole('button', { name: 'Вход' }).click()
   await page.getByLabel('Электронная почта').fill(adminEmail)

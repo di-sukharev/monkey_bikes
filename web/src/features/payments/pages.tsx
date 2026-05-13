@@ -22,9 +22,9 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { TableFilters, TableFilterSelect } from '@/components/table-filters'
+import { NativeSelectOption } from '@/components/ui/native-select'
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination'
-import { Spinner } from '@/components/ui/spinner'
 import {
   Table,
   TableBody,
@@ -32,6 +32,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
 } from '@/components/ui/table'
 import { pageShellClass } from '@/lib/page-layout'
 import { formatRequestError } from '@/lib/request-error'
@@ -114,10 +115,9 @@ export function AdminPaymentsPage() {
           )}
         </CardHeader>
         <CardContent className="grid gap-4 py-4">
-          <div className="flex flex-wrap gap-2">
-            <NativeSelect
+          <TableFilters>
+            <TableFilterSelect
               aria-label="Фильтр статуса платежа"
-              className="w-full max-w-56"
               value={status}
               onChange={(event) => {
                 setPage(1)
@@ -130,10 +130,9 @@ export function AdminPaymentsPage() {
                   {paymentStatusLabel(nextStatus)}
                 </NativeSelectOption>
               ))}
-            </NativeSelect>
-            <NativeSelect
+            </TableFilterSelect>
+            <TableFilterSelect
               aria-label="Фильтр типа платежа"
-              className="w-full max-w-56"
               value={type}
               onChange={(event) => {
                 setPage(1)
@@ -146,14 +145,15 @@ export function AdminPaymentsPage() {
                   {formatPaymentType(nextType)}
                 </NativeSelectOption>
               ))}
-            </NativeSelect>
-          </div>
+            </TableFilterSelect>
+          </TableFilters>
 
           {paymentsQuery.isLoading && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
-              <Spinner />
-              Загружаем платежи...
-            </div>
+            <TableSkeleton
+              columns={6}
+              label="Загружаем платежи..."
+              tableClassName="min-w-[980px]"
+            />
           )}
 
           {paymentsQuery.isError && (
