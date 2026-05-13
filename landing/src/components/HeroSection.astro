@@ -1,0 +1,41 @@
+---
+import ButtonLink from './ButtonLink.astro'
+
+interface HeroFact {
+  term: string
+  description: string
+}
+
+interface Props {
+  authHref: string
+  catalogHref: string
+  facts: HeroFact[]
+}
+
+const { authHref, catalogHref, facts } = Astro.props
+---
+
+<section class="hero" aria-labelledby="page-title">
+  <div class="hero-media" aria-hidden="true"></div>
+  <div class="hero-content">
+    <p class="eyebrow">MVP аренды маленьких велосипедов</p>
+    <h1 id="page-title">Bicycle Monkey Rent</h1>
+    <p class="lead">
+      Платформа для проверки аренды маленьких велосипедов:
+      каталог, заявки, модерация, платежные заглушки, чеклисты выдачи и
+      базовая отчетность в одном рабочем процессе.
+    </p>
+    <div class="hero-actions" aria-label="Переходы в приложение">
+      <ButtonLink href={catalogHref} variant="primary">Открыть каталог</ButtonLink>
+      <ButtonLink href={authHref}>Войти или зарегистрироваться</ButtonLink>
+    </div>
+    <dl class="hero-facts" aria-label="Ключевые ограничения MVP">
+      {facts.map((fact) => (
+        <div>
+          <dt>{fact.term}</dt>
+          <dd>{fact.description}</dd>
+        </div>
+      ))}
+    </dl>
+  </div>
+</section>

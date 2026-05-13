@@ -1,103 +1,150 @@
 ---
+import '../styles/landing.css'
+import AppHeader from '../components/AppHeader.astro'
+import ButtonLink from '../components/ButtonLink.astro'
+import CtaSection from '../components/CtaSection.astro'
+import FlowStep from '../components/FlowStep.astro'
+import HeroSection from '../components/HeroSection.astro'
+import RoleCard from '../components/RoleCard.astro'
+import SafetyItem from '../components/SafetyItem.astro'
+import SectionHeader from '../components/SectionHeader.astro'
 
+const rawWebAppUrl = import.meta.env.PUBLIC_WEB_APP_URL?.trim() ?? ''
+const webAppUrl = rawWebAppUrl.replace(/\/$/, '')
+const rawLandingUrl = import.meta.env.PUBLIC_LANDING_URL?.trim() ?? ''
+const landingUrl = rawLandingUrl.replace(/\/$/, '')
+const appHref = (path: string) => `${webAppUrl}${path}`
+const assetHref = (path: string) => `${landingUrl}${path}`
+
+const links = {
+  auth: appHref('/'),
+  catalog: appHref('/bicycles'),
+  manufacturer: appHref('/manufacturer/profile'),
+  admin: appHref('/admin'),
+}
+
+const roles = [
+  {
+    title: 'Арендаторам',
+    text: 'Подбор по размеру, датам, цене и доступности. Заявка фиксирует контакт, формат получения и согласие с правилами безопасного использования.',
+  },
+  {
+    title: 'Производителям',
+    text: 'Профиль, карточки велосипедов, модерация и видимость заказов, где участвует их инвентарь.',
+  },
+  {
+    title: 'Администраторам',
+    text: 'Модерация каталога, подтверждение заявок, статусы заказов, чеклисты выдачи и возврата, базовые отчеты.',
+  },
+]
+
+const heroFacts = [
+  {
+    term: 'Платежи',
+    description: 'заглушки без реального списания',
+  },
+  {
+    term: 'Логистика',
+    description: 'самовывоз или доставка с ручным подтверждением',
+  },
+  {
+    term: 'Контроль',
+    description: 'модерация, статусы и чеклисты',
+  },
+]
+
+const flow = [
+  'Каталог показывает только модерированные доступные велосипеды.',
+  'Пользователь выбирает даты, велосипеды, самовывоз или доставку и отправляет заявку.',
+  'Администратор проверяет доступность, контакты, стоимость, залог и доставку.',
+  'После подтверждения проходят платежные заглушки аренды и залога без реального списания денег.',
+  'Выдача и возврат фиксируются чеклистами состояния и контрольными статусами заказа.',
+]
+
+const safeguards = [
+  'Модерация производителей и карточек до публикации.',
+  'Расчет периода аренды идет по календарным датам без зависимости от часового пояса клиента.',
+  'Сервис показывает расчет аренды и залога, а платежи в MVP работают только как заглушки.',
+  'Производитель видит только связанные заказы и минимум контактных данных для исполнения аренды.',
+  'Проблемы на возврате могут скрыть велосипед или отправить его в обслуживание.',
+]
 ---
 
 <html lang="ru">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>landing</title>
-	</head>
-	<body>
-		<main>
-			<section class="hero" aria-labelledby="page-title">
-				<p class="eyebrow">Astro workspace</p>
-				<h1 id="page-title">landing</h1>
-				<p class="summary">
-					Отдельная статическая landing-поверхность для проекта, готовая к
-					контенту, секциям и настройкам деплоя после выбора продуктового
-					направления.
-				</p>
-			</section>
-		</main>
-	</body>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+    <meta
+      name="description"
+      content="Bicycle Monkey Rent — MVP-сервис аренды маленьких велосипедов для цирковых номеров: каталог, заявки, роли, модерация, платежные заглушки и чеклисты безопасности."
+    />
+    <meta property="og:title" content="Bicycle Monkey Rent" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:description"
+      content="Каталог, заявки и админ-контроль аренды маленьких велосипедов в рамках честного MVP без реального эквайринга."
+    />
+    <meta property="og:image" content={assetHref('/images/hero-equipment.jpg')} />
+    <title>Bicycle Monkey Rent</title>
+  </head>
+  <body>
+    <AppHeader brandHref={links.auth} catalogHref={links.catalog} />
+
+    <main>
+      <HeroSection authHref={links.auth} catalogHref={links.catalog} facts={heroFacts} />
+
+      <section class="section intro" aria-labelledby="intro-title">
+        <div>
+          <p class="eyebrow">Что уже входит в MVP</p>
+          <h2 id="intro-title">Не витрина обещаний, а рабочий контур аренды.</h2>
+        </div>
+        <p>
+          Сервис связывает арендатора, производителя и администратора вокруг
+          одного заказа. Он не заменяет реальный эквайринг, уведомления,
+          мобильное приложение или автоматическую логистику, но показывает
+          ключевой процесс от выбора велосипеда до возврата и проверки состояния.
+        </p>
+      </section>
+
+      <section class="section" id="flow" aria-labelledby="flow-title">
+        <SectionHeader eyebrow="Сценарий аренды" title="От каталога до возврата" titleId="flow-title" />
+        <ol class="flow-list">
+          {flow.map((item, index) => (
+            <FlowStep index={index} text={item} />
+          ))}
+        </ol>
+      </section>
+
+      <section class="section" id="roles" aria-labelledby="roles-title">
+        <SectionHeader eyebrow="Роли" title="Каждая роль видит только свой контекст" titleId="roles-title" />
+        <div class="role-grid">
+          {roles.map((role) => (
+            <RoleCard title={role.title} text={role.text} />
+          ))}
+        </div>
+        <div class="role-actions">
+          <ButtonLink href={links.manufacturer}>Кабинет производителя после входа</ButtonLink>
+          <ButtonLink href={links.admin}>Админ-панель после входа</ButtonLink>
+        </div>
+      </section>
+
+      <section class="section safety" id="safety" aria-labelledby="safety-title">
+        <SectionHeader
+          eyebrow="Безопасность и ограничения"
+          title="MVP явно отделяет демонстрационные механики от реальных операций"
+          titleId="safety-title"
+        />
+        <div class="safety-grid">
+          {safeguards.map((item) => (
+            <SafetyItem text={item} />
+          ))}
+        </div>
+      </section>
+
+      <CtaSection authHref={links.auth} catalogHref={links.catalog} />
+    </main>
+  </body>
 </html>
-
-<style>
-	:root {
-		color-scheme: light;
-		font-family:
-			Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-			sans-serif;
-		background: #f6f8fb;
-		color: #14221f;
-	}
-
-	body {
-		margin: 0;
-		min-height: 100vh;
-		background: #f6f8fb;
-	}
-
-	main {
-		min-height: 100vh;
-		display: grid;
-		align-items: center;
-		padding: 3rem 1.5rem;
-	}
-
-	.hero {
-		max-width: 720px;
-	}
-
-	.eyebrow {
-		margin: 0 0 1rem;
-		font-size: 0.8rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #4c6f5b;
-	}
-
-	h1 {
-		margin: 0;
-		font-size: 4rem;
-		line-height: 0.92;
-		letter-spacing: 0;
-	}
-
-	.summary {
-		margin: 1.5rem 0 0;
-		max-width: 580px;
-		font-size: 1.125rem;
-		line-height: 1.55;
-		color: #3e4a42;
-	}
-
-	@media (min-width: 720px) {
-		main {
-			padding: 5rem;
-		}
-
-		h1 {
-			font-size: 7rem;
-		}
-
-		.summary {
-			font-size: 1.25rem;
-		}
-	}
-
-	@media (min-width: 1120px) {
-		main {
-			padding: 6rem;
-		}
-
-		h1 {
-			font-size: 9rem;
-		}
-	}
-</style>

@@ -1,0 +1,13 @@
+---
+interface Props {
+  index: number
+  text: string
+}
+
+const { index, text } = Astro.props
+---
+
+<li>
+  <span>{String(index + 1).padStart(2, '0')}</span>
+  <p>{text}</p>
+</li>

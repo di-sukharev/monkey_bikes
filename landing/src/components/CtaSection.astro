@@ -1,0 +1,21 @@
+---
+import ButtonLink from './ButtonLink.astro'
+
+interface Props {
+  authHref: string
+  catalogHref: string
+}
+
+const { authHref, catalogHref } = Astro.props
+---
+
+<section class="section cta" aria-labelledby="cta-title">
+  <div>
+    <p class="eyebrow">Начать проверку MVP</p>
+    <h2 id="cta-title">Откройте web-приложение и пройдите сценарий по роли.</h2>
+  </div>
+  <div class="cta-actions">
+    <ButtonLink href={authHref} variant="primary">Войти в приложение</ButtonLink>
+    <ButtonLink href={catalogHref}>Посмотреть каталог</ButtonLink>
+  </div>
+</section>

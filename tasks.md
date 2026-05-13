@@ -372,6 +372,14 @@
 
 Минимальная проверка: `bun run typecheck:landing` и `bun run build:landing`.
 
+Статус выполнения:
+
+- Выполнено: placeholder landing заменен на продуктовую Astro-страницу с hero, сценарием аренды, ролями, safety-блоком и CTA в существующие web-сценарии.
+- Выполнено: тексты отражают фактический MVP scope и явно отделяют платежные заглушки, ручное подтверждение логистики, модерацию и чеклисты от Post-MVP функций.
+- Выполнено: landing собран компонентно на Astro-компонентах без добавления лишних зависимостей; shadcn/UI подход web-клиента учтен через модульные UI-блоки и согласованную визуальную систему.
+- Выполнено: hero assets оптимизированы для production: WebP для desktop/tablet, отдельный mobile WebP и сжатый JPEG fallback/OG.
+- Проверено: `bun run typecheck:landing`, `bun run build:landing`, `git diff --check`, Playwright smoke на 1440x900, 768x900 и 375x812 без horizontal overflow; review loop достиг оценки 9.6/10.
+
 ## 13. Сквозной Playwright happy-path
 
 Цель: покрыть главный пользовательский сценарий через настоящий backend и web UI.
