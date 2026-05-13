@@ -37,8 +37,8 @@ DigitalOcean App Platform Static Sites не принимают локальны�
 
 Для этого repo:
 
-- web: `build_command: bun run build:web`, `output_dir: web/dist`;
-- landing: `build_command: bun run build:landing`, `output_dir: landing/dist`;
+- web: `build_command: bun install --frozen-lockfile && bun run build:web`, `output_dir: web/dist`;
+- landing: `build_command: bun install --frozen-lockfile && bun run build:landing`, `output_dir: landing/dist`;
 - web должен иметь `catchall_document: index.html`, потому что это SPA на TanStack Router.
 
 ## Managed PostgreSQL

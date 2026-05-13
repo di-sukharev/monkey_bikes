@@ -11,7 +11,7 @@ static_sites:
       deploy_on_push: true
     source_dir: /
     environment_slug: node-js
-    build_command: bun run build:web
+    build_command: bun install --frozen-lockfile && bun run build:web
     output_dir: web/dist
     index_document: index.html
     catchall_document: index.html
