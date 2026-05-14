@@ -248,6 +248,7 @@ maybeDescribe('auth API integration', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Origin: env.CORS_ORIGINS[0],
         'X-Client-Platform': 'web',
       },
       body: JSON.stringify({
@@ -269,6 +270,7 @@ maybeDescribe('auth API integration', () => {
       headers: {
         'Content-Type': 'application/json',
         Cookie: setCookie!.split(';')[0],
+        Origin: env.CORS_ORIGINS[0],
         'X-Client-Platform': 'web',
       },
       body: JSON.stringify({}),
@@ -280,6 +282,66 @@ maybeDescribe('auth API integration', () => {
     expect(clearCookie).toContain('Path=/api/auth')
     expect(clearCookie).toContain('Secure')
     expect(clearCookie).toContain('SameSite=None')
+  })
+
+  test('production web auth rejects untrusted cookie refresh and logout origins', async () => {
+    const productionApp = createApp({
+      env: {
+        ...env,
+        APP_ENV: 'production',
+        COOKIE_SECURE: false,
+      },
+      prisma,
+    })
+
+    const register = await productionApp.request('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: env.CORS_ORIGINS[0],
+        'X-Client-Platform': 'web',
+      },
+      body: JSON.stringify({
+        email: 'csrf-cookie@example.com',
+        password: 'password123',
+      }),
+    })
+    const cookie = register.headers.get('set-cookie')!.split(';')[0]
+
+    const noOriginRefresh = await productionApp.request('/api/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        'X-Client-Platform': 'web',
+      },
+      body: JSON.stringify({}),
+    })
+    expect(noOriginRefresh.status).toBe(403)
+
+    const untrustedLogout = await productionApp.request('/api/auth/logout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://attacker.example',
+        'X-Client-Platform': 'web',
+      },
+      body: JSON.stringify({}),
+    })
+    expect(untrustedLogout.status).toBe(403)
+
+    const allowedRefresh = await productionApp.request('/api/auth/refresh', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: env.CORS_ORIGINS[0],
+        'X-Client-Platform': 'web',
+      },
+      body: JSON.stringify({}),
+    })
+    expect(allowedRefresh.status).toBe(200)
   })
 
   test('guards me and returns stable validation errors', async () => {

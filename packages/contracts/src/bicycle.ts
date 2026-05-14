@@ -31,7 +31,16 @@ export const bicycleStatusSchema = z.enum([
 ])
 
 const bicyclePhotoUrlsSchema = z
-  .array(z.string().trim().url().max(500))
+  .array(
+    z
+      .string()
+      .trim()
+      .url()
+      .max(500)
+      .refine((value) => new URL(value).protocol === 'https:', {
+        message: 'Photo URL must use https',
+      }),
+  )
   .max(6)
   .default([])
 

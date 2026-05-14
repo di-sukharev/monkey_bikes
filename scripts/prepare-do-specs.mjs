@@ -8,6 +8,7 @@ const scratchDir = resolve(repoRoot, '.scratch/deploy')
 
 const targets = new Set(['backend-initial', 'backend-final', 'web', 'landing', 'all'])
 const target = process.argv[2]
+const knownWeakJwtSecrets = new Set(['replace-with-at-least-32-random-characters'])
 
 if (!targets.has(target)) {
   console.error(`Usage: bun scripts/prepare-do-specs.mjs <${[...targets].join('|')}>`)
@@ -26,7 +27,7 @@ await mkdir(scratchDir, { recursive: true })
 
 if (target === 'backend-initial' || target === 'backend-final' || target === 'all') {
   const jwtSecret = requiredEnv('JWT_SECRET')
-  assertMinLength('JWT_SECRET', jwtSecret, 32)
+  assertStrongJwtSecret(jwtSecret)
   const webUrl = target === 'backend-initial' ? 'https://placeholder.invalid' : requiredUrlEnv('DO_WEB_URL')
   await writePreparedSpec('backend-app.yaml.example', 'backend-app.yaml', {
     REPLACE_WITH_AT_LEAST_32_RANDOM_CHARS: jwtSecret,
@@ -89,6 +90,15 @@ function requiredUrlEnv(name) {
 function assertMinLength(name, value, minimum) {
   if (value.length < minimum) {
     throw new Error(`${name} must be at least ${minimum} characters`)
+  }
+}
+
+function assertStrongJwtSecret(value) {
+  assertMinLength('JWT_SECRET', value, 32)
+
+  const normalized = value.trim().toLowerCase()
+  if (knownWeakJwtSecrets.has(normalized) || new Set(value).size === 1) {
+    throw new Error('JWT_SECRET must be a non-placeholder random secret')
   }
 }
 

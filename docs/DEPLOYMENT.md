@@ -208,7 +208,13 @@ PAYMENT_STUB_DEV_ENDPOINTS_ENABLED=false
 PAYMENT_CURRENCY=RUB
 ```
 
-Production web auth depends on cross-origin cookies between the web static host and backend host. In production the backend sets the HttpOnly refresh cookie as `Secure` and `SameSite=None`; do not weaken CORS or cookie security to work around browser failures.
+`JWT_SECRET` вставляется именно в production backend env: либо перед генерацией
+`.scratch/deploy/backend-app.yaml` через `JWT_SECRET="$(openssl rand -hex 32)"`,
+либо в переменную `JWT_SECRET` backend-сервиса в DigitalOcean App Platform.
+`openssl rand -hex 32` генерирует 32 случайных байта, записанных как 64
+hex-символа. Не используйте placeholder из `.env.example` и человеческие фразы.
+
+Production web auth depends on cross-origin cookies between the web static host and backend host. In production the backend sets the HttpOnly refresh cookie as `Secure` and `SameSite=None`; cookie-based refresh/logout requests also require an `Origin` that matches `CORS_ORIGINS`. Do not weaken CORS or cookie security to work around browser failures.
 
 ## Seed first admin
 

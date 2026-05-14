@@ -279,6 +279,19 @@ describe('contracts', () => {
       }),
     ).toThrow()
 
+    for (const unsafeUrl of [
+      'javascript:alert(1)',
+      'data:image/svg+xml,<svg></svg>',
+      'ftp://example.com/photo.jpg',
+    ]) {
+      expect(() =>
+        bicycleUpsertRequestSchema.parse({
+          ...bicyclePayload('Tiny Performer S'),
+          photoUrls: [unsafeUrl],
+        }),
+      ).toThrow()
+    }
+
     expect(() =>
       publicBicyclesQuerySchema.parse({
         minPriceKopecks: 1_000_000,

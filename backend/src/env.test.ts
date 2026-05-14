@@ -31,6 +31,24 @@ describe('loadEnv', () => {
     expect(env.PAYMENT_STUB_DEV_ENDPOINTS_ENABLED).toBe(false)
   })
 
+  test('rejects known weak JWT secrets in production', () => {
+    expect(() =>
+      loadEnv({
+        APP_ENV: 'production',
+        DATABASE_URL: 'postgresql://postgres:postgres@localhost:54329/web_app_demo',
+        JWT_SECRET: 'replace-with-at-least-32-random-characters',
+      }),
+    ).toThrow()
+
+    expect(() =>
+      loadEnv({
+        APP_ENV: 'production',
+        DATABASE_URL: 'postgresql://postgres:postgres@localhost:54329/web_app_demo',
+        JWT_SECRET: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      }),
+    ).toThrow()
+  })
+
   test('allows explicit stub provider and dev endpoint config', () => {
     const env = loadEnv({
       NODE_ENV: 'production',
