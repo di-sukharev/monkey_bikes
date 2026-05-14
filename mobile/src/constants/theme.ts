@@ -10,17 +10,17 @@ import { Platform } from 'react-native';
 export const Colors = {
   light: {
     text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
+    background: '#E8EFFC',
+    backgroundElement: '#FFFFFF',
+    backgroundSelected: '#DCE7FB',
+    textSecondary: '#404A5C',
   },
   dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
+    text: '#F4F4F5',
+    background: '#302C47',
+    backgroundElement: '#19191C',
+    backgroundSelected: '#333447',
+    textSecondary: '#C9CCD6',
   },
 } as const;
 
@@ -63,3 +63,28 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+export const Neo = {
+  background: '#E8EFFC',
+  surface: '#FFFFFF',
+  muted: '#DCE7FB',
+  foreground: '#000000',
+  mutedForeground: '#404A5C',
+  main: '#7EA6FF',
+  success: '#CFF47A',
+  warning: '#FFE66D',
+  destructive: '#000000',
+  destructiveForeground: '#FFFFFF',
+  border: '#000000',
+  radius: 6,
+  borderWidth: 2,
+  shadowOffset: 4,
+} as const;
+
+export const NeoShadow = {
+  shadowColor: Neo.border,
+  shadowOffset: { width: Neo.shadowOffset, height: Neo.shadowOffset },
+  shadowOpacity: 1,
+  shadowRadius: 0,
+  elevation: 4,
+} as const;

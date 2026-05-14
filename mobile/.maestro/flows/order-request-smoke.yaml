@@ -1,0 +1,115 @@
+appId: ${APP_ID}
+tags:
+  - order
+  - smoke
+---
+- launchApp:
+    clearState: true
+    clearKeychain: true
+- runFlow:
+    when:
+      true: ${USE_DEV_CLIENT}
+    commands:
+      - openLink: ${DEV_CLIENT_URL}
+      - tapOn:
+          text: Open
+          optional: true
+      - tapOn:
+          text: Continue
+          optional: true
+      - tapOn:
+          text: Close
+          optional: true
+- assertVisible:
+    id: ${CATALOG_SCREEN_ID}
+- scrollUntilVisible:
+    element:
+      id: ${CATALOG_FIRST_BICYCLE_SELECT_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 70
+- tapOn:
+    id: ${CATALOG_FIRST_BICYCLE_SELECT_ID}
+- scrollUntilVisible:
+    element:
+      id: ${CATALOG_CREATE_ORDER_BUTTON_ID}
+    direction: UP
+    timeout: 30000
+    visibilityPercentage: 70
+- tapOn:
+    id: ${CATALOG_CREATE_ORDER_BUTTON_ID}
+- assertVisible: Нужен клиентский аккаунт
+- tapOn:
+    id: ${AUTH_OPEN_BUTTON_ID}
+- assertVisible: Monkey Bikes
+- tapOn:
+    id: ${NAME_INPUT_ID}
+- inputText: ${E2E_ORDER_DISPLAY_NAME}
+- tapOn:
+    id: ${EMAIL_INPUT_ID}
+- inputText: ${E2E_ORDER_EMAIL}
+- tapOn: Вход клиента
+- scrollUntilVisible:
+    element:
+      id: ${PASSWORD_INPUT_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 100
+- tapOn:
+    id: ${PASSWORD_INPUT_ID}
+- inputText: ${E2E_PASSWORD}
+- tapOn: Вход клиента
+- tapOn:
+    id: ${SUBMIT_BUTTON_ID}
+    enabled: true
+- assertVisible:
+    id: ${ORDER_START_DATE_INPUT_ID}
+- tapOn:
+    id: ${ORDER_START_DATE_INPUT_ID}
+- inputText: ${E2E_ORDER_STARTS_ON}
+- tapOn: Создать заявку
+- tapOn:
+    id: ${ORDER_END_DATE_INPUT_ID}
+- inputText: ${E2E_ORDER_ENDS_ON}
+- tapOn: Создать заявку
+- scrollUntilVisible:
+    element:
+      id: ${ORDER_CONTACT_NAME_INPUT_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 80
+- tapOn:
+    id: ${ORDER_CONTACT_NAME_INPUT_ID}
+- inputText: Mobile Trainer
+- scrollUntilVisible:
+    element:
+      id: ${ORDER_CONTACT_PHONE_INPUT_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 80
+- tapOn:
+    id: ${ORDER_CONTACT_PHONE_INPUT_ID}
+- inputText: "+7 999 111-22-33"
+- tapOn: Комментарий
+- scrollUntilVisible:
+    element:
+      id: ${ORDER_SAFETY_CHECKBOX_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 80
+    centerElement: true
+- tapOn:
+    id: ${ORDER_SAFETY_CHECKBOX_ID}
+- assertVisible: "checkbox, checked"
+- scrollUntilVisible:
+    element:
+      id: ${ORDER_CREATE_BUTTON_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 80
+    centerElement: true
+- tapOn:
+    id: ${ORDER_CREATE_BUTTON_ID}
+    enabled: true
+- assertVisible:
+    id: ${ORDER_DETAIL_SCREEN_ID}

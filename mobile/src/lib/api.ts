@@ -4,6 +4,15 @@ import {
   loginRequestSchema,
   logoutRequestSchema,
   meResponseSchema,
+  orderCancelRequestSchema,
+  orderCreateRequestSchema,
+  orderResponseSchema,
+  ordersQuerySchema,
+  ordersResponseSchema,
+  paymentResponseSchema,
+  publicBicycleResponseSchema,
+  publicBicyclesQuerySchema,
+  publicBicyclesResponseSchema,
   refreshRequestSchema,
   refreshResponseSchema,
   registerRequestSchema,
@@ -11,6 +20,16 @@ import {
   type LoginRequest,
   type LogoutRequest,
   type MeResponse,
+  type OrderCancelInput,
+  type OrderCreateInput,
+  type OrderResponse,
+  type OrdersQuery,
+  type OrdersResponse,
+  type PaymentResponse,
+  type PaymentType,
+  type PublicBicycleResponse,
+  type PublicBicyclesQuery,
+  type PublicBicyclesResponse,
   type RefreshResponse,
   type RegisterRequest,
 } from '@web-app-demo/contracts';
@@ -98,6 +117,107 @@ export class ApiClient {
     });
   }
 
+  publicBicycles(input: Partial<PublicBicyclesQuery> = {}): Promise<PublicBicyclesResponse> {
+    const query = publicBicyclesQuerySchema.parse(input);
+    const params = paginatedParams(query.page, query.pageSize);
+
+    if (query.sizes) {
+      params.set('sizes', query.sizes.join(','));
+    }
+
+    if (query.minPriceKopecks !== undefined) {
+      params.set('minPriceKopecks', String(query.minPriceKopecks));
+    }
+
+    if (query.maxPriceKopecks !== undefined) {
+      params.set('maxPriceKopecks', String(query.maxPriceKopecks));
+    }
+
+    if (query.city) {
+      params.set('city', query.city);
+    }
+
+    if (query.startsOn) {
+      params.set('startsOn', query.startsOn);
+    }
+
+    if (query.endsOn) {
+      params.set('endsOn', query.endsOn);
+    }
+
+    return this.request(`/api/bicycles?${params.toString()}`, publicBicyclesResponseSchema, {
+      auth: false,
+    });
+  }
+
+  publicBicycle(id: string): Promise<PublicBicycleResponse> {
+    return this.request(`/api/bicycles/${encodeURIComponent(id)}`, publicBicycleResponseSchema, {
+      auth: false,
+    });
+  }
+
+  orders(input: Partial<OrdersQuery> = {}): Promise<OrdersResponse> {
+    const query = ordersQuerySchema.parse(input);
+    const params = paginatedParams(query.page, query.pageSize);
+
+    if (query.status) {
+      params.set('status', query.status);
+    }
+
+    if (query.scope !== 'all') {
+      params.set('scope', query.scope);
+    }
+
+    return this.request(`/api/orders?${params.toString()}`, ordersResponseSchema, {
+      auth: true,
+    });
+  }
+
+  order(id: string): Promise<OrderResponse> {
+    return this.request(`/api/orders/${encodeURIComponent(id)}`, orderResponseSchema, {
+      auth: true,
+    });
+  }
+
+  createOrder(input: OrderCreateInput): Promise<OrderResponse> {
+    const payload = orderCreateRequestSchema.parse(input);
+    return this.request('/api/orders', orderResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  cancelOrder(id: string, input: OrderCancelInput = {}): Promise<OrderResponse> {
+    const payload = orderCancelRequestSchema.parse(input);
+    return this.request(`/api/orders/${encodeURIComponent(id)}/cancel`, orderResponseSchema, {
+      method: 'POST',
+      body: payload,
+      auth: true,
+    });
+  }
+
+  createOrderPayment(id: string, type: PaymentType): Promise<PaymentResponse> {
+    return this.request(
+      `/api/orders/${encodeURIComponent(id)}/payments/${type}`,
+      paymentResponseSchema,
+      {
+        method: 'POST',
+        auth: true,
+      },
+    );
+  }
+
+  completeStubPayment(
+    id: string,
+    action: 'stub-cancel' | 'stub-fail' | 'stub-success',
+  ): Promise<PaymentResponse> {
+    return this.request(`/api/payments/${encodeURIComponent(id)}/${action}`, paymentResponseSchema, {
+      method: 'POST',
+      auth: true,
+    });
+  }
+
   private async request<TSchema extends z.ZodType>(
     path: string,
     schema: TSchema,
@@ -182,4 +302,11 @@ async function toApiError(response: Response) {
   } catch {
     return new ApiRequestError(response.status, 'INTERNAL_ERROR', fallbackMessage);
   }
+}
+
+function paginatedParams(page: number, pageSize: number) {
+  return new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  });
 }

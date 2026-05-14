@@ -77,7 +77,7 @@ bun run --cwd web e2e:ui
 
 ## Mobile Maestro E2E
 
-Maestro flow находится в `mobile/.maestro/flows/auth-smoke.yaml`, runner - `mobile/scripts/e2e/run-maestro.mjs`.
+Maestro flows находятся в `mobile/.maestro/flows/*.yaml`, runner - `mobile/scripts/e2e/run-maestro.mjs`.
 
 Установка CLI:
 
@@ -104,6 +104,68 @@ EXPO_PUBLIC_API_URL=http://127.0.0.1:43180 bunx eas-cli build --profile developm
 EXPO_PUBLIC_API_URL=http://10.0.2.2:43180 bunx eas-cli build --profile development --platform android
 ```
 
+### Expo dev client + Maestro runbook
+
+Для локального визуального прогона на iOS Simulator используйте установленный
+Expo development build, backend на host-reachable URL и Metro dev-client bundle.
+Не запускайте эти flows через Expo Go: Maestro будет видеть Expo launcher, а не
+приложение.
+
+1. Соберите и установите development build для симулятора:
+
+```bash
+(
+  cd mobile
+  EXPO_PUBLIC_API_URL=http://127.0.0.1:43180 bunx eas-cli build --profile development-simulator --platform ios
+)
+```
+
+После завершения EAS build скачайте `.tar.gz`, распакуйте `.app` и установите
+его в booted simulator:
+
+```bash
+xcrun simctl install booted /path/to/MonkeyBikes.app
+```
+
+2. Запустите backend и убедитесь, что `/health` доступен с того host, который
+увидит simulator:
+
+```bash
+bun run --cwd backend dev
+curl http://127.0.0.1:43180/health
+```
+
+3. Запустите Metro в dev-client режиме. Для симулятора обычно работает
+`127.0.0.1`; если устройство или среда не видит localhost, используйте LAN IP.
+`EXPO_PUBLIC_E2E=1` включает только тестовые упрощения для local E2E bundle
+например обычный password input вместо secure field, а любой bundle без этой
+переменной остается с `secureTextEntry`.
+
+```bash
+HOST_IP="$(ipconfig getifaddr en0 || echo 127.0.0.1)"
+(
+  cd mobile
+  EXPO_PUBLIC_API_URL="http://$HOST_IP:43180" \
+  EXPO_PUBLIC_E2E=1 \
+  bunx expo start --dev-client --host lan --port 43185
+)
+```
+
+4. Запустите Maestro через dev-client URL. Runner сам сформирует ссылку вида
+`exp+monkey-bikes://expo-development-client/?url=<encoded metro url>`, если
+задан `MAESTRO_DEV_SERVER_URL`. При переносе шаблона на другой slug/scheme
+обновите этот URL в runner вместе с `app.json`.
+
+```bash
+PATH="$HOME/.maestro/bin:$PATH" \
+EXPO_PUBLIC_API_URL="http://$HOST_IP:43180" \
+E2E_API_HEALTH_URL="http://$HOST_IP:43180/health" \
+MAESTRO_DEV_SERVER_URL="http://$HOST_IP:43185" \
+MAESTRO_DEVICE="<simulator-name-or-udid>" \
+MAESTRO_REQUIRE_ORDER_FLOW=1 \
+bun run --cwd mobile e2e:maestro
+```
+
 Запуск smoke flow:
 
 ```bash
@@ -121,7 +183,43 @@ E2E_PASSWORD=password123
 E2E_API_HEALTH_URL=http://127.0.0.1:43180/health
 ```
 
-Mobile E2E использует `testID` selectors из `mobile/src/constants/testIds.ts`; новые flows должны добавлять стабильные selectors в UI, а не полагаться на хрупкие координаты. Текстовые selectors допустимы для финальных пользовательских сообщений. Auth smoke проверяет register, session restore after app relaunch и logout.
+Mobile E2E использует `testID` selectors из `mobile/src/constants/testIds.ts`; новые flows должны добавлять стабильные selectors в UI, а не полагаться на хрупкие координаты. Текстовые selectors допустимы для финальных пользовательских сообщений. Auth smoke проверяет public catalog, register, session restore after app relaunch и logout. Runner также запускает order request smoke, если backend catalog probe находит публичный велосипед; для обязательной проверки заявки задайте `MAESTRO_REQUIRE_ORDER_FLOW=1`, а для auth-only smoke - `MAESTRO_SKIP_ORDER_FLOW=1`.
+
+### Подводные камни Mobile E2E
+
+- `launchApp` после `clearState` или `stopApp` не гарантирует загрузку Metro
+  bundle в Expo dev client. Для dev client всегда открывайте приложение через
+  `openLink` с `MAESTRO_DEV_SERVER_URL`; обычный `launchApp` может оставить
+  симулятор на home screen или на launcher.
+- Backend и Metro URL должны быть достижимы из simulator/device. Если
+  `localhost` ведет не туда, используйте LAN IP и прокиньте один и тот же host
+  в `EXPO_PUBLIC_API_URL`, `E2E_API_HEALTH_URL` и `MAESTRO_DEV_SERVER_URL`.
+- Secure password fields на iOS могут быть флейковыми для Maestro: команда
+  `inputText` завершается успешно, но controlled React Native state остается
+  пустым. Для E2E допускается test-only gate вроде `EXPO_PUBLIC_E2E=1`, где
+  password field становится обычным `TextInput`; production bundle не должен
+  включать этот режим.
+- `hideKeyboard` ненадежен в React Native flows. Предпочитайте тап по
+  статичному тексту, `keyboardDismissMode="on-drag"` на `ScrollView` и явный
+  `scrollUntilVisible` до следующего элемента.
+- Интерактивные элементы должны иметь touch target минимум 44-48 pt. Маленькие
+  кастомные checkbox/radio rows визуально нажимаются человеком, но Maestro
+  будет промахиваться или тапать по краю.
+- Для кастомных RN checkbox на `Pressable` поле `checked` в Maestro hierarchy
+  может не отражать реальное состояние. Проверяйте тот accessibility value,
+  который реально есть в hierarchy, например `"checkbox, checked"`, или
+  добавляйте стабильный `testID`/state marker.
+- `scrollUntilVisible` может посчитать частично видимый CTA доступным и тапнуть
+  в область за нижней границей экрана. Для финальных кнопок используйте
+  `centerElement: true` или дополнительный scroll до полностью видимого
+  состояния.
+- После перестройки Expo Router маршрутов обязательно чистите starter tabs
+  (`/explore`, `/index`) и используйте object-form navigation для dynamic/query
+  routes. Typed routes должны проходить `bun run --cwd mobile typecheck` до E2E.
+- Order smoke должен запускаться только при готовых данных каталога. Runner
+  делает backend health/catalog preflight; используйте
+  `MAESTRO_REQUIRE_ORDER_FLOW=1`, когда отсутствие публичного велосипеда должно
+  считаться ошибкой среды, и `MAESTRO_SKIP_ORDER_FLOW=1` для auth-only smoke.
 
 ## Источники
 

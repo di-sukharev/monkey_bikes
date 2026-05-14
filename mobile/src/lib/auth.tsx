@@ -24,6 +24,7 @@ import {
 } from './token-store';
 
 type AuthContextValue = {
+  api: ApiClient;
   user: UserDto | null;
   isBootstrapping: boolean;
   isAuthenticated: boolean;
@@ -136,6 +137,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const value = useMemo<AuthContextValue>(
     () => ({
+      api,
       user: meQuery.data?.user ?? null,
       isBootstrapping,
       isAuthenticated: Boolean(meQuery.data?.user),
@@ -143,7 +145,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
     }),
-    [isBootstrapping, login, logout, meQuery.data?.user, register],
+    [api, isBootstrapping, login, logout, meQuery.data?.user, register],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

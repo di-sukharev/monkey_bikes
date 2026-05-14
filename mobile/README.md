@@ -1,6 +1,6 @@
 # Mobile
 
-Мобильное приложение Monkey Bikes на Expo и React Native. Поверхность активна для пользовательских сценариев аренды: вход, каталог, заявка, платежная заглушка и отслеживание заказов. Админские и производственные сценарии остаются web-first, пока их явно не перенесут в mobile.
+Мобильное приложение Monkey Bikes на Expo и React Native. Поверхность реализует клиентские сценарии аренды: публичный каталог, карточку велосипеда, создание заявки, платежную заглушку, список заказов, детали заказа и профиль клиента. Админские и производственные сценарии намеренно остаются web-first.
 
 ## Стек
 
@@ -93,7 +93,7 @@ EXPO_PUBLIC_API_URL=http://10.0.2.2:43180 bunx eas-cli build --profile developme
 
 ## Maestro E2E
 
-Maestro smoke flow проверяет `register -> current user -> logout` по установленному development build.
+Maestro smoke flow проверяет `public catalog -> client register -> session restore -> logout`. Если backend catalog probe находит хотя бы один публичный велосипед, runner дополнительно запускает `public catalog -> select bicycle -> register client -> create order -> order detail`.
 
 ```bash
 bun run e2e:maestro:setup
@@ -103,15 +103,19 @@ bun run e2e:maestro
 
 Перед запуском backend должен быть доступен по `EXPO_PUBLIC_API_URL`, с которым собран или запущен mobile bundle. Для runner preflight задайте `E2E_API_HEALTH_URL`, например `http://127.0.0.1:43180/health`.
 
-Стабильные selectors лежат в `src/constants/testIds.ts`, flow - в `.maestro/flows/auth-smoke.yaml`, runner - в `scripts/e2e/run-maestro.mjs`. Подробный runbook: `../docs/TESTING.md`.
+Полезные флаги:
 
-## Чего пока не хватает
+- `MAESTRO_SKIP_ORDER_FLOW=1` - запустить только auth smoke.
+- `MAESTRO_REQUIRE_ORDER_FLOW=1` - считать отсутствие публичного велосипеда ошибкой тестовой среды.
 
-- Продуктового каталога велосипедов в mobile: сейчас есть только auth shell.
-- Экранов карточки велосипеда, фильтров, выбора дат и создания заявки.
-- Мобильного просмотра своих заказов, оплаты через заглушку и статусов выдачи/возврата.
-- Ролевой навигации для производителя и администратора, если решим переносить эти сценарии в mobile.
-- Финальных иконок/splash assets под бренд Monkey Bikes; текущие assets еще шаблонные.
+Стабильные selectors лежат в `src/constants/testIds.ts`, flows - в `.maestro/flows/*.yaml`, runner - в `scripts/e2e/run-maestro.mjs`. Подробный runbook: `../docs/TESTING.md`.
+
+## Границы клиента
+
+- Mobile поддерживает только роль клиента (`user`). Если в приложение входит администратор или производитель, экран сообщает, что мобильная поверхность доступна только клиентам, и предлагает выйти.
+- Публичный каталог доступен без входа. Создание заявки, просмотр заказов, отмена заявки и платежная заглушка требуют клиентской сессии.
+- Контактные данные пока вводятся в каждой заявке отдельно: текущий backend хранит их в заказе, а не в редактируемом клиентском профиле.
+- Финальные иконки/splash assets под бренд Monkey Bikes еще остаются отдельной задачей.
 
 ## Практика
 

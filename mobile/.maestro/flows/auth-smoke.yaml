@@ -6,6 +6,27 @@ tags:
 - launchApp:
     clearState: true
     clearKeychain: true
+- runFlow:
+    when:
+      true: ${USE_DEV_CLIENT}
+    commands:
+      - openLink: ${DEV_CLIENT_URL}
+      - tapOn:
+          text: Open
+          optional: true
+      - tapOn:
+          text: Continue
+          optional: true
+      - tapOn:
+          text: Close
+          optional: true
+- assertVisible:
+    id: ${CATALOG_SCREEN_ID}
+- tapOn:
+    id: ${PROFILE_TAB_ID}
+- assertVisible: Нужен вход
+- tapOn:
+    id: ${AUTH_OPEN_BUTTON_ID}
 - assertVisible: Monkey Bikes
 - tapOn:
     id: ${NAME_INPUT_ID}
@@ -13,22 +34,55 @@ tags:
 - tapOn:
     id: ${EMAIL_INPUT_ID}
 - inputText: ${E2E_EMAIL}
+- tapOn: Вход клиента
+- scrollUntilVisible:
+    element:
+      id: ${PASSWORD_INPUT_ID}
+    direction: DOWN
+    timeout: 30000
+    visibilityPercentage: 100
 - tapOn:
     id: ${PASSWORD_INPUT_ID}
 - inputText: ${E2E_PASSWORD}
-- hideKeyboard
+- tapOn: Вход клиента
 - tapOn:
     id: ${SUBMIT_BUTTON_ID}
     enabled: true
 - assertVisible:
     id: ${DASHBOARD_ID}
 - assertVisible: ${E2E_EMAIL}
+- tapOn:
+    id: ${CATALOG_TAB_ID}
+- assertVisible:
+    id: ${CATALOG_SCREEN_ID}
 - stopApp
-- launchApp
+- runFlow:
+    when:
+      true: ${USE_DEV_CLIENT}
+    commands:
+      - openLink: ${DEV_CLIENT_URL}
+      - tapOn:
+          text: Open
+          optional: true
+      - tapOn:
+          text: Continue
+          optional: true
+      - tapOn:
+          text: Close
+          optional: true
+- runFlow:
+    when:
+      true: ${USE_STANDALONE_APP}
+    commands:
+      - launchApp
+- assertVisible:
+    id: ${CATALOG_SCREEN_ID}
+- tapOn:
+    id: ${PROFILE_TAB_ID}
 - assertVisible:
     id: ${DASHBOARD_ID}
 - assertVisible: ${E2E_EMAIL}
 - tapOn:
     id: ${LOGOUT_BUTTON_ID}
 - assertVisible:
-    id: ${SUBMIT_BUTTON_ID}
+    id: ${CATALOG_SCREEN_ID}
